@@ -77,8 +77,10 @@ jobs:
             -DMNN_BUILD_LLM_OMNI=ON \
             -DNATIVE_LIBRARY_OUTPUT=.
           make -j$(nproc)
-          ls -la libMNN.so
-          cp libMNN.so ${GITHUB_WORKSPACE}/mnn/lib/arm64-v8a/libMNN.so
+          FOUND=$(find . -name "libMNN.so" -type f | head -1)
+          echo "Found libMNN.so at: $FOUND"
+          ls -la "$FOUND"
+          cp "$FOUND" ${GITHUB_WORKSPACE}/mnn/lib/arm64-v8a/libMNN.so
 
       - name: Build libMNN for armeabi-v7a
         run: |
@@ -111,8 +113,10 @@ jobs:
             -DMNN_ARM82=OFF \
             -DNATIVE_LIBRARY_OUTPUT=.
           make -j$(nproc)
-          ls -la libMNN.so
-          cp libMNN.so ${GITHUB_WORKSPACE}/mnn/lib/armeabi-v7a/libMNN.so
+          FOUND=$(find . -name "libMNN.so" -type f | head -1)
+          echo "Found libMNN.so at: $FOUND"
+          ls -la "$FOUND"
+          cp "$FOUND" ${GITHUB_WORKSPACE}/mnn/lib/armeabi-v7a/libMNN.so
 
       - name: Verify built libMNN architecture
         run: |
@@ -185,9 +189,9 @@ jobs:
         with:
           files: HNN-CN-ET-${{ env.APP_VERSION_NAME }}.apk
           body: |
-            HNN-CN-ET ${APP_VERSION_NAME}
+            HNN-CN-ET ${{ env.APP_VERSION_NAME }}
             - Dual ABI: arm64-v8a + armeabi-v7a
-            - MNN ${MNN_TAG} built with LLM + Diffusion + Audio support
+            - MNN ${{ env.MNN_TAG }} built with LLM + Diffusion + Audio support
             - Signed with stable release keystore (in-app update supported)
           draft: false
           prerelease: false
