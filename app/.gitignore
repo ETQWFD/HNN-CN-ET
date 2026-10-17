@@ -2,6 +2,8 @@
 google-services.json
 src/standard/google-services.json
 
-# Native libraries (downloaded at build time)
-src/main/jniLibs/arm64-v8a/libsherpa-mnn-jni.so
-src/main/jniLibs/arm64-v8a/libsherpa-mnn-jni.zip
+# HNN CN ET: sherpa-mnn JNI .so are vendored for BOTH ABIs (arm64 CDN prebuilt;
+# armeabi-v7a built from alibaba/MNN 3.6.0 source via scripts/build-sherpa-armv7.sh).
+# They are committed so a clean checkout builds without network/CDN. Ignore only
+# the downloaded archive.
+src/main/jniLibs/**/*.zip

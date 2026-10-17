@@ -143,8 +143,18 @@ class OnlineRecognizer(
     private external fun getResult(ptr: Long, streamPtr: Long): Array<Any>
 
     companion object {
+        var isAvailable: Boolean = false
+            private set
+
         init {
-            System.loadLibrary("sherpa-mnn-jni")
+            try {
+                System.loadLibrary("sherpa-mnn-jni")
+                isAvailable = true
+            } catch (e: UnsatisfiedLinkError) {
+                android.util.Log.w("OnlineRecognizer", "sherpa-mnn-jni not available: ${e.message}")
+            } catch (e: Throwable) {
+                android.util.Log.w("OnlineRecognizer", "Failed to load sherpa-mnn-jni: ${e.message}")
+            }
         }
     }
 }

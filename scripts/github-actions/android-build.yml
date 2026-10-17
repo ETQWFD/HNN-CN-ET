@@ -171,6 +171,20 @@ jobs:
               echo "ERROR: libmnnllmapp.so missing for $ABI"
               exit 1
             fi
+            if [ ! -f "$TMPDIR/lib/$ABI/libmnn_tts.so" ]; then
+              echo "ERROR: libmnn_tts.so missing for $ABI"
+              exit 1
+            fi
+            if [ ! -f "$TMPDIR/lib/$ABI/libsherpa-mnn-jni.so" ]; then
+              echo "ERROR: libsherpa-mnn-jni.so missing for $ABI (32-bit ASR parity required)"
+              exit 1
+            fi
+            EXPORTS=$($READELF --dyn-syms "$TMPDIR/lib/$ABI/libsherpa-mnn-jni.so" | grep -c "Java_com_k2fsa_sherpa_mnn_" || true)
+            echo "    sherpa JNI exports: $EXPORTS"
+            if [ "$EXPORTS" -lt 94 ]; then
+              echo "ERROR: sherpa JNI exports $EXPORTS < 94 for $ABI"
+              exit 1
+            fi
           done
           echo "APK_PATH=$APK" >> $GITHUB_ENV
           cp $APK ${GITHUB_WORKSPACE}/HNN-CN-ET-${{ env.APP_VERSION_NAME }}.apk

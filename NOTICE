@@ -15,7 +15,13 @@ Modifications for the HNN CN ET build:
 These modifications are also licensed under the MIT License. They include:
   * Branding: user-facing application name changed to "HNN CN ET"
     (package name, MNN library identifiers and technical attribution unchanged).
-  * 32-bit (armeabi-v7a) and 64-bit (arm64-v8a) native ABI packaging.
+  * 32-bit (armeabi-v7a) and 64-bit (arm64-v8a) native ABI packaging. The core
+    libraries (libMNN / libmnnllmapp / libmnn_tts) ship for both ABIs.
+  * Speech recognition parity on 32-bit: libsherpa-mnn-jni.so for armeabi-v7a is
+    compiled from the sherpa-mnn source bundled in alibaba/MNN 3.6.0
+    (apps/frameworks/sherpa-mnn, derived from k2-fsa sherpa-onnx). Its 94 JNI
+    exports match the arm64-v8a prebuilt exactly; the runtime load is guarded so
+    a missing native lib disables ASR gracefully instead of crashing.
   * In-app self-update against this repository's GitHub Releases (resumable,
     with retry, progress/speed dialog and system installer integration).
   * Built-in on-device application log viewer (level filter, keyword filter,

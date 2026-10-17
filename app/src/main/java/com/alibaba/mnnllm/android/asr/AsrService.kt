@@ -73,6 +73,12 @@ class AsrService(
     private var utteranceCount: Int = 0
 
     suspend fun initRecognizer() {
+        if (!com.k2fsa.sherpa.mnn.OnlineRecognizer.isAvailable) {
+            Log.w(TAG, "sherpa-mnn-jni native library not available on this device; ASR disabled.")
+            isLoaded = false
+            initComplete.complete(false)
+            return
+        }
         val actualModelDir = modelDir ?: VoiceModelPathUtils.getAsrModelPath(activity)
         setAsrModelDir(actualModelDir)
         Log.i(TAG, "Set ASR model directory: $actualModelDir (from ${if (modelDir != null) "parameter" else "VoiceModelPathUtils"})")

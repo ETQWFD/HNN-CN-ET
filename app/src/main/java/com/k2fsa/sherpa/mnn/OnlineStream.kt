@@ -29,8 +29,18 @@ class OnlineStream(var ptr: Long = 0) {
 
 
     companion object {
+        var isAvailable: Boolean = false
+            private set
+
         init {
-            System.loadLibrary("sherpa-mnn-jni")
+            try {
+                System.loadLibrary("sherpa-mnn-jni")
+                isAvailable = true
+            } catch (e: UnsatisfiedLinkError) {
+                android.util.Log.w("OnlineStream", "sherpa-mnn-jni not available: ${e.message}")
+            } catch (e: Throwable) {
+                android.util.Log.w("OnlineStream", "Failed to load sherpa-mnn-jni: ${e.message}")
+            }
         }
     }
 }
