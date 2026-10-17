@@ -33,7 +33,10 @@ class MnnLlmApplication : Application() {
 
         // Initialize Timber logging based on configuration
         TimberConfig.initialize(this)
-        
+
+        // HNN CN ET: unified in-app logging (file rotation + memory ring buffer + crash capture)
+        com.alibaba.mnnllm.android.log.AppLogger.initialize(this)
+
         // Set context for ModelListManager (enables auto-initialization)
         ModelListManager.setContext(getInstance())
         ModelDownloadManager.getInstance(this).setProgressCallbackIntervalMs(500L)

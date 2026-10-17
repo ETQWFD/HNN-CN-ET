@@ -18,8 +18,10 @@ import java.util.concurrent.TimeUnit
 class ModelFileDownloader {
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
-        .followRedirects(false)
-        .followSslRedirects(false) //                .addInterceptor(OkHttpUtils.createLoggingInterceptor())
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
         .build()
 
     @Throws(FileDownloadException::class, DownloadPausedException::class, IOException::class)
@@ -201,11 +203,23 @@ class ModelFileDownloader {
                     "downloadChunk response: success: " + response.isSuccessful + " code: " + response.code
                 )
                 if (response.isSuccessful || response.code == 416) {
+                    // 206 = partial content, resume at downloadedSize. 200 = server ignored Range,
+                    // so truncate and restart from 0 to avoid appending onto a partial file.
+                    val isPartial = response.code == 206
+                    if (!isPartial && fileDownloadTask.downloadedSize > 0) {
+                        Log.d(TAG, "server returned 200 (no Range support), restarting file from 0")
+                    }
                     response.body!!
                         .byteStream().use { `is` ->
                             RandomAccessFile(tempFile, "rw").use { raf ->
-                                raf.seek(fileDownloadTask.downloadedSize)
-                                val buffer = ByteArray(8192)
+                                if (isPartial) {
+                                    raf.seek(fileDownloadTask.downloadedSize)
+                                } else {
+                                    raf.setLength(0)
+                                    fileDownloadTask.downloadedSize = 0
+                                    downloadedBytes = 0
+                                }
+                                val buffer = ByteArray(32768)
                                 var bytesRead: Int
                                 while ((`is`.read(buffer).also { bytesRead = it }) != -1) {
                                     raf.write(buffer, 0, bytesRead)

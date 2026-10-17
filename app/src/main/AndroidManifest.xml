@@ -99,6 +99,13 @@
             android:exported="false"
             android:label="@string/storage_management" />
 
+        <activity
+            android:name="com.alibaba.mnnllm.android.log.LogsActivity"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:label="@string/feedback_logs"
+            android:theme="@style/AppTheme" />
+
 <!--        <activity-->
 <!--            android:name=".modelsettings.SettingsActivity"-->
 <!--            android:exported="true">-->
