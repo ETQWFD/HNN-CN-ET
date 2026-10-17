@@ -1,0 +1,193 @@
+name: Android Dual-ABI Build
+
+on:
+  push:
+    branches: [ ci/dual-abi ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+env:
+  MNN_TAG: "3.6.0"
+  NDK_VERSION: "27.2.12479018"
+  CMAKE_VERSION: "3.22.1"
+  APP_VERSION_NAME: "1.0.0"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK and CMake
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "ndk;${NDK_VERSION}" "cmake;${CMAKE_VERSION}" "platforms;android-35" "build-tools;35.0.0"
+          echo "ANDROID_NDK=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=${ANDROID_HOME}" >> $GITHUB_ENV
+
+      - name: Decode keystore
+        run: |
+          mkdir -p ${HOME}/.android
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ${HOME}/.android/hnn-release.jks
+          echo "KEYSTORE_FILE=${HOME}/.android/hnn-release.jks" >> $GITHUB_ENV
+
+      - name: Clone MNN ${MNN_TAG}
+        run: |
+          git clone --depth 1 --branch ${MNN_TAG} https://github.com/alibaba/MNN.git ${GITHUB_WORKSPACE}/mnn-src
+
+      - name: Build libMNN for arm64-v8a
+        run: |
+          set -e
+          mkdir -p ${GITHUB_WORKSPACE}/mnn-build-arm64
+          cd ${GITHUB_WORKSPACE}/mnn-build-arm64
+          cmake ${GITHUB_WORKSPACE}/mnn-src \
+            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_STL=c++_static \
+            -DANDROID_NATIVE_API_LEVEL=android-21 \
+            -DMNN_USE_LOGCAT=OFF \
+            -DMNN_USE_SSE=OFF \
+            -DMNN_BUILD_BENCHMARK=OFF \
+            -DMNN_BUILD_TEST=OFF \
+            -DMNN_BUILD_TOOLS=OFF \
+            -DMNN_BUILD_CONVERTER=OFF \
+            -DMNN_BUILD_FOR_ANDROID_COMMAND=ON \
+            -DMNN_LOW_MEMORY=ON \
+            -DMNN_BUILD_DIFFUSION=ON \
+            -DMNN_BUILD_OPENCV=ON \
+            -DMNN_IMGCODECS=ON \
+            -DMNN_OPENCL=ON \
+            -DMNN_SEP_BUILD=OFF \
+            -DMNN_SUPPORT_TRANSFORMER_FUSE=ON \
+            -DMNN_BUILD_LLM=ON \
+            -DMNN_BUILD_LLM_OMNI=ON \
+            -DNATIVE_LIBRARY_OUTPUT=.
+          make -j$(nproc)
+          ls -la libMNN.so
+          cp libMNN.so ${GITHUB_WORKSPACE}/mnn/lib/arm64-v8a/libMNN.so
+
+      - name: Build libMNN for armeabi-v7a
+        run: |
+          set -e
+          mkdir -p ${GITHUB_WORKSPACE}/mnn-build-armv7
+          cd ${GITHUB_WORKSPACE}/mnn-build-armv7
+          cmake ${GITHUB_WORKSPACE}/mnn-src \
+            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DANDROID_ABI=armeabi-v7a \
+            -DANDROID_STL=c++_static \
+            -DANDROID_NATIVE_API_LEVEL=android-21 \
+            -DANDROID_TOOLCHAIN=clang \
+            -DMNN_USE_LOGCAT=OFF \
+            -DMNN_USE_SSE=OFF \
+            -DMNN_BUILD_BENCHMARK=OFF \
+            -DMNN_BUILD_TEST=OFF \
+            -DMNN_BUILD_TOOLS=OFF \
+            -DMNN_BUILD_CONVERTER=OFF \
+            -DMNN_BUILD_FOR_ANDROID_COMMAND=ON \
+            -DMNN_LOW_MEMORY=ON \
+            -DMNN_BUILD_DIFFUSION=ON \
+            -DMNN_BUILD_OPENCV=ON \
+            -DMNN_IMGCODECS=ON \
+            -DMNN_OPENCL=ON \
+            -DMNN_SEP_BUILD=OFF \
+            -DMNN_SUPPORT_TRANSFORMER_FUSE=ON \
+            -DMNN_BUILD_LLM=ON \
+            -DMNN_BUILD_LLM_OMNI=ON \
+            -DMNN_ARM82=OFF \
+            -DNATIVE_LIBRARY_OUTPUT=.
+          make -j$(nproc)
+          ls -la libMNN.so
+          cp libMNN.so ${GITHUB_WORKSPACE}/mnn/lib/armeabi-v7a/libMNN.so
+
+      - name: Verify built libMNN architecture
+        run: |
+          set -e
+          READELF=${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf
+          echo "=== arm64-v8a/libMNN.so ==="
+          $READELF -h ${GITHUB_WORKSPACE}/mnn/lib/arm64-v8a/libMNN.so | grep -E "Class|Machine"
+          echo "=== armeabi-v7a/libMNN.so ==="
+          $READELF -h ${GITHUB_WORKSPACE}/mnn/lib/armeabi-v7a/libMNN.so | grep -E "Class|Machine"
+          echo "=== LLM/diffusion/audio symbols in arm64 build ==="
+          NM=${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm
+          $NM -D ${GITHUB_WORKSPACE}/mnn/lib/arm64-v8a/libMNN.so | grep -cE "Llm|DIFFUSION|AUDIO" || true
+          $NM -D ${GITHUB_WORKSPACE}/mnn/lib/arm64-v8a/libMNN.so | grep -E "Llm.*initRuntime|DIFFUSION.*Wan|AUDIO.*fbank" | head -5
+
+      - name: Assemble release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleStandardRelease --no-daemon --stacktrace
+
+      - name: Locate and verify APK
+        id: verify
+        run: |
+          set -e
+          APK=$(ls app/build/outputs/apk/standard/release/app-standard-release-*.apk | grep -v -e unsigned -e aligned | head -1)
+          if [ -z "$APK" ]; then
+            APK=$(ls app/build/outputs/apk/standard/release/*.apk | head -1)
+          fi
+          echo "APK found: $APK"
+          ls -la $APK
+          READELF=${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf
+          echo "=== APK contents (lib/) ==="
+          unzip -l $APK | grep -E "lib/(arm64-v8a|armeabi-v7a)/" || true
+          echo "=== Extracting and verifying each .so ==="
+          TMPDIR=$(mktemp -d)
+          unzip -q $APK 'lib/*' -d $TMPDIR
+          for ABI in arm64-v8a armeabi-v7a; do
+            echo "--- $ABI ---"
+            ls -la $TMPDIR/lib/$ABI/
+            for SO in $TMPDIR/lib/$ABI/*.so; do
+              echo "  $(basename $SO):"
+              $READELF -h $SO | grep -E "Class|Machine" | sed 's/^/    /'
+            done
+            if [ ! -f "$TMPDIR/lib/$ABI/libMNN.so" ]; then
+              echo "ERROR: libMNN.so missing for $ABI"
+              exit 1
+            fi
+            if [ ! -f "$TMPDIR/lib/$ABI/libmnnllmapp.so" ]; then
+              echo "ERROR: libmnnllmapp.so missing for $ABI"
+              exit 1
+            fi
+          done
+          echo "APK_PATH=$APK" >> $GITHUB_ENV
+          cp $APK ${GITHUB_WORKSPACE}/HNN-CN-ET-${{ env.APP_VERSION_NAME }}.apk
+          echo "APK_NAME=HNN-CN-ET-${{ env.APP_VERSION_NAME }}.apk" >> $GITHUB_ENV
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HNN-CN-ET-${{ env.APP_VERSION_NAME }}
+          path: HNN-CN-ET-${{ env.APP_VERSION_NAME }}.apk
+          retention-days: 30
+
+      - name: Create Release on tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: HNN-CN-ET-${{ env.APP_VERSION_NAME }}.apk
+          body: |
+            HNN-CN-ET ${APP_VERSION_NAME}
+            - Dual ABI: arm64-v8a + armeabi-v7a
+            - MNN ${MNN_TAG} built with LLM + Diffusion + Audio support
+            - Signed with stable release keystore (in-app update supported)
+          draft: false
+          prerelease: false
