@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>下载统计 · HNN CN ET</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" href="assets/icons/favicon.ico" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <!--
+    ============================================================================
+    【重要说明 - 给管理员】
+    ----------------------------------------------------------------------------
+    本页面是 GitHub Pages 上的纯静态页面，没有任何服务端。
+    所谓「管理员访问口令」仅是前端遮蔽（前端常量 + JS 判断），并不是真正的
+    鉴权：任何拿到完整网址的人，查看页面源码都能看到口令，理论上仍可访问。
+
+    而且本页面展示的下载数据本身就来自 GitHub 公开 REST API：
+        https://api.github.com/repos/ETQWFD/HNN-CN-ET/releases
+    这些数据本就是公开可查的，口令不增加数据安全性。
+
+    如果将来需要真正私有的后台，必须：
+      1. 有一个带后端的服务（自己的服务器 / Serverless / Cloudflare Workers）；
+      2. 在后端用 GitHub token 调 API 并做真正的会话鉴权；
+      3. 前端只跟自己的后端通信。
+    当前页面不做上述事情，口令仅用于「随手挡一下爬虫和非管理员」。
+    ============================================================================
+  -->
+</head>
+<body>
+
+<!-- 口令遮罩 -->
+<div class="lock-overlay" id="lockOverlay">
+  <div class="lock-box">
+    <h2>管理员访问</h2>
+    <p>请输入访问口令以查看下载统计。</p>
+    <input type="password" id="passInput" placeholder="访问口令" autocomplete="off" />
+    <div class="err" id="passErr"></div>
+    <button class="btn btn-primary" id="btnUnlock" style="margin-top:14px; width:100%;">进入</button>
+    <div class="lock-note">
+      注意：本页面为纯静态前端，口令仅作遮蔽，并非真正鉴权。<br/>
+      数据来自 GitHub 公开 Releases API。
+    </div>
+  </div>
+</div>
+
+<!-- 主内容 -->
+<div id="mainContent" style="display:none;">
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html">
+        <img src="assets/logo.svg" alt="logo" style="width:32px;height:32px;" />
+        <span>HNN CN ET · 下载统计</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html">返回首页</a>
+      </div>
+    </div>
+  </nav>
+
+  <section>
+    <div class="container">
+      <h2 class="section-title">发布与下载统计</h2>
+      <p class="section-sub">数据来自 GitHub Releases API，实时拉取。</p>
+
+      <div class="state-box" id="stateBox">正在加载发布数据…</div>
+
+      <div id="statsArea" style="display:none;">
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="label">总下载量（所有 asset）</div>
+            <div class="value" id="statTotal">0</div>
+          </div>
+          <div class="stat green">
+            <div class="label">最新版本</div>
+            <div class="value" id="statLatest" style="font-size:20px;">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">Release 数量</div>
+            <div class="value" id="statReleases">0</div>
+          </div>
+          <div class="stat green">
+            <div class="label">Asset 数量</div>
+            <div class="value" id="statAssets">0</div>
+          </div>
+        </div>
+
+        <div class="card" style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>版本</th>
+                <th>发布时间</th>
+                <th>Asset</th>
+                <th style="text-align:right;">下载次数</th>
+              </tr>
+            </thead>
+            <tbody id="releaseTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+// 前端口令常量（仅遮蔽，非真正鉴权）
+var ADMIN_PASS = 'et-admin-2026';
+var REPO = 'ETQWFD/HNN-CN-ET';
+var API_ALL = 'https://api.github.com/repos/' + REPO + '/releases?per_page=100';
+
+function $(id) { return document.getElementById(id); }
+
+// ---- 解锁逻辑 ----
+function tryUnlock() {
+  var v = ($('passInput').value || '').trim();
+  if (v === ADMIN_PASS) {
+    $('lockOverlay').style.display = 'none';
+    $('mainContent').style.display = 'block';
+    loadData();
+  } else {
+    $('passErr').textContent = '口令不正确';
+  }
+}
+$('btnUnlock').addEventListener('click', tryUnlock);
+$('passInput').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') tryUnlock();
+});
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+function fmtNum(n) {
+  n = n || 0;
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function setState(msg, isErr) {
+  var box = $('stateBox');
+  box.style.display = 'block';
+  box.textContent = msg;
+  box.className = 'state-box' + (isErr ? ' error' : '');
+}
+function showTable() {
+  $('stateBox').style.display = 'none';
+  $('statsArea').style.display = 'block';
+}
+
+function loadData() {
+  setState('正在从 GitHub 拉取发布数据…');
+  fetch(API_ALL, { headers: { 'Accept': 'application/vnd.github+json' } })
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function (list) {
+      if (!Array.isArray(list) || list.length === 0) {
+        setState('还没有任何 Release。首个发布上传后，这里会自动展示下载量。');
+        return;
+      }
+      var total = 0, assetCount = 0;
+      var rows = [];
+      list.forEach(function (rel) {
+        var assets = rel.assets || [];
+        assetCount += assets.length;
+        assets.forEach(function (a) {
+          total += (a.download_count || 0);
+          rows.push({
+            tag: rel.tag_name || rel.name || '—',
+            date: rel.published_at,
+            asset: a.name,
+            dl: a.download_count || 0,
+            url: a.browser_download_url
+          });
+        });
+        // 如果某个 release 没有 asset，也展示一行
+        if (assets.length === 0) {
+          rows.push({ tag: rel.tag_name || rel.name || '—', date: rel.published_at, asset: '(无 asset)', dl: 0, url: null });
+        }
+      });
+
+      $('statTotal').textContent = fmtNum(total);
+      $('statReleases').textContent = list.length;
+      $('statAssets').textContent = assetCount;
+      var latest = list[0];
+      $('statLatest').textContent = latest ? (latest.tag_name || latest.name || '—') : '—';
+
+      var tbody = $('releaseTable');
+      tbody.innerHTML = '';
+      rows.forEach(function (r) {
+        var tr = document.createElement('tr');
+        var tdTag = document.createElement('td'); tdTag.textContent = r.tag;
+        var tdDate = document.createElement('td'); tdDate.textContent = fmtDate(r.date);
+        var tdAsset = document.createElement('td');
+        if (r.url) {
+          var a = document.createElement('a');
+          a.href = r.url; a.target = '_blank'; a.rel = 'noopener';
+          a.textContent = r.asset;
+          tdAsset.appendChild(a);
+        } else {
+          tdAsset.textContent = r.asset;
+        }
+        var tdDl = document.createElement('td');
+        tdDl.className = 'num';
+        tdDl.textContent = fmtNum(r.dl);
+        tr.appendChild(tdTag); tr.appendChild(tdDate); tr.appendChild(tdAsset); tr.appendChild(tdDl);
+        tbody.appendChild(tr);
+      });
+
+      showTable();
+    })
+    .catch(function (err) {
+      setState('加载失败：' + err.message + '。请检查网络后刷新重试。', true);
+    });
+}
+</script>
+</body>
+</html>
