@@ -5,9 +5,11 @@ android {
     namespace 'com.alibaba.mnn.tts'
     compileSdk 34
     ndkVersion "27.2.12479018"
-    sourceSets {
-        main.java.srcDirs += ['java']
-    }
+    // HNN CN ET: do NOT add the top-level 'java' demo folder as a source dir. Its only file
+    // (com/taobao/meta/avatar/tts/TtsService.kt) is also vendored by the app module with the
+    // same FQN, which makes D8 fail with "defined multiple times". The JNI symbols still live
+    // in libmnn_tts_jni.so and bind at runtime to the app's copy. The real library sources stay
+    // under the default src/main/java (MNNTTS.kt).
 
     defaultConfig {
         minSdk 21

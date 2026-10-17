@@ -134,3 +134,6 @@ app/src/main/assets/builtin_models
 
 *.keystore
 *.jks
+
+# HNN CN ET: libMNN is built from alibaba/MNN source by CI/local toolchain; do not commit binaries
+mnn/lib/**/*.so

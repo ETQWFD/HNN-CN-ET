@@ -14,6 +14,7 @@ import android.util.Log
 import androidx.core.content.FileProvider
 import timber.log.Timber
 import java.io.File
+import java.io.FileWriter
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.text.SimpleDateFormat
@@ -51,7 +52,7 @@ object AppLogger {
 
     private val diskFmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
 
-    fun init(context: Context) {
+    fun initialize(context: Context) {
         if (!planted.compareAndSet(false, true)) return
         appContext = context.applicationContext
 
@@ -217,7 +218,7 @@ object AppLogger {
         }
     }
 
-    private inner class ETTree : Timber.DebugTree() {
+    private class ETTree : Timber.DebugTree() {
         override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
             val resolvedTag = tag ?: "App"
             val fullMessage = if (t != null) {
