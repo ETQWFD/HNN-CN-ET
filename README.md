@@ -1,4 +1,16 @@
 # MNN Chat Android App
+
+> ## HNN CN ET (ET 改版)
+>
+> 这是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat) (Copyright (c) 2025 Frank Luo, MIT) 的第三方修改版，品牌名为 **HNN CN ET**。
+>
+> - 仓库：<https://github.com/ETQWFD/HNN-CN-ET>
+> - 官网 / 下载统计：<https://etqwfd.github.io/HNN-CN-ET/> （下载量面板：<https://etqwfd.github.io/HNN-CN-ET/dan.html>）
+> - Release APK：见仓库 [Releases](https://github.com/ETQWFD/HNN-CN-ET/releases)，通用包 `HNN-CN-ET-<版本>.apk`，同时包含 `armeabi-v7a`(32位) 与 `arm64-v8a`(64位) 原生库。
+> - 联系作者：<mailto:2416444244@qq.com> ｜ QQ 群：917902000
+> - 修改点：双 ABI 打包、应用内自更新（走本仓库 GitHub Releases，支持断点续传/失败重试/进度速度）、内置应用日志页（可复制/分享）、设置内“联系作者/加入QQ群”、模型下载健壮性增强（自动重定向、超时、206/200 正确处理）。
+> - 许可：保留上游 MIT 版权（见 `LICENSE`）；本次修改 Copyright (c) 2026 ET，详见 `NOTICE`。技术库 [MNN](https://github.com/alibaba/MNN) 版权归原作者。
+
 [簡体中文版本](./README_CN.md) | [繁體中文版本](./README_TW.md)
 
 [Download](#releases)  [下载](./README_CN.md#releases)

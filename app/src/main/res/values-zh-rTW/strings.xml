@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MNN Chat</string>
+    <string name="app_name">HNN CN ET</string>
     <string name="title_activity_main">MainActivity</string>
     <string name="navigation_drawer_open">開啟導覽抽屜</string>
     <string name="navigation_drawer_close">關閉導覽抽屜</string>
@@ -599,7 +599,7 @@
     <string name="update_available">有新版本</string>
     <string name="menu_copy_error_info">複製錯誤資訊</string>
     <string name="error_info_copied">錯誤資訊已複製到剪貼簿</string>
-    <string name="download_service_title">MNN Chat 下載服務</string>
+    <string name="download_service_title">HNN CN ET 下載服務</string>
     <string name="downloading_single_model">正在下載 %1$s</string>
     <string name="downloading_multiple_models">正在下載 %1$d 個模型</string>
     
@@ -634,7 +634,7 @@
     
     <!-- Privacy Policy Strings -->
     <string name="privacy_policy_title">當機資料採集確認</string>
-    <string name="privacy_policy_content">為了提升應用程式穩定性，MNN Chat 可透過 Firebase Crashlytics 採集當機與診斷資料。\n\n這些資料僅用於定位和修復當機、提升穩定性以及加快版本迭代。\n\n您可以自主選擇是否開啟：\n• 同意：允許上傳當機和診斷資料\n• 不同意：不上傳任何當機資料\n\n您的選擇不會影響應用程式核心功能的使用。</string>
+    <string name="privacy_policy_content">為了提升應用程式穩定性，HNN CN ET 可透過 Firebase Crashlytics 採集當機與診斷資料。\n\n這些資料僅用於定位和修復當機、提升穩定性以及加快版本迭代。\n\n您可以自主選擇是否開啟：\n• 同意：允許上傳當機和診斷資料\n• 不同意：不上傳任何當機資料\n\n您的選擇不會影響應用程式核心功能的使用。</string>
     <string name="privacy_policy_agree">我已了解並同意採集當機資料用於穩定性改進</string>
     <string name="privacy_policy_agree_button">同意並開啟</string>
     <string name="privacy_policy_disagree">不同意並繼續使用</string>
@@ -661,4 +661,30 @@
     <string name="save_image">儲存圖片</string>
     <string name="image_saved_to_gallery">圖片已儲存至相簿</string>
     <string name="failed_to_save_image">儲存圖片失敗</string>
+
+    <!-- HNN CN ET：關於 / 聯絡 / 日誌 / 自我更新 -->
+    <string name="brand_name">HNN CN ET</string>
+    <string name="contact_author">聯絡作者</string>
+    <string name="contact_author_email">2416444244@qq.com</string>
+    <string name="join_qq_group">加入 QQ 群（917902000）</string>
+    <string name="qq_group_open_failed">無法開啟 QQ 群連結，請手動開啟。</string>
+    <string name="feedback_logs">日誌 / 回饋日誌</string>
+    <string name="logs_activity_title">應用程式日誌</string>
+    <string name="logs_copy_all">全部複製</string>
+    <string name="logs_share">分享日誌</string>
+    <string name="logs_cleared">日誌已清空</string>
+    <string name="logs_copied">日誌已複製到剪貼簿</string>
+    <string name="logs_empty">暫無日誌。使用應用程式後日誌會顯示在這裡。</string>
+    <string name="logs_filter_hint">依關鍵字過濾…</string>
+    <string name="logs_level_all">全部</string>
+    <string name="logs_level_verbose">詳細</string>
+    <string name="logs_level_info">資訊</string>
+    <string name="logs_level_warn">警告</string>
+    <string name="logs_level_error">錯誤</string>
+    <string name="logs_share_chooser">分享日誌到…</string>
+    <string name="update_downloading_title">正在下載更新</string>
+    <string name="update_download_progress">%1$.0f%%  ·  %2$s/%3$s  ·  %4$s</string>
+    <string name="update_download_retrying">更新下載失敗，正在重試（%1$d/%2$d）…</string>
+    <string name="update_download_failed">更新下載失敗，請稍後重試。</string>
+    <string name="update_notes_empty">暫無更新說明。</string>
 </resources>

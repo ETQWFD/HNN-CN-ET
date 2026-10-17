@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MNN Chat</string>
+    <string name="app_name">HNN CN ET</string>
     <string name="title_activity_main">MainActivity</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
@@ -600,7 +600,7 @@
     <string name="update_available">有新版本</string>
     <string name="menu_copy_error_info">复制错误信息</string>
     <string name="error_info_copied">错误信息已复制到剪贴板</string>
-    <string name="download_service_title">MNN Chat 下载服务</string>
+    <string name="download_service_title">HNN CN ET 下载服务</string>
     <string name="downloading_single_model">正在下载 %1$s</string>
     <string name="downloading_multiple_models">正在下载 %1$d 个模型</string>
     
@@ -662,4 +662,30 @@
     <string name="save_image">保存图片</string>
     <string name="image_saved_to_gallery">图片已保存到相册</string>
     <string name="failed_to_save_image">保存图片失败</string>
+
+    <!-- HNN CN ET：关于 / 联系 / 日志 / 自更新 -->
+    <string name="brand_name">HNN CN ET</string>
+    <string name="contact_author">联系作者</string>
+    <string name="contact_author_email">2416444244@qq.com</string>
+    <string name="join_qq_group">加入 QQ 群（917902000）</string>
+    <string name="qq_group_open_failed">无法打开 QQ 群链接，请手动打开。</string>
+    <string name="feedback_logs">日志 / 反馈日志</string>
+    <string name="logs_activity_title">应用日志</string>
+    <string name="logs_copy_all">全部复制</string>
+    <string name="logs_share">分享日志</string>
+    <string name="logs_cleared">日志已清空</string>
+    <string name="logs_copied">日志已复制到剪贴板</string>
+    <string name="logs_empty">暂无日志。使用应用后日志会显示在这里。</string>
+    <string name="logs_filter_hint">按关键字过滤…</string>
+    <string name="logs_level_all">全部</string>
+    <string name="logs_level_verbose">详细</string>
+    <string name="logs_level_info">信息</string>
+    <string name="logs_level_warn">警告</string>
+    <string name="logs_level_error">错误</string>
+    <string name="logs_share_chooser">分享日志到…</string>
+    <string name="update_downloading_title">正在下载更新</string>
+    <string name="update_download_progress">%1$.0f%%  ·  %2$s/%3$s  ·  %4$s</string>
+    <string name="update_download_retrying">更新下载失败，正在重试（%1$d/%2$d）…</string>
+    <string name="update_download_failed">更新下载失败，请稍后重试。</string>
+    <string name="update_notes_empty">暂无更新说明。</string>
 </resources>

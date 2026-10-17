@@ -1,0 +1,31 @@
+HNN CN ET
+=========
+
+This product is a modified/derived work based on:
+
+  * longluo/MnnLlmChat  (Copyright (c) 2025 Frank Luo, MIT License)
+  * alibaba/MNN          (Copyright (c) Alibaba Group, Apache-2.0 / as shipped)
+
+The original MIT copyright notice and license text from longluo/MnnLlmChat are
+retained in the file `LICENSE` and must not be removed.
+
+Modifications for the HNN CN ET build:
+  Copyright (c) 2026 ET
+
+These modifications are also licensed under the MIT License. They include:
+  * Branding: user-facing application name changed to "HNN CN ET"
+    (package name, MNN library identifiers and technical attribution unchanged).
+  * 32-bit (armeabi-v7a) and 64-bit (arm64-v8a) native ABI packaging.
+  * In-app self-update against this repository's GitHub Releases (resumable,
+    with retry, progress/speed dialog and system installer integration).
+  * Built-in on-device application log viewer (level filter, keyword filter,
+    copy all, system share, uncaught-exception capture).
+  * Settings entries: "Contact Author" (mailto:2416444244@qq.com) and
+    "Join QQ Group".
+  * Model download robustness: automatic redirect following, explicit read/write
+    timeouts, correct HTTP 206 resume vs 200 restart handling, larger transfer
+    buffer (existing retry, SHA/etag verification and speed reporting retained).
+
+Contact: 2416444244@qq.com
+QQ group: 917902000
+Repository: https://github.com/ETQWFD/HNN-CN-ET

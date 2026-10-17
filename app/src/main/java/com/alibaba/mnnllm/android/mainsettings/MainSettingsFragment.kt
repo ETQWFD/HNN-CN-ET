@@ -4,6 +4,7 @@
 package com.alibaba.mnnllm.android.mainsettings
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -93,6 +94,7 @@ class MainSettingsFragment : Fragment() {
         setupCrashDiagnostics()
         setupResetApiConfig()
         setupUpdateAndVersion()
+        setupContactAndLogs()
         setupDebugMode(sharedPreferences)
     }
 
@@ -266,6 +268,32 @@ class MainSettingsFragment : Fragment() {
             binding.tvMnnVersion.text = version
         } catch (_: Exception) {
             binding.tvMnnVersion.text = "N/A"
+        }
+    }
+
+    private fun setupContactAndLogs() {
+        binding.btnContactAuthor.setOnClickListener {
+            val mailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("mailto:2416444244@qq.com")
+            }
+            try {
+                startActivity(Intent.createChooser(mailIntent, getString(R.string.contact_author)))
+            } catch (e: Exception) {
+                Toast.makeText(context, R.string.qq_group_open_failed, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.btnJoinQqGroup.setOnClickListener {
+            val groupUrl = "http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=U-cTOkqDyq6AxSaXIw3JKzW6z-CpI6-G&authKey=jNbP%2FSn08WY%2FU9or2kiKqewkNeXfoMvnVUXda7k98aunYkYwn2J9zZlCeg0OtKjK&noverify=0&group_code=917902000"
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(groupUrl)))
+            } catch (e: Exception) {
+                Toast.makeText(context, R.string.qq_group_open_failed, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.btnViewLogs.setOnClickListener {
+            startActivity(Intent(requireContext(), com.alibaba.mnnllm.android.log.LogsActivity::class.java))
         }
     }
 

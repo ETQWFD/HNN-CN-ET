@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MNN Chat</string>
+    <string name="app_name">HNN CN ET</string>
     <string name="title_activity_main">MainActivity</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
@@ -613,7 +613,7 @@
     <string name="update_available">Update Available</string>
     <string name="menu_copy_error_info">Copy Error Info</string>
     <string name="error_info_copied">Error information copied to clipboard</string>
-    <string name="download_service_title">MNN Chat Download Service</string>
+    <string name="download_service_title">HNN CN ET Download Service</string>
     <string name="downloading_single_model">Downloading %1$s</string>
     <string name="downloading_multiple_models">Downloading %1$d models</string>
     
@@ -675,4 +675,31 @@
     <string name="save_image">Save Image</string>
     <string name="image_saved_to_gallery">Image saved to gallery</string>
     <string name="failed_to_save_image">Failed to save image</string>
+
+    <!-- HNN CN ET: About / Contact / Logs / Self-update -->
+    <string name="brand_name">HNN CN ET</string>
+    <string name="contact_author">Contact Author</string>
+    <string name="contact_author_email">2416444244@qq.com</string>
+    <string name="join_qq_group">Join QQ Group (917902000)</string>
+    <string name="qq_group_open_failed">Could not open QQ group link. Please open it manually.</string>
+    <string name="feedback_logs">Logs / Feedback Logs</string>
+    <string name="logs_activity_title">App Logs</string>
+    <string name="logs_copy_all">Copy All</string>
+    <string name="logs_share">Share Log</string>
+    <string name="logs_cleared">Logs cleared</string>
+    <string name="logs_copied">Logs copied to clipboard</string>
+    <string name="logs_empty">No logs yet. Use the app and logs will appear here.</string>
+    <string name="logs_filter_hint">Filter by keyword…</string>
+    <string name="logs_level_all">All</string>
+    <string name="logs_level_verbose">Verbose</string>
+    <string name="logs_level_info">Info</string>
+    <string name="logs_level_warn">Warn</string>
+    <string name="logs_level_error">Error</string>
+    <string name="logs_share_chooser">Share logs via…</string>
+    <string name="update_downloading_title">Downloading update</string>
+    <string name="update_download_progress">%1$.0f%%  ·  %2$s/%3$s  ·  %4$s</string>
+    <string name="update_download_retrying">Update download failed, retrying (%1$d/%2$d)…</string>
+    <string name="update_download_failed">Failed to download update. Please try again later.</string>
+    <string name="update_notes_empty">No release notes provided.</string>
+    <string name="update_channel_url">https://api.github.com/repos/ETQWFD/HNN-CN-ET/releases/latest</string>
 </resources>
