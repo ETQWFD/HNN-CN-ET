@@ -132,3 +132,5 @@ app/src/main/assets/builtin_models
 
 
 
+*.keystore
+*.jks

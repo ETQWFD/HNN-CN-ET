@@ -26,7 +26,10 @@ set(MNN_SOURCE_ROOT ${CMAKE_CURRENT_LIST_DIR}/../mnn)
 #set(MNN_INSTALL_ROOT "${MNN_SOURCE_ROOT}/project/android/build_64")
 #set(LIB_PATH "${MNN_INSTALL_ROOT}/lib")
 
-set(LIB_PATH "${MNN_SOURCE_ROOT}/lib")
+set(LIB_PATH "${MNN_SOURCE_ROOT}/lib/${ANDROID_ABI}")
+if(NOT EXISTS "${LIB_PATH}/libMNN.so")
+    set(LIB_PATH "${MNN_SOURCE_ROOT}/lib")
+endif()
 
 set(MNN_TTS_SOURCE_PATH ${CMAKE_CURRENT_LIST_DIR}/src/main/cpp)
 

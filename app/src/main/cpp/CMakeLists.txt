@@ -53,7 +53,11 @@ set(MNN_SOURCE_ROOT "${MNNCHAT_REPO_ROOT}/mnn")
 
 set (MNN_INSTALL_ROOT "${MNN_SOURCE_ROOT}")
 
-set(LIB_PATH "${MNN_INSTALL_ROOT}/lib")
+set(LIB_PATH "${MNN_INSTALL_ROOT}/lib/${ANDROID_ABI}")
+if(NOT EXISTS "${LIB_PATH}/libMNN.so")
+    # Fallback: allow a single prebuilt libMNN.so at mnn/lib/ for local dev
+    set(LIB_PATH "${MNN_INSTALL_ROOT}/lib")
+endif()
 
 #set (MNN_ROOT "${CMAKE_SOURCE_DIR}/../../../../../../../")
 message(INFO "MNN_SOURCE_ROOT: ${MNN_SOURCE_ROOT}")
