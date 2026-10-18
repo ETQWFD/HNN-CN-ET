@@ -39,7 +39,9 @@ HNN CN ET 是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 ## 更新日志
 
-### v1.0.5（2026-10-18）
+### v1.0.7（2026-10-18）
+- v1.0.7: MCP config supports an optional access token (Bearer); non-JSON responses (e.g. Unauthorized) now show a clear reason instead of a parse error.
+### v1.0.6（2026-10-18）
 - v1.0.6: Fix MCP connection (allow cleartext HTTP for LAN http://IP:port servers); Agent now asks for the accessibility permission and automatically continues the pending task after it is granted; real MCP tool calls via "call tool <name> k=v".
 - MCP：测试显示行内状态与失败原因（超时/无法连接），新增读取/列出/删除/修改文件，支持直接调用 MCP 工具（如：调用工具 工具名 参数=值）。
 - 聊天：发送消息后显示「正在思考…」加载提示，回复不再空白。

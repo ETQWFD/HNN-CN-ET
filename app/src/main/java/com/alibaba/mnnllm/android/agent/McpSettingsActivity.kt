@@ -69,6 +69,7 @@ class McpSettingsActivity : AppCompatActivity() {
                     val reason = when (error) {
                         "timeout" -> getString(R.string.mcp_err_timeout)
                         "connect" -> getString(R.string.mcp_err_connect)
+                        "unauthorized" -> getString(R.string.mcp_err_unauthorized)
                         else -> getString(R.string.mcp_test_fail, error)
                     }
                     statusView?.text = reason
@@ -88,6 +89,7 @@ class McpSettingsActivity : AppCompatActivity() {
         val view = LayoutInflater.from(this).inflate(R.layout.dialog_mcp_add, null)
         val nameInput = view.findViewById<EditText>(R.id.input_name)
         val urlInput = view.findViewById<EditText>(R.id.input_url)
+        val tokenInput = view.findViewById<EditText>(R.id.input_token)
         AlertDialog.Builder(this)
             .setTitle(R.string.mcp_add)
             .setView(view)
@@ -101,7 +103,8 @@ class McpSettingsActivity : AppCompatActivity() {
                 if (!url.startsWith("http://") && !url.startsWith("https://")) {
                     url = "http://$url"
                 }
-                servers.add(McpServer(name, url))
+                val token = tokenInput.text.toString().trim()
+                servers.add(McpServer(name, url, token))
                 McpConfigStore.saveServers(this, servers)
                 renderList()
             }

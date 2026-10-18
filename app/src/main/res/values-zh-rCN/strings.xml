@@ -722,6 +722,8 @@
     <string name="mcp_name_hint">服务器名称</string>
     <string name="mcp_url_hint">服务器地址（http://主机:端口）</string>
     <string name="mcp_empty">还没有 MCP 服务器，点击「添加」创建一个。</string>
+    <string name="mcp_token_hint">访问令牌（可选，Bearer 认证）</string>
+    <string name="mcp_err_unauthorized">未授权：服务器要求访问令牌，请在配置中填写令牌后再测试。</string>
     <string name="mcp_test_ok">连接成功，可用工具：%1$d 个</string>
     <string name="mcp_test_fail">连接失败：%1$s</string>
     <string name="agent_accessibility_description">HNN CN ET Agent 无障碍服务。开启 Agent 工作模式并授权后，可帮你操作其他应用。</string>

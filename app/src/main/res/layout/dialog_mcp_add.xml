@@ -21,4 +21,14 @@
         android:hint="@string/mcp_url_hint"
         android:inputType="textUri"
         android:maxLines="1" />
+
+    <!-- HNN CN ET v1.0.7: optional access token (Bearer) for protected MCP servers -->
+    <EditText
+        android:id="@+id/input_token"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="@string/mcp_token_hint"
+        android:inputType="text"
+        android:maxLines="1" />
 </LinearLayout>
