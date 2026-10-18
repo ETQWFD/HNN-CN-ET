@@ -82,6 +82,12 @@ class MainSettingsFragment : Fragment() {
             sharedPreferences.edit().putBoolean("stop_download_on_chat", isChecked).apply()
         }
 
+        // HNN CN ET v1.0.2: AI 模型审核开关（默认关闭 → 原生对话，不经过任何附加审核）
+        binding.itemAiSafetyFilter.isChecked = MainSettings.isAiSafetyFilterEnabled(requireContext())
+        binding.itemAiSafetyFilter.setOnCheckedChangeListener { isChecked ->
+            MainSettings.setAiSafetyFilterEnabled(requireContext(), isChecked)
+        }
+
         setupDownloadProvider(sharedPreferences)
         setupVoiceModelManagement()
         setupStorageManagement()
@@ -263,12 +269,17 @@ class MainSettingsFragment : Fragment() {
             }
         }
 
-        try {
-            val version = MNN.getVersion()
-            binding.tvMnnVersion.text = version
+        // HNN CN ET v1.0.2: display as "HNN <version> · 基于 MNN <version>" while keeping real attribution.
+        val mnnVersion = try {
+            MNN.getVersion()
         } catch (_: Exception) {
-            binding.tvMnnVersion.text = "N/A"
+            "3.6.0"
         }
+        binding.tvMnnVersion.text = getString(
+            R.string.engine_label_format,
+            AppUtils.getAppVersionName(requireContext()),
+            mnnVersion
+        )
     }
 
     private fun setupContactAndLogs() {

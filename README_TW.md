@@ -1,89 +1,72 @@
-# MNN Chat Android 應用程式
-[簡體中文版本](./README_CN.md)
-
-[下載](#releases)
-
-[iOS App](../../iOS/MNNLLMChat/README-ZH.md)
-
-## 簡介
-這是我們的全功能多模態大型語言模型 (LLM) Android 應用程式。
-
 <p align="center">
-  <img width="20%" alt="Icon"  src="./assets/image_home_new.jpg" style="margin: 0 10px;">
-  <img width="20%" alt="Icon" src="./assets/image_diffusion_new.jpg" style="margin: 0 10px;">
-  <img width="20%" alt="Icon" src="./assets/image_sound_new.jpg" style="margin: 0 10px;">
-  <img width="20%" alt="Icon" src="./assets/image_image_new.jpg" style="margin: 0 10px;">
+  <img src="docs/assets/logo.svg" width="120" alt="HNN CN ET" />
 </p>
 
+<h1 align="center">HNN CN ET</h1>
 
-### 功能亮點
+<p align="center">
+  <b>在安卓手機上本地跑大模型聊天</b><br/>
+  不用聯網、不用付費、聊天記錄不上傳 · 32 位舊裝置也能用
+</p>
 
-+ **多模態支援：** 提供多種任務功能，包括文字生成文字、圖像生成文字、音訊轉文字，以及文字生成圖像（基於擴散模型）。
+<p align="center">
+  <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/latest"><img alt="Release" src="https://img.shields.io/badge/下載-最新APK-00B38A" /></a>
+  <a href="https://etqwfd.github.io/HNN-CN-ET/"><img alt="Website" src="https://img.shields.io/badge/官網-etqwfd.github.io/HNN--CN--ET-22D3EE" /></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-green" /></a>
+</p>
 
-+ **CPU 推理最佳化：** 在 Android 平台上，MNN-LLM 展現了卓越的 CPU 效能；預填充 (prefill) 速度相較於 llama.cpp 提高了 8.6 倍，相較於 fastllm 提升了 20.5 倍；解碼速度分別快了 2.3 倍與 8.9 倍。下圖為 llama.cpp 與 MNN-LLM 的比較。
+---
 
-+ **廣泛的模型相容性：** 支援多種領先的模型提供商，包括 Qwen、Gemma、Llama（涵蓋 TinyLlama 與 MobileLLM）、Baichuan、Yi、DeepSeek、InternLM、Phi、ReaderLM 與 Smolm。
+## 這是什麼
 
-+ **本機端運作：** 完全在裝置本機執行，確保資料隱私，無需將資訊上傳至外部伺服器。
+HNN CN ET 是基於 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)（MIT，Copyright © 2025 Frank Luo）和 [alibaba/MNN](https://github.com/alibaba/MNN) 二次開發的安卓端側大模型聊天應用。
 
+- 官網：<https://etqwfd.github.io/HNN-CN-ET/>
+- 下載統計：<https://etqwfd.github.io/HNN-CN-ET/dan.html>
+- Release：<https://github.com/ETQWFD/HNN-CN-ET/releases>
+- 聯絡作者：<mailto:2416444244@qq.com> · QQ 群：917902000
 
-## 使用說明
-您可以透過 [Releases](#releases) 下載應用程式，或自行[建置](#開發)。
-+ 安裝應用程式後，您可以瀏覽所有支援的模型，下載所需模型，並直接在 App 內與模型互動。
-+ 此外，您可以透過側邊欄存取對話歷史，輕鬆查看與管理先前的對話記錄。
+## 功能
 
-!!!warning!!! 此版本目前僅在 OnePlus 13 和小米 14 Ultra 上進行過測試。由於大型語言模型 (LLM) 對裝置效能要求較高，許多低階配置裝置可能會遇到以下問題：推理速度緩慢、應用程式不穩定甚至無法執行。無法保證其他裝置的穩定性。如果您在使用過程中遇到問題，請隨時提交 Issue 以獲得協助。
+- **端側離線聊天**：模型在本地執行，聊天記錄只存在手機裡，不上傳任何伺服器。
+- **真實 32 位支援**：APK 同時包含 `armeabi-v7a`（32 位）與 `arm64-v8a`（64 位）原生庫，核心庫（libMNN / libmnnllmapp / libmnn_tts）與語音辨識庫（libsherpa-mnn-jni，ASR）雙架構齊備。
+- **應用內自動更新**：啟動時檢查 GitHub Releases，支援斷點續傳、失敗重試、進度與速度顯示。
+- **日誌頁**：記錄啟動、下載、載入、推論和錯誤，可一鍵複製，方便排查問題。
+- **模型下載器**：內建模型下載，顯示進度/速度，支援斷點續傳與檔案校驗。
+- **公告系統**：官方公告發布後，App 啟動時彈窗展示一次。
+- **AI 模型審核開關**：預設關閉，直接使用所選模型原生對話；開啟後可使用安全審核（Guard）模型。
+- **聯絡作者**：設定頁「聯絡作者」一鍵寄信，也可加入 QQ 群。
 
+## 更新日誌
 
-## 開發
-+ 準備環境：
-  + Android Studio
-  + NDK（與 `app/build.gradle` 保持一致，目前為 `27.2.12479018`）
-  + `export ANDROID_NDK=${YOUR_NDK_ROOT}`
-+ 複製程式碼庫：
-  ```shell
-    git clone https://github.com/alibaba/MNN.git
-  ```
-+ 建置函式庫：
-  ```shell
-  cd project/android
-  mkdir build_64
-  cd build_64
-  ../build_64.sh "-DMNN_LOW_MEMORY=true -DMNN_CPU_WEIGHT_DEQUANT_GEMM=true -DMNN_BUILD_LLM=true -DMNN_SUPPORT_TRANSFORMER_FUSE=true -DMNN_ARM82=true -DMNN_USE_LOGCAT=true -DMNN_OPENCL=true -DLLM_SUPPORT_VISION=true -DMNN_BUILD_OPENCV=true -DMNN_IMGCODECS=true -DLLM_SUPPORT_AUDIO=true -DMNN_BUILD_AUDIO=true -DMNN_BUILD_DIFFUSION=ON -DMNN_SEP_BUILD=OFF -DCMAKE_INSTALL_PREFIX=."
-  make install
-  ```
-+ 建置 Android 應用程式專案並安裝：
-  ```shell
-  cd ../../../apps/Android/MnnLlmChat
-  ./installDebug.sh
-  ```
+### v1.0.2（2026-10-18）
+- 回饋改為直接寄信給營運團隊（2416444244@qq.com），不再跳轉 GitHub Issue。
+- Star 彈窗指向 HNN CN ET 倉庫。
+- 補齊標籤翻譯：安全審核 / 語音辨識 / 語音合成 / 英語 / 中英雙語。
+- 安全審核模型單獨歸類，不再誤當聊天模型。
+- 新增「AI 模型審核」開關（預設關閉）。
+- 新增公告系統。
+- 生成卡住逾時提示，不再一直轉圈。
+- 引擎顯示：HNN 1.0.2 · 基於 MNN 3.6.0。
+- 介面統一為青綠色品牌色。
 
-## 版本發佈 (Releases)
+### v1.0.1（2026-10-18）
+- 補齊 32 位語音辨識原生庫。
 
-*(由於篇幅限制，以下版本說明已精簡翻譯，保留連結與關鍵亮點)*
+### v1.0.0（2026-10-17）
+- 首個 ET 版：補齊 32 位 armeabi-v7a 原生庫；新增應用內自動更新、日誌頁、模型下載斷點續傳；品牌統一為 HNN CN ET。
 
-### Version 0.8.2.2
-+ 點擊這裡 [下載](https://meta.alicdn.com/data/mnn/apks/mnn_chat_0_8_2_2.apk)
-+ 更新亮點：更新 MNN runtime，匯入最新的 CPU LinearAttention 與 Arm82 fp16 最佳化路徑；提升思考模式在提示詞與陣列拼接場景下的相容性；為 OpenCL 與 Metal 執行路徑補充 TopKV2 後端支援。
+## 建置
 
-### Version 0.8.2.1
-+ 點擊這裡 [下載](https://meta.alicdn.com/data/mnn/apks/mnn_chat_0_8_2_1.apk)
-+ 問題修復：修復 Android 在預編譯 runtime 下可能只輸出單個 Token 或第二輪無法繼續生成的問題。
+- 環境：Android Studio / JDK 17+ / NDK `27.2.12479018` / Gradle 8.9
+- `local.properties` 指向 Android SDK 目錄
+- 簽名（release）：環境變數 `KEYSTORE_FILE` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` / `KEY_PASSWORD`
+- 建置：`./gradlew :app:assembleStandardRelease`
 
-### Version 0.8.2
-+ 點擊這裡 [下載](https://meta.alicdn.com/data/mnn/apks/mnn_chat_0_8_2.apk)
-+ 更新亮點：支援語音對話中即時使用視覺輸入；復原對話頁面返回後的自動捲動。
+## 授權
 
-*(其餘舊版本亦可依照此模式進行翻譯)*
+- 上游：longluo/MnnLlmChat，MIT，Copyright © 2025 Frank Luo
+- 推論引擎：alibaba/MNN，版權歸原作者
+- 本次修改：Copyright © 2026 ET，詳見 [NOTICE](NOTICE) 與 [LICENSE](LICENSE)
 
-## 關於 MNN-LLM
-MNN-LLM 是一個多功能的推理框架，旨在最佳化並加速大型語言模型在行動裝置與本機 PC 上的部署。透過模型量化、混合儲存與硬體特定最佳化等創新措施，解決高記憶體消耗與計算成本等挑戰。如需更詳細資訊，請參考論文：[MNN-LLM: A Generic Inference Engine for Fast Large Language Model Deployment on Mobile Devices](https://dl.acm.org/doi/pdf/10.1145/3700410.3702126)
-
-## 致謝
-該專案基於以下開源專案：
-+ [progress-dialog](https://github.com/techinessoverloaded/progress-dialog)
-+ [okhttp](https://github.com/square/okhttp)
-+ [retrofit](https://github.com/square/retrofit)
-+ [Android-SpinKit](https://github.com/ybq/Android-SpinKit)
-+ [expandable-fab](https://github.com/nambicompany/expandable-fab)
-+ [Android-Wave-Recorder](https://github.com/squti/Android-Wave-Recorder)
+English [README.md](README.md) · 简体中文 [README_CN.md](README_CN.md)

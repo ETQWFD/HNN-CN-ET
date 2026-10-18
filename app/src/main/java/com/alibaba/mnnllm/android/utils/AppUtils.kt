@@ -3,6 +3,7 @@
 package com.alibaba.mnnllm.android.utils
 
 import android.content.Context
+import android.os.Build
 
 object AppUtils {
     //get app version name
@@ -10,5 +11,17 @@ object AppUtils {
         val packageManager = context.packageManager
         val packageInfo = packageManager.getPackageInfo(context.packageName, 0)
         return packageInfo.versionName!!
+    }
+
+    //get app version code
+    fun getAppVersionCode(context: Context): Long {
+        val packageManager = context.packageManager
+        val packageInfo = packageManager.getPackageInfo(context.packageName, 0)
+        return packageInfo.longVersionCode
+    }
+
+    //get device supported ABIs joined by comma
+    fun getAbiSummary(): String {
+        return Build.SUPPORTED_ABIS.joinToString(", ")
     }
 }

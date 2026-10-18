@@ -69,8 +69,8 @@ android {
         applicationId "com.alibaba.mnnllm.android"
         minSdk 26
         targetSdk 35
-        versionCode 10001
-        versionName "1.0.1"
+        versionCode 10002
+        versionName "1.0.2"
         buildConfigField "boolean", "ENABLE_FIREBASE", enableFirebase ? "true" : "false"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -171,7 +171,8 @@ android {
                 'META-INF/io.netty.versions.properties',
                 'META-INF/DEPENDENCIES',
                 'META-INF/LICENSE',
-                'META-INF/MANIFEST.MF'
+                'META-INF/MANIFEST.MF',
+                '**/0B.jpg'
         ])
         // Exclude large model files from compression
         jniLibs {

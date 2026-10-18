@@ -16,12 +16,12 @@
     <color name="colorTextBlack">#E6FFFFFF</color>
     <color name="colorTextInfo">#B3FFFFFF</color>
     <color name="colorGreen">#A5DE40</color>
-    <color name="mainBlue">#64B5F6</color>
+    <color name="mainBlue">#4DD0B0</color>
     <color name="color_background">#1c1c1c</color>
     <color name="color_foreground">@android:color/white</color>
     <bool name="is_day_mode">false</bool>
     <bool name="is_night_mode">true</bool>
-    <color name="app_theme_color">#329BEA</color>
+    <color name="app_theme_color">#00B38A</color>
     <color name="color_on_surface_variant">#999999</color>
     <color name="my_color_surface_variant">#222222</color>
     <color name="my_color_surface">#EEEEEE</color>
@@ -32,7 +32,7 @@
     <color name="pinned_overlay_color">#333333</color>
 
     <!-- UED颜色 (夜间模式) -->
-    <color name="ued_blue">#4FA8FF</color>
+    <color name="ued_blue">#00B38A</color>
     <color name="label_not_selected">#F1F1F1</color>
 
     <!-- Message background (夜间模式) -->
@@ -47,8 +47,8 @@
     <color name="chip_background">#2c2c2e</color>
     
     <!-- Benchmark Performance Metric Colors (夜间模式) -->
-    <color name="benchmark_gradient_start">#667eea</color>
-    <color name="benchmark_gradient_end">#764ba2</color>
+    <color name="benchmark_gradient_start">#00B38A</color>
+    <color name="benchmark_gradient_end">#00796B</color>
     <color name="benchmark_warning">#f59e0b</color>
     <color name="benchmark_success">#10b981</color>
     <color name="benchmark_error">#ef4444</color>
@@ -56,6 +56,6 @@
     <color name="benchmark_light">#1f2937</color>
     <color name="benchmark_card_bg">#1c1b1f</color>
     <color name="benchmark_card_border">#3f3f46</color>
-    <color name="benchmark_accent">#6366f1</color>
+    <color name="benchmark_accent">#00B38A</color>
 
 </resources>

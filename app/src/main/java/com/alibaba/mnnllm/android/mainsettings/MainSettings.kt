@@ -45,6 +45,21 @@ object MainSettings {
     }
 
     /**
+     * HNN CN ET v1.0.2: AI 模型审核开关。
+     * 开启后可使用安全审核(Guard)模型对对话进行过滤；
+     * 关闭（默认）时直接使用所选模型原生对话，不经过任何附加审核。
+     */
+    fun isAiSafetyFilterEnabled(context: Context): Boolean {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        return sharedPreferences.getBoolean("ai_safety_filter", false)
+    }
+
+    fun setAiSafetyFilterEnabled(context: Context, enabled: Boolean) {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        sharedPreferences.edit().putBoolean("ai_safety_filter", enabled).apply()
+    }
+
+    /**
      * Get the default TTS model ID
      */
     fun getDefaultTtsModel(context: Context): String? {

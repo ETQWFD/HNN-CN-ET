@@ -99,7 +99,7 @@ class LogAdapter : RecyclerView.Adapter<LogAdapter.LogViewHolder>() {
      * Find file in project
      */
     private fun findFileInProject(fileName: String): String? {
-        val projectRoot = "c:/Project/github/AIddlx/0528/MNN/apps/Android/MnnLlmChat"
+        val projectRoot = "/github/ETQWFD/HNN-CN-ET"
         
         // Recursively search for file
         return searchFileRecursively(java.io.File("$projectRoot/app/src/main"), fileName)

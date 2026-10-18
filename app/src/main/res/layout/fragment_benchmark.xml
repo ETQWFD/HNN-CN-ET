@@ -840,7 +840,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="https://github.com/alibaba/MNN"
+                                android:text="https://github.com/ETQWFD/HNN-CN-ET"
                                 android:textColor="@color/benchmark_secondary"
                                 android:textSize="12sp" />
 

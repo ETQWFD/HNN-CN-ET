@@ -40,6 +40,7 @@ import com.alibaba.mnnllm.android.modelist.ModelListFragment
 import com.alibaba.mnnllm.android.modelmarket.ModelMarketFragment
 import com.alibaba.mnnllm.android.modelmarket.ModelRepository
 import com.alibaba.mnnllm.android.update.UpdateChecker
+import com.alibaba.mnnllm.android.update.AnnouncementManager
 import com.alibaba.mnnllm.android.utils.AnalyticsTracker
 import com.alibaba.mnnllm.android.utils.CrashUtil
 import com.alibaba.mnnllm.android.utils.GithubUtils
@@ -418,6 +419,8 @@ class MainActivity : AppCompatActivity(), MainFragmentManager.FragmentLifecycleL
         expandableFabLayout = findViewById(R.id.expandable_fab_layout)
         updateChecker = UpdateChecker(this)
         updateChecker!!.checkForUpdates(this, false)
+        // HNN CN ET v1.0.2: show each new announcement once at startup
+        AnnouncementManager.checkAndShow(this)
         mainFragmentManager = MainFragmentManager(this, R.id.main_fragment_container, bottomNav, this, this)
         mainFragmentManager.initialize(savedInstanceState)
         bottomNav.post { setDrawerEnabled(bottomNav.getSelectedTab() != BottomTabBar.Tab.BENCHMARK) }

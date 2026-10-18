@@ -4,7 +4,7 @@
     <string name="navigation_drawer_open">開啟導覽抽屜</string>
     <string name="navigation_drawer_close">關閉導覽抽屜</string>
     <string name="action_settings">設定</string>
-    <string name="main_describe">mnn-llm</string>
+    <string name="main_describe">hnn-llm</string>
     <string name="model_loading">模型載入中…</string>
     <string name="model_load_failed">模型載入失敗: %1$s</string>
     <string name="download_not_started">%1$s</string>
@@ -26,10 +26,10 @@
     <string name="input_messages">輸入訊息</string>
     <string name="input_face_image_hint">請輸入人臉圖片</string>
     <string name="send">傳送</string>
-    <string name="raise_issue">回報問題 (Issue)</string>
-    <string name="star_project">在 GitHub 上加星號 (Star)</string>
-    <string name="star_project_confirm_title">為 MNN 專案給予 Star</string>
-    <string name="star_project_confirm_message">在 GitHub 上給予 Star 以支持我們！</string>
+    <string name="raise_issue">回報給 HNN CN ET 營運團隊</string>
+    <string name="star_project">為 HNN CN ET 專案給予 Star</string>
+    <string name="star_project_confirm_title">為 HNN CN ET 專案給予 Star</string>
+    <string name="star_project_confirm_message">在 GitHub 上為 HNN CN ET 專案點亮 Star，支持我們！</string>
     <string name="resume_all_downloads">復原所有未完成的下載</string>
     <string name="history_cleard">歷史記錄已清除</string>
     <string name="press_to_chat">按住說話</string>
@@ -109,7 +109,7 @@
     <string name="copy_config">複製配置</string>
     <string name="current_version">目前版本: %1$s</string>
     <string name="current_version_check_update">目前版本: %1$s (點擊檢查更新)</string>
-    <string name="mnn_version">MNN 引擎版本</string>
+    <string name="mnn_version">HNN 引擎</string>
     <string name="select_download_provider">選擇下載提供商</string>
     <string name="settings_complete">強烈建議刪除未完成的下載任務重新開始，否則可能會產生資料不一致的問題。</string>
     <string name="stop_download_tasks_when_chat">對話時停止下載任務</string>
@@ -507,10 +507,10 @@
     <string name="test_tag_creation">測試標籤建立</string>
     <string name="test_tag_mapper">測試標籤映射器</string>
     <string name="test_get_all_tags">測試取得所有標籤</string>
-    <string name="mnn_local_model">mnn-本機</string>
+    <string name="mnn_local_model">hnn-本機</string>
     <string name="assistant_role">助理</string>
     <string name="stop_finish_reason">停止</string>
-    <string name="project_path">c:/Project/github/AIddlx/0528/MNN/apps/Android/MnnLlmChat</string>
+    <string name="project_path">https://github.com/ETQWFD/HNN-CN-ET</string>
     <string name="default_localhost_ip">127.0.0.1</string>
     <string name="listen_all_ip">0.0.0.0</string>
     <string name="tts_service_tag">TTS 服務</string>
@@ -579,8 +579,8 @@
     <string name="failed_to_open_url">無法開啟連結</string>
     
     <!-- Report Issue Dialog Strings -->
-    <string name="report_issue_confirm_title">確認</string>
-    <string name="report_issue_confirm_message">是否確認在 GitHub 上提 Issue？</string>
+    <string name="report_issue_confirm_title">傳送回饋</string>
+    <string name="report_issue_confirm_message">將開啟郵件傳送給 HNN CN ET 營運團隊（2416444244@qq.com），郵件會自動附上版本與裝置資訊，是否繼續？</string>
     <string name="confirm">確認</string>
 
     <!-- Leaderboard Strings -->
@@ -613,7 +613,7 @@
     <string name="total_tokens_title">總時間</string>
     <string name="total_tokens_subtitle">完成時間</string>
     <string name="benchmark_config_title">基準測試配置</string>
-    <string name="powered_by_mnn">Powered By MNN</string>
+    <string name="powered_by_mnn">基於 MNN 3.6.0</string>
     <string name="benchmark_results_title">基準測試結果</string>
     <string name="performance_analysis_complete">效能分析完成</string>
     <string name="completed">完成時間</string>
@@ -687,4 +687,24 @@
     <string name="update_download_retrying">更新下載失敗，正在重試（%1$d/%2$d）…</string>
     <string name="update_download_failed">更新下載失敗，請稍後重試。</string>
     <string name="update_notes_empty">暫無更新說明。</string>
+
+    <!-- HNN CN ET v1.0.2: feedback / AI audit / announcements / model types -->
+    <string name="feedback_email_subject">HNN CN ET 問題回報</string>
+    <string name="feedback_email_chooser">選擇應用程式傳送回饋…</string>
+    <string name="feedback_no_mail_app">找不到郵件應用程式，電子郵件地址已複製到剪貼簿。</string>
+    <string name="ai_safety_filter_title">AI 模型審核</string>
+    <string name="ai_safety_filter_summary">開啟後對話將經過安全審核模型過濾；關閉後直接使用所選模型原生對話（預設關閉）。</string>
+    <string name="tag_safety">安全審核</string>
+    <string name="tag_tts">語音合成</string>
+    <string name="tag_asr">語音辨識</string>
+    <string name="tag_english">英語</string>
+    <string name="tag_bilingual">中英雙語</string>
+    <string name="tag_chat">對話</string>
+    <string name="guard_model_not_chat">該模型為安全審核模型，不能用於一般對話。</string>
+    <string name="guard_model_filter_off">該模型為安全審核模型。請在設定中開啟「AI 模型審核」後再使用。</string>
+    <string name="announcement_title">公告</string>
+    <string name="announcement_dismiss">知道了</string>
+    <string name="view_announcement">查看最新公告</string>
+    <string name="engine_label_format">HNN %1$s · 基於 MNN %2$s</string>
+    <string name="generation_timeout_message">產生逾時：模型在 180 秒內未產生回覆。請重試，或改用較小的模型。</string>
 </resources>

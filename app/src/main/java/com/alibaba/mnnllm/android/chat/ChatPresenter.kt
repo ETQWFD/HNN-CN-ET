@@ -45,6 +45,11 @@ class ChatPresenter(
     private val presenterScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var generateListener:GenerateListener? = null
     private val additionalListeners = mutableListOf<GenerateListener>()
+
+    // HNN CN ET v1.0.2: first-token stall watchdog.
+    // If no progress is observed within this window, generation is reported as timed out.
+    @Volatile
+    private var firstProgressObserved = false
     
     /**
      * Get LLM session instance
@@ -236,6 +241,7 @@ class ChatPresenter(
         generateResultProcessor.generateBegin()
         val result = chatSession.generate(prompt, mapOf(), object: GenerateProgressListener {
             override fun onProgress(progress: String?): Boolean {
+                firstProgressObserved = true
                 generateResultProcessor.process(progress)
                 chatActivity.lifecycleScope.launch {
                     this@ChatPresenter.generateListener?.onLlmGenerateProgress(progress, generateResultProcessor)
@@ -285,7 +291,8 @@ class ChatPresenter(
     suspend fun requestGenerate(userData: ChatDataItem, generateListener: GenerateListener): HashMap<String, Any> {
         this.generateListener = generateListener
         val prompt = PromptUtils.generateUserPrompt(userData)
-        
+        firstProgressObserved = false
+
         // Ensure user input is saved first
         try {
             if (this.sessionName.isNullOrEmpty()) {
@@ -299,10 +306,35 @@ class ChatPresenter(
             
             this.generateListener?.onGenerateStart()
             additionalListeners.forEach { it.onGenerateStart() }
-            
-            val result = presenterScope.async {
+
+            // HNN CN ET v1.0.2: stall watchdog.
+            // If generation produces no first token within the timeout, report a
+            // friendly timeout error instead of leaving the UI stuck at "thinking".
+            val generation = presenterScope.async {
                 return@async submitRequest(prompt, userData)
-            }.await()
+            }
+            val watchdog = presenterScope.launch {
+                kotlinx.coroutines.delay(FIRST_TOKEN_TIMEOUT_MS)
+                if (!firstProgressObserved && generation.isActive) {
+                    Log.w(TAG, "Generation stalled: no progress within $FIRST_TOKEN_TIMEOUT_MS ms, aborting")
+                    stopGenerating = true
+                    val timeoutResult = HashMap<String, Any>().apply {
+                        put("error", true)
+                        put("message", chatActivity.getString(
+                            com.alibaba.mnnllm.android.R.string.generation_timeout_message
+                        ))
+                        put("response", chatActivity.getString(
+                            com.alibaba.mnnllm.android.R.string.generation_timeout_message
+                        ))
+                    }
+                    chatActivity.lifecycleScope.launch {
+                        this@ChatPresenter.generateListener?.onGenerateFinished(timeoutResult)
+                        additionalListeners.forEach { it.onGenerateFinished(timeoutResult) }
+                    }
+                }
+            }
+            val result = generation.await()
+            watchdog.cancel()
             
             return result
         } catch (e: Exception) {
@@ -518,6 +550,10 @@ class ChatPresenter(
     
     companion object {
         private const val TAG: String = "ChatPresenter"
+
+        // HNN CN ET v1.0.2: first-token stall watchdog timeout
+        const val FIRST_TOKEN_TIMEOUT_MS = 180_000L
+
         internal fun resolveDiffusionPrompt(input: String, modelId: String): String {
             if (input.isNotBlank()) return input
             return if (ModelTypeUtils.requiresFaceImageInput(modelId)) {

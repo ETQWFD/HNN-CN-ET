@@ -27,7 +27,7 @@ class ResponseHandler {
     companion object {
         private const val HEARTBEAT_PERIOD_SECONDS = 3L
         private const val DONE_DELAY_MS = 100L
-        private const val MODEL_NAME = "mnn-llm"
+        private const val MODEL_NAME = "hnn-llm"
         private const val COMPLETION_CHUNK_OBJECT = "chat.completion.chunk"
         private const val COMPLETION_OBJECT = "chat.completion"
     }

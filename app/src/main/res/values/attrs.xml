@@ -33,6 +33,7 @@
 
     <declare-styleable name="SettingsItemView">
         <attr name="itemText" format="string" />
+        <attr name="itemSummary" format="string" />
         <attr name="checked" format="boolean" />
     </declare-styleable>
     

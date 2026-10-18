@@ -28,6 +28,13 @@ class SettingsItemView @JvmOverloads constructor(
         attrs?.let {
             val ta = context.obtainStyledAttributes(it, R.styleable.SettingsItemView, 0, 0)
             binding.tvLabel.text = ta.getString(R.styleable.SettingsItemView_itemText) ?: ""
+            val summary = ta.getString(R.styleable.SettingsItemView_itemSummary)
+            if (!summary.isNullOrBlank()) {
+                binding.tvSummary.text = summary
+                binding.tvSummary.visibility = android.view.View.VISIBLE
+            } else {
+                binding.tvSummary.visibility = android.view.View.GONE
+            }
             binding.switchControl.isChecked = ta.getBoolean(R.styleable.SettingsItemView_checked, false)
             ta.recycle()
         }

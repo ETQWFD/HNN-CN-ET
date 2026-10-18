@@ -407,6 +407,19 @@ class ModelListFragment : Fragment(), ModelListContract.View, Searchable {
     }
 
     override fun runModel(destPath:String?, modelId: String?) {
+        if (modelId == null) return
+
+        // HNN CN ET v1.0.2: guard (safety-audit) models are not chat models.
+        if (com.alibaba.mnnllm.android.model.ModelTypeUtils.isGuardModel(modelId) &&
+            !com.alibaba.mnnllm.android.mainsettings.MainSettings.isAiSafetyFilterEnabled(requireContext())) {
+            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.tag_safety)
+                .setMessage(R.string.guard_model_filter_off)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
+
         // Check if model is larger than 7GB before running
         val modelItem = ModelListManager.getModelIdModelMap()[modelId]
         val modelMarketItem = (modelItem?.modelMarketItem as? com.alibaba.mnnllm.android.modelmarket.ModelMarketItem)
@@ -419,7 +432,7 @@ class ModelListFragment : Fragment(), ModelListContract.View, Searchable {
                 modelSize = modelMarketItem.sizeB,
                 onConfirm = {
                     // User confirmed, proceed with running the model
-                    ChatRouter.startRun(requireContext(), modelId!!, destPath, null)
+                    ChatRouter.startRun(requireContext(), modelId, destPath, null)
                 },
                 onCancel = {
                     // User cancelled, do nothing
@@ -427,7 +440,7 @@ class ModelListFragment : Fragment(), ModelListContract.View, Searchable {
             )
         } else {
             // Model is not large or size info not available, run directly
-            ChatRouter.startRun(requireContext(), modelId!!, destPath, null)
+            ChatRouter.startRun(requireContext(), modelId, destPath, null)
         }
     }
 }

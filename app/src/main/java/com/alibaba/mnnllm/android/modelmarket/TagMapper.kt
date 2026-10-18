@@ -5,11 +5,42 @@ import com.alibaba.mnnllm.android.utils.DeviceUtils
 import timber.log.Timber
 
 object TagMapper {
-    
+
+    /**
+     * Built-in fallback translations so every tag used by the model market
+     * (including Safety / TTS / ASR / English / English and Chinese) always
+     * resolves, even when the remote market config ships without them.
+     * Config-provided translations override these defaults.
+     */
+    private val builtinTranslations: Map<String, String> = mapOf(
+        "Vision" to "图像理解",
+        "Video" to "视频理解",
+        "Audio" to "音频理解",
+        "Code" to "代码",
+        "Math" to "数学",
+        "ImageGen" to "文生图",
+        "AudioGen" to "音频生成",
+        "Think" to "深度思考",
+        "Chat" to "对话",
+        "Safety" to "安全审核",
+        "TTS" to "语音合成",
+        "ASR" to "语音识别",
+        "English" to "英语",
+        "English and Chinese" to "中英双语",
+        "QNN" to "QNN",
+        "Omni" to "全模态",
+        "Local" to "本地"
+    )
+
     private var tagMap: Map<String, Tag> = emptyMap()
-    
+
     fun initializeFromConfig(config: ModelMarketConfig) {
         val mappings = mutableMapOf<String, Tag>()
+        // Built-in defaults first, then config overrides.
+        builtinTranslations.forEach { (key, chineseTranslation) ->
+            mappings[chineseTranslation] = Tag(chineseTranslation, key)
+            mappings[key] = Tag(chineseTranslation, key)
+        }
         config.tagTranslations.forEach { (key, chineseTranslation) ->
             mappings[chineseTranslation] = Tag(chineseTranslation, key)
             mappings[key] = Tag(chineseTranslation, key)

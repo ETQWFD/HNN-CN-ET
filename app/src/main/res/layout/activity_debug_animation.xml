@@ -87,7 +87,7 @@
                 android:orientation="horizontal"
                 android:layout_marginTop="8dp">
                 <RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="全部"/>
-                <RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="MNN"/>
+                <RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="HNN"/>
                 <RadioButton android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TFLite"/>
             </RadioGroup>
 

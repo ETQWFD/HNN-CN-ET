@@ -127,4 +127,31 @@ object ModelTypeUtils {
     fun isAudioModelByTags(tags: List<String>): Boolean {
         return tags.any { it.equals("Audio", ignoreCase = true) }
     }
+
+    /**
+     * Check if the model is a guard / safety-audit model based on tags
+     */
+    fun isGuardModelByTags(tags: List<String>): Boolean {
+        return tags.any { it.equals("Safety", ignoreCase = true) }
+    }
+
+    /**
+     * Check if the model is a guard / safety-audit model by its id
+     * (models such as Qwen3Guard-Stream-* belong to the safety-audit family).
+     */
+    fun isGuardModel(modelId: String): Boolean {
+        val lower = modelId.lowercase(Locale.getDefault())
+        return lower.contains("guard") || isGuardModelByTags(ModelListManager.getModelTags(modelId))
+    }
+
+    /**
+     * Check if a model is usable for normal chat:
+     * guard / asr / tts / diffusion models are not chat models.
+     */
+    fun isChatUsableModel(modelId: String, tags: List<String>): Boolean {
+        if (isGuardModelByTags(tags) || isGuardModel(modelId)) return false
+        if (isAsrModelByTags(tags) || isTtsModelByTags(tags)) return false
+        if (isDiffusionModel(modelId) || isSanaModel(modelId)) return false
+        return true
+    }
 }

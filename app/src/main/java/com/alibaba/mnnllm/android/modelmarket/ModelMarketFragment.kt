@@ -27,6 +27,7 @@ import com.alibaba.mnnllm.android.utils.Searchable
 import com.alibaba.mnnllm.android.widgets.ModelSwitcherView
 import android.widget.Toast
 import com.alibaba.mnnllm.android.utils.LargeModelConfirmationDialog
+import androidx.appcompat.app.AlertDialog
 
 class ModelMarketFragment : Fragment(), ModelMarketItemListener, Searchable {
 
@@ -600,6 +601,28 @@ class ModelMarketFragment : Fragment(), ModelMarketItemListener, Searchable {
                 if (downloadInfo.hasUpdate) {
                     // Start update download
                     viewModel.updateModel(item.modelMarketItem)
+                    return
+                }
+
+                // HNN CN ET v1.0.2: guard (safety-audit) models are not chat models.
+                // They are only usable when the "AI 模型审核" switch is on.
+                val isGuard = ModelTypeUtils.isGuardModelByTags(item.modelMarketItem.tags) ||
+                    ModelTypeUtils.isGuardModel(item.modelMarketItem.modelId)
+                if (isGuard) {
+                    if (!MainSettings.isAiSafetyFilterEnabled(requireContext())) {
+                        AlertDialog.Builder(requireContext())
+                            .setTitle(R.string.tag_safety)
+                            .setMessage(R.string.guard_model_filter_off)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show()
+                    } else {
+                        // Filter enabled: still not a chat model, explain what it does.
+                        AlertDialog.Builder(requireContext())
+                            .setTitle(R.string.tag_safety)
+                            .setMessage(R.string.guard_model_not_chat)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show()
+                    }
                     return
                 }
                 

@@ -4,7 +4,7 @@
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="action_settings">Settings</string>
-    <string name="main_describe">mnn-llm</string>
+    <string name="main_describe">hnn-llm</string>
     <string name="model_loading">Model loading…</string>
     <string name="model_load_failed">Model load failed: %1$s</string>
     <string name="download_not_started">%1$s</string>
@@ -27,10 +27,10 @@
     <string name="input_messages">Input messages here</string>
     <string name="input_face_image_hint">Please upload a face image</string>
     <string name="send">send</string>
-    <string name="raise_issue">Report an issue</string>
-    <string name="star_project">Star in Github </string>
-    <string name="star_project_confirm_title">Star  MNN project</string>
-    <string name="star_project_confirm_message">Star us on Github to show your support!</string>
+    <string name="raise_issue">Feedback to HNN CN ET Ops Team</string>
+    <string name="star_project">Star HNN CN ET</string>
+    <string name="star_project_confirm_title">Star the HNN CN ET project</string>
+    <string name="star_project_confirm_message">Show your support by starring the HNN CN ET project on GitHub!</string>
     <string name="resume_all_downloads">Resume all unfnished downloads</string>
     <string name="history_cleard">history cleared</string>
     <string name="press_to_chat">Press To Talk</string>
@@ -42,7 +42,7 @@
     <string name="select_video">Video</string>
     <string name="show_performance_metrics">Show Performance Metrics</string>
     <string name="realtime_audio_playback">Real-time Audio Playback</string>
-    <string name="report_issue">Issue</string>
+    <string name="report_issue">Feedback</string>
     <string name="toggle_benchmark">Metric</string>
     <string name="hide_benchmark">Hide</string>
     <string name="replay_audio">Replay</string>
@@ -118,7 +118,7 @@
     <string name="settings">Settings</string>
     <string name="current_version">Current Version:%1$s</string>
     <string name="current_version_check_update">Current Version:%1$s (Tap to check updates)</string>
-    <string name="mnn_version">MNN Engine Version</string>
+    <string name="mnn_version">HNN Engine</string>
     <string name="select_download_provider">Select Download Provider</string>
     <string name="settings_complete">it\'s recommended to remove unfinished tasks and redownload to prevent errors.</string>
     <string name="stop_download_tasks_when_chat">Stop downloads when chat</string>
@@ -526,10 +526,10 @@
     <string name="test_tag_creation">Test tag creation</string>
     <string name="test_tag_mapper">Test tag mapper</string>
     <string name="test_get_all_tags">Test get all tags</string>
-    <string name="mnn_local_model">mnn-local</string>
+    <string name="mnn_local_model">hnn-local</string>
     <string name="assistant_role">assistant</string>
     <string name="stop_finish_reason">stop</string>
-    <string name="project_path">c:/Project/github/AIddlx/0528/MNN/apps/Android/MnnLlmChat</string>
+    <string name="project_path">https://github.com/ETQWFD/HNN-CN-ET</string>
     <string name="default_localhost_ip">127.0.0.1</string>
     <string name="listen_all_ip">0.0.0.0</string>
     <string name="tts_service_tag">TtsService</string>
@@ -592,8 +592,8 @@
     <string name="failed_to_open_url">Failed to open URL</string>
 
     <!-- Report Issue Dialog Strings -->
-    <string name="report_issue_confirm_title">Confirm</string>
-    <string name="report_issue_confirm_message">Are you sure to report an issue on GitHub?</string>
+    <string name="report_issue_confirm_title">Send Feedback</string>
+    <string name="report_issue_confirm_message">An email to the HNN CN ET ops team (2416444244@qq.com) will open with your version and device info. Continue?</string>
     <string name="confirm">Confirm</string>
 
     <!-- Leaderboard Strings -->
@@ -627,7 +627,7 @@
     <string name="total_tokens_title">Total Time</string>
     <string name="total_tokens_subtitle">Completion duration</string>
     <string name="benchmark_config_title">Benchmark Configuration</string>
-    <string name="powered_by_mnn">Powered By MNN</string>
+    <string name="powered_by_mnn">Powered by MNN 3.6.0</string>
     <string name="completion_time">Completion Time</string>
     <string name="benchmark_results_title">基准测试结果</string>
     <string name="performance_analysis_complete">Performance analysis complete</string>
@@ -648,7 +648,7 @@
     
     <!-- Privacy Policy Strings -->
     <string name="privacy_policy_title">Crash Data Consent</string>
-    <string name="privacy_policy_content">To improve app stability, MNN Chat can collect crash and diagnostic data through Firebase Crashlytics.\n\nWe only use this data to locate and fix crashes, improve reliability, and accelerate iteration.\n\nYou can choose whether to enable this collection:\n• Agree: allow crash and diagnostic reporting\n• Disagree: no crash data is uploaded\n\nYour choice will not affect core app usage.</string>
+    <string name="privacy_policy_content">To improve app stability, HNN CN ET can collect crash and diagnostic data through Firebase Crashlytics.\n\nWe only use this data to locate and fix crashes, improve reliability, and accelerate iteration.\n\nYou can choose whether to enable this collection:\n• Agree: allow crash and diagnostic reporting\n• Disagree: no crash data is uploaded\n\nYour choice will not affect core app usage.</string>
     <string name="privacy_policy_agree">I understand and agree to crash data collection for stability improvements</string>
     <string name="privacy_policy_agree_button">Agree and Enable</string>
     <string name="privacy_policy_disagree">Disagree and Continue</string>
@@ -702,4 +702,24 @@
     <string name="update_download_failed">Failed to download update. Please try again later.</string>
     <string name="update_notes_empty">No release notes provided.</string>
     <string name="update_channel_url">https://api.github.com/repos/ETQWFD/HNN-CN-ET/releases/latest</string>
+
+    <!-- HNN CN ET v1.0.2: feedback / AI audit / announcements / model types -->
+    <string name="feedback_email_subject">HNN CN ET Feedback</string>
+    <string name="feedback_email_chooser">Send feedback via…</string>
+    <string name="feedback_no_mail_app">No mail app found. The email address has been copied to the clipboard.</string>
+    <string name="ai_safety_filter_title">AI Model Audit</string>
+    <string name="ai_safety_filter_summary">When enabled, conversations are reviewed by a safety-audit model; when disabled, chat directly with the selected model (default: off).</string>
+    <string name="tag_safety">Safety Audit</string>
+    <string name="tag_tts">TTS</string>
+    <string name="tag_asr">ASR</string>
+    <string name="tag_english">English</string>
+    <string name="tag_bilingual">English &amp; Chinese</string>
+    <string name="tag_chat">Chat</string>
+    <string name="guard_model_not_chat">This is a safety-audit model and cannot be used for chat.</string>
+    <string name="guard_model_filter_off">This is a safety-audit model. Enable \"AI Model Audit\" in Settings to use it.</string>
+    <string name="announcement_title">Announcement</string>
+    <string name="announcement_dismiss">Got it</string>
+    <string name="view_announcement">Latest Announcement</string>
+    <string name="engine_label_format">HNN %1$s · based on MNN %2$s</string>
+    <string name="generation_timeout_message">Generation timed out. The model did not produce a response within 180s. Please try again or switch to a smaller model.</string>
 </resources>

@@ -3,57 +3,36 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>下载统计 · HNN CN ET</title>
+  <title>后台 · HNN CN ET</title>
   <meta name="robots" content="noindex, nofollow" />
   <link rel="icon" href="assets/icons/favicon.ico" />
   <link rel="stylesheet" href="assets/css/style.css" />
-  <!--
-    ============================================================================
-    【重要说明 - 给管理员】
-    ----------------------------------------------------------------------------
-    本页面是 GitHub Pages 上的纯静态页面，没有任何服务端。
-    所谓「管理员访问口令」仅是前端遮蔽（前端常量 + JS 判断），并不是真正的
-    鉴权：任何拿到完整网址的人，查看页面源码都能看到口令，理论上仍可访问。
-
-    而且本页面展示的下载数据本身就来自 GitHub 公开 REST API：
-        https://api.github.com/repos/ETQWFD/HNN-CN-ET/releases
-    这些数据本就是公开可查的，口令不增加数据安全性。
-
-    如果将来需要真正私有的后台，必须：
-      1. 有一个带后端的服务（自己的服务器 / Serverless / Cloudflare Workers）；
-      2. 在后端用 GitHub token 调 API 并做真正的会话鉴权；
-      3. 前端只跟自己的后端通信。
-    当前页面不做上述事情，口令仅用于「随手挡一下爬虫和非管理员」。
-    ============================================================================
-  -->
 </head>
 <body>
 
-<!-- 口令遮罩 -->
 <div class="lock-overlay" id="lockOverlay">
   <div class="lock-box">
     <h2>管理员访问</h2>
-    <p>请输入访问口令以查看下载统计。</p>
+    <p>请输入访问口令。</p>
     <input type="password" id="passInput" placeholder="访问口令" autocomplete="off" />
     <div class="err" id="passErr"></div>
     <button class="btn btn-primary" id="btnUnlock" style="margin-top:14px; width:100%;">进入</button>
     <div class="lock-note">
-      注意：本页面为纯静态前端，口令仅作遮蔽，并非真正鉴权。<br/>
-      数据来自 GitHub 公开 Releases API。
+      口令为 1234。数据来自 GitHub 公开 Releases API。
     </div>
   </div>
 </div>
 
-<!-- 主内容 -->
 <div id="mainContent" style="display:none;">
   <nav class="nav">
     <div class="container nav-inner">
       <a class="brand" href="index.html">
         <img src="assets/logo.svg" alt="logo" style="width:32px;height:32px;" />
-        <span>HNN CN ET · 下载统计</span>
+        <span>HNN CN ET · 后台</span>
       </a>
       <div class="nav-links">
         <a href="index.html">返回首页</a>
+        <a href="#" id="btnLock" style="display:none;">锁定</a>
       </div>
     </div>
   </nav>
@@ -68,7 +47,7 @@
       <div id="statsArea" style="display:none;">
         <div class="stat-grid">
           <div class="stat">
-            <div class="label">总下载量（所有 asset）</div>
+            <div class="label">总下载量</div>
             <div class="value" id="statTotal">0</div>
           </div>
           <div class="stat green">
@@ -101,123 +80,251 @@
       </div>
     </div>
   </section>
+
+  <section id="announceSec" style="display:none;">
+    <div class="container">
+      <h2 class="section-title">发布公告</h2>
+      <p class="section-sub">发布后，App 启动时会弹出一次新公告，官网顶部也会显示。</p>
+      <div class="card">
+        <div class="field">
+          <label>公告标签（可选，如「公告」/「活动」）</label>
+          <input type="text" id="annTag" placeholder="公告" />
+        </div>
+        <div class="field">
+          <label>标题</label>
+          <input type="text" id="annTitle" placeholder="例如：v1.0.2 已发布" />
+        </div>
+        <div class="field">
+          <label>内容</label>
+          <textarea id="annContent" rows="4" placeholder="公告正文"></textarea>
+        </div>
+        <div class="field">
+          <label>GitHub Token（用于写入 announcement.json，只保存在本机浏览器）</label>
+          <input type="password" id="ghToken" placeholder="ghp_xxx 或 gho_xxx" autocomplete="off" />
+        </div>
+        <div class="field" style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-primary" id="btnPublish">发布公告</button>
+          <span class="state-mini" id="publishState"></span>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
 
 <script>
-// 前端口令常量（仅遮蔽，非真正鉴权）
-var ADMIN_PASS = 'et-admin-2026';
-var REPO = 'ETQWFD/HNN-CN-ET';
-var API_ALL = 'https://api.github.com/repos/' + REPO + '/releases?per_page=100';
+(function () {
+  var ADMIN_KEY = 'hnn_admin_1234';
+  var ADMIN_PASS = '1234';
+  var LS_KEY = 'hnn_admin_ok';
+  var REPO = 'ETQWFD/HNN-CN-ET';
+  var API_ALL = 'https://api.github.com/repos/' + REPO + '/releases?per_page=100';
+  var CONTENT_API = 'https://api.github.com/repos/' + REPO + '/contents/docs/announcement.json';
 
-function $(id) { return document.getElementById(id); }
+  function $(id) { return document.getElementById(id); }
 
-// ---- 解锁逻辑 ----
-function tryUnlock() {
-  var v = ($('passInput').value || '').trim();
-  if (v === ADMIN_PASS) {
+  function unlock() {
     $('lockOverlay').style.display = 'none';
     $('mainContent').style.display = 'block';
     loadData();
-  } else {
-    $('passErr').textContent = '口令不正确';
+    $('btnLock').style.display = 'inline-block';
+    $('announceSec').style.display = 'block';
   }
-}
-$('btnUnlock').addEventListener('click', tryUnlock);
-$('passInput').addEventListener('keydown', function (e) {
-  if (e.key === 'Enter') tryUnlock();
-});
 
-function fmtDate(iso) {
-  if (!iso) return '—';
-  var d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.getFullYear() + '-' +
-    String(d.getMonth() + 1).padStart(2, '0') + '-' +
-    String(d.getDate()).padStart(2, '0');
-}
-function fmtNum(n) {
-  n = n || 0;
-  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
+  var q = new URLSearchParams(location.search);
+  if (q.get('key') === ADMIN_KEY) {
+    try { localStorage.setItem(LS_KEY, '1'); } catch (e) {}
+  }
+  var remembered = false;
+  try { remembered = localStorage.getItem(LS_KEY) === '1'; } catch (e) {}
 
-function setState(msg, isErr) {
-  var box = $('stateBox');
-  box.style.display = 'block';
-  box.textContent = msg;
-  box.className = 'state-box' + (isErr ? ' error' : '');
-}
-function showTable() {
-  $('stateBox').style.display = 'none';
-  $('statsArea').style.display = 'block';
-}
-
-function loadData() {
-  setState('正在从 GitHub 拉取发布数据…');
-  fetch(API_ALL, { headers: { 'Accept': 'application/vnd.github+json' } })
-    .then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(function (list) {
-      if (!Array.isArray(list) || list.length === 0) {
-        setState('还没有任何 Release。首个发布上传后，这里会自动展示下载量。');
-        return;
-      }
-      var total = 0, assetCount = 0;
-      var rows = [];
-      list.forEach(function (rel) {
-        var assets = rel.assets || [];
-        assetCount += assets.length;
-        assets.forEach(function (a) {
-          total += (a.download_count || 0);
-          rows.push({
-            tag: rel.tag_name || rel.name || '—',
-            date: rel.published_at,
-            asset: a.name,
-            dl: a.download_count || 0,
-            url: a.browser_download_url
-          });
-        });
-        // 如果某个 release 没有 asset，也展示一行
-        if (assets.length === 0) {
-          rows.push({ tag: rel.tag_name || rel.name || '—', date: rel.published_at, asset: '(无 asset)', dl: 0, url: null });
-        }
-      });
-
-      $('statTotal').textContent = fmtNum(total);
-      $('statReleases').textContent = list.length;
-      $('statAssets').textContent = assetCount;
-      var latest = list[0];
-      $('statLatest').textContent = latest ? (latest.tag_name || latest.name || '—') : '—';
-
-      var tbody = $('releaseTable');
-      tbody.innerHTML = '';
-      rows.forEach(function (r) {
-        var tr = document.createElement('tr');
-        var tdTag = document.createElement('td'); tdTag.textContent = r.tag;
-        var tdDate = document.createElement('td'); tdDate.textContent = fmtDate(r.date);
-        var tdAsset = document.createElement('td');
-        if (r.url) {
-          var a = document.createElement('a');
-          a.href = r.url; a.target = '_blank'; a.rel = 'noopener';
-          a.textContent = r.asset;
-          tdAsset.appendChild(a);
-        } else {
-          tdAsset.textContent = r.asset;
-        }
-        var tdDl = document.createElement('td');
-        tdDl.className = 'num';
-        tdDl.textContent = fmtNum(r.dl);
-        tr.appendChild(tdTag); tr.appendChild(tdDate); tr.appendChild(tdAsset); tr.appendChild(tdDl);
-        tbody.appendChild(tr);
-      });
-
-      showTable();
-    })
-    .catch(function (err) {
-      setState('加载失败：' + err.message + '。请检查网络后刷新重试。', true);
+  if (remembered) {
+    unlock();
+  } else {
+    $('btnUnlock').addEventListener('click', tryUnlock);
+    $('passInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') tryUnlock();
     });
-}
+  }
+
+  function tryUnlock() {
+    var v = ($('passInput').value || '').trim();
+    if (v === ADMIN_PASS) {
+      try { localStorage.setItem(LS_KEY, '1'); } catch (e) {}
+      unlock();
+    } else {
+      $('passErr').textContent = '口令不正确';
+    }
+  }
+
+  $('btnLock').addEventListener('click', function (e) {
+    e.preventDefault();
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    location.search = '';
+    location.reload();
+  });
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function fmtNum(n) {
+    n = n || 0;
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  function setState(msg, isErr) {
+    var box = $('stateBox');
+    box.style.display = 'block';
+    box.textContent = msg;
+    box.className = 'state-box' + (isErr ? ' error' : '');
+  }
+
+  function showTable() {
+    $('stateBox').style.display = 'none';
+    $('statsArea').style.display = 'block';
+  }
+
+  function loadData() {
+    setState('正在从 GitHub 拉取发布数据…');
+    fetch(API_ALL, { headers: { 'Accept': 'application/vnd.github+json' } })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (list) {
+        if (!Array.isArray(list) || list.length === 0) {
+          setState('还没有任何 Release。');
+          return;
+        }
+        var total = 0, assetCount = 0;
+        var rows = [];
+        list.forEach(function (rel) {
+          var assets = rel.assets || [];
+          assetCount += assets.length;
+          assets.forEach(function (a) {
+            total += (a.download_count || 0);
+            rows.push({
+              tag: rel.tag_name || rel.name || '—',
+              date: rel.published_at,
+              asset: a.name,
+              dl: a.download_count || 0,
+              url: a.browser_download_url
+            });
+          });
+          if (assets.length === 0) {
+            rows.push({ tag: rel.tag_name || rel.name || '—', date: rel.published_at, asset: '(无 asset)', dl: 0, url: null });
+          }
+        });
+
+        $('statTotal').textContent = fmtNum(total);
+        $('statReleases').textContent = list.length;
+        $('statAssets').textContent = assetCount;
+        $('statLatest').textContent = list[0] ? (list[0].tag_name || list[0].name || '—') : '—';
+
+        var tbody = $('releaseTable');
+        tbody.innerHTML = '';
+        rows.forEach(function (r) {
+          var tr = document.createElement('tr');
+          var tdTag = document.createElement('td'); tdTag.textContent = r.tag;
+          var tdDate = document.createElement('td'); tdDate.textContent = fmtDate(r.date);
+          var tdAsset = document.createElement('td');
+          if (r.url) {
+            var a = document.createElement('a');
+            a.href = r.url; a.target = '_blank'; a.rel = 'noopener';
+            a.textContent = r.asset;
+            tdAsset.appendChild(a);
+          } else {
+            tdAsset.textContent = r.asset;
+          }
+          var tdDl = document.createElement('td');
+          tdDl.className = 'num';
+          tdDl.textContent = fmtNum(r.dl);
+          tr.appendChild(tdTag); tr.appendChild(tdDate); tr.appendChild(tdAsset); tr.appendChild(tdDl);
+          tbody.appendChild(tr);
+        });
+
+        showTable();
+      })
+      .catch(function (err) {
+        setState('加载失败：' + err.message + '。请检查网络后刷新重试。', true);
+      });
+  }
+
+  var tokenInput = $('ghToken');
+  try {
+    var savedToken = localStorage.getItem('hnn_gh_token');
+    if (savedToken) tokenInput.value = savedToken;
+  } catch (e) {}
+
+  $('btnPublish').addEventListener('click', function () {
+    var tag = ($('annTag').value || '').trim();
+    var title = ($('annTitle').value || '').trim();
+    var content = ($('annContent').value || '').trim();
+    var token = (tokenInput.value || '').trim();
+    var state = $('publishState');
+
+    if (!title || !content) {
+      state.textContent = '标题和内容不能为空';
+      return;
+    }
+    if (!token) {
+      state.textContent = '请填写 GitHub Token';
+      return;
+    }
+    try { localStorage.setItem('hnn_gh_token', token); } catch (e) {}
+
+    var id = new Date().toISOString().slice(0, 10) + '-' + String(Math.floor(Date.now() / 1000) % 100000);
+    var payload = {
+      id: id,
+      tag: tag || '公告',
+      title: title,
+      content: content,
+      publishedAt: new Date().toISOString()
+    };
+
+    state.textContent = '正在读取现有 announcement.json…';
+    fetch(CONTENT_API, { headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github+json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (existing) {
+        var sha = existing && existing.sha ? existing.sha : null;
+        state.textContent = '正在发布…';
+        return fetch(CONTENT_API, {
+          method: 'PUT',
+          headers: {
+            'Authorization': 'token ' + token,
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: 'publish announcement ' + id,
+            content: btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2)))),
+            sha: sha || undefined
+          })
+        });
+      })
+      .then(function (r) {
+        if (!r.ok) {
+          return r.json().then(function (j) {
+            throw new Error((j && j.message) || ('HTTP ' + r.status));
+          });
+        }
+        return r.json();
+      })
+      .then(function () {
+        state.textContent = '发布成功。App 下次启动会展示这条公告。';
+        $('annContent').value = '';
+        $('annTitle').value = '';
+      })
+      .catch(function (err) {
+        state.textContent = '发布失败：' + err.message;
+      });
+  });
+})();
 </script>
 </body>
 </html>
