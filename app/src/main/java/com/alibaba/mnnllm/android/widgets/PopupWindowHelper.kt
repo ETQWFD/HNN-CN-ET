@@ -32,11 +32,20 @@ class PopupWindowHelper {
         anchorView: View?,
         onClickListener: View.OnClickListener
     ) {
+        showPopupWindow(context, anchorView, onClickListener, showCodeCopy = true)
+    }
+
+    fun showPopupWindow(
+        context: Context?,
+        anchorView: View?,
+        onClickListener: View.OnClickListener,
+        showCodeCopy: Boolean
+    ) {
         if (context == null || anchorView == null) {
             return
         }
 
-        val popupView = createPopupView(LayoutInflater.from(context), null, onClickListener)
+        val popupView = createPopupView(LayoutInflater.from(context), null, onClickListener, showCodeCopy)
 
         val popupWindow = PopupWindow(
             popupView,
@@ -85,7 +94,8 @@ class PopupWindowHelper {
         fun createPopupView(
             inflater: LayoutInflater,
             parent: ViewGroup?,
-            onClickListener: View.OnClickListener? = null
+            onClickListener: View.OnClickListener? = null,
+            showCodeCopy: Boolean = true
         ): View {
             val themedInflater = inflater.cloneInContext(
                 ContextThemeWrapper(inflater.context, R.style.AppTheme)
@@ -95,9 +105,18 @@ class PopupWindowHelper {
                 return popupView
             }
 
+            val codeCopyItem = popupView.findViewById<TextView>(R.id.assistant_text_copy_code)
             val copyItem = popupView.findViewById<TextView>(R.id.assistant_text_copy)
             val selectItem = popupView.findViewById<TextView>(R.id.assistant_text_select)
             val reportIssueItem = popupView.findViewById<TextView>(R.id.assistant_text_report)
+
+            popupView.findViewById<View>(R.id.assistant_text_copy_code_row).visibility =
+                if (showCodeCopy) View.VISIBLE else View.GONE
+            if (showCodeCopy) {
+                wireAction(popupView.findViewById(R.id.assistant_text_copy_code_row), codeCopyItem, onClickListener)
+                wireAction(popupView.findViewById(R.id.assistant_text_copy_code_icon), codeCopyItem, onClickListener)
+                wireAction(codeCopyItem, codeCopyItem, onClickListener)
+            }
 
             wireAction(popupView.findViewById(R.id.assistant_text_copy_row), copyItem, onClickListener)
             wireAction(popupView.findViewById(R.id.assistant_text_copy_icon), copyItem, onClickListener)

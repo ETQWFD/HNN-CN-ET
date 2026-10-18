@@ -722,4 +722,36 @@
     <string name="view_announcement">Latest Announcement</string>
     <string name="engine_label_format">HNN %1$s · based on MNN %2$s</string>
     <string name="generation_timeout_message">Generation timed out. The model did not produce a response within 180s. Please try again or switch to a smaller model.</string>
+
+    <!-- HNN CN ET v1.0.3: deep thinking / MCP / Agent -->
+    <string name="deep_thinking">Deep Think</string>
+    <string name="mcp_config_title">MCP Connections</string>
+    <string name="mcp_config_summary">Add MCP servers so the AI can call tools (e.g. create files)</string>
+    <string name="agent_mode_title">Agent Mode</string>
+    <string name="agent_mode_summary">Let the AI operate apps for you: open apps, send messages, watch videos, play music, create files</string>
+    <string name="mcp_add">Add</string>
+    <string name="mcp_delete">Delete</string>
+    <string name="mcp_test">Test</string>
+    <string name="mcp_name_hint">Server name</string>
+    <string name="mcp_url_hint">Server URL (http://host:port)</string>
+    <string name="mcp_empty">No MCP servers yet. Tap Add to create one.</string>
+    <string name="mcp_test_ok">Connected. Tools available: %1$d</string>
+    <string name="mcp_test_fail">Connection failed: %1$s</string>
+    <string name="agent_accessibility_description">HNN CN ET Agent accessibility service. When Agent Mode is on, it can open apps and perform actions for you after you grant permission.</string>
+    <string name="agent_needs_accessibility">Agent needs the accessibility service to operate other apps. Please enable &quot;HNN CN ET accessibility service&quot; on the next screen.</string>
+    <string name="agent_enable_accessibility">Enable accessibility</string>
+    <string name="agent_open_failed">No app named &quot;%1$s&quot; was found.</string>
+    <string name="agent_opened">Opened &quot;%1$s&quot;.</string>
+    <string name="agent_created_file">File created: %1$s</string>
+    <string name="agent_mcp_none">No MCP server configured. Add one in Settings → MCP Connections, or the file was created locally: %1$s</string>
+    <string name="agent_mcp_fail">MCP call failed: %1$s</string>
+    <string name="agent_sent">Sent message to %1$s.</string>
+    <string name="agent_send_failed">Failed to send message: %1$s</string>
+    <string name="agent_played">Started %1$s.</string>
+    <string name="agent_back">Done.</string>
+    <string name="agent_a11y_not_ready">Accessibility service is not ready yet. Please wait a moment and try again.</string>
+    <string name="copy_code">Copy Code</string>
+    <string name="code_copied">Code copied to clipboard</string>
+    <string name="agent_overlay_request">Agent 需要「悬浮窗」权限，开启后退出聊天界面时会在屏幕上常驻 Agent 悬浮窗（可拖动、点击回到应用）。请在弹出的页面中允许。</string>
+    <string name="agent_storage_needed">Agent 需要存储权限才能读写文件。请在设置中开启存储权限后重试。</string>
 </resources>

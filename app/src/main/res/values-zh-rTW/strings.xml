@@ -707,4 +707,36 @@
     <string name="view_announcement">查看最新公告</string>
     <string name="engine_label_format">HNN %1$s · 基於 MNN %2$s</string>
     <string name="generation_timeout_message">產生逾時：模型在 180 秒內未產生回覆。請重試，或改用較小的模型。</string>
+
+    <!-- HNN CN ET v1.0.3: deep thinking / MCP / Agent -->
+    <string name="deep_thinking">深度思考</string>
+    <string name="mcp_config_title">MCP 連線設定</string>
+    <string name="mcp_config_summary">新增 MCP 伺服器，讓 AI 可以呼叫工具（如建立檔案）</string>
+    <string name="agent_mode_title">Agent 工作模式</string>
+    <string name="agent_mode_summary">開啟後 AI 可以幫你開啟應用程式、傳訊息、看影片、聽音樂、建立檔案</string>
+    <string name="mcp_add">新增</string>
+    <string name="mcp_delete">刪除</string>
+    <string name="mcp_test">測試</string>
+    <string name="mcp_name_hint">伺服器名稱</string>
+    <string name="mcp_url_hint">伺服器位址（http://主機:連接埠）</string>
+    <string name="mcp_empty">還沒有 MCP 伺服器，點「新增」建立一個。</string>
+    <string name="mcp_test_ok">連線成功，可用工具：%1$d 個</string>
+    <string name="mcp_test_fail">連線失敗：%1$s</string>
+    <string name="agent_accessibility_description">HNN CN ET Agent 無障礙服務。開啟 Agent 工作模式並授權後，可幫你操作其他應用程式。</string>
+    <string name="agent_needs_accessibility">Agent 需要無障礙權限才能操作其他應用程式。請在接下來彈出的頁面中開啟「HNN CN ET 無障礙服務」。</string>
+    <string name="agent_enable_accessibility">開啟無障礙</string>
+    <string name="agent_open_failed">找不到名為「%1$s」的應用程式。</string>
+    <string name="agent_opened">已開啟「%1$s」。</string>
+    <string name="agent_created_file">已建立檔案：%1$s</string>
+    <string name="agent_mcp_none">未設定 MCP 伺服器，無法呼叫工具；檔案已寫入本機：%1$s</string>
+    <string name="agent_mcp_fail">MCP 呼叫失敗：%1$s</string>
+    <string name="agent_sent">已向 %1$s 傳送訊息。</string>
+    <string name="agent_send_failed">傳送訊息失敗：%1$s</string>
+    <string name="agent_played">已開始播放 %1$s。</string>
+    <string name="agent_back">操作完成。</string>
+    <string name="agent_a11y_not_ready">無障礙服務尚未就緒，請稍候再試。</string>
+    <string name="copy_code">複製程式碼</string>
+    <string name="code_copied">程式碼已複製到剪貼簿</string>
+    <string name="agent_overlay_request">Agent 需要「懸浮視窗」權限：開啟後離開聊天介面時，螢幕上會常駐一個可拖動的 Agent 懸浮球，點擊即可回到應用。請在彈出的頁面中允許。</string>
+    <string name="agent_storage_needed">Agent 需要儲存權限才能讀寫檔案。請在設定中開啟「所有檔案存取」或儲存權限後重試。</string>
 </resources>

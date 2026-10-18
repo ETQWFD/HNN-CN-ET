@@ -109,4 +109,30 @@ object MainSettings {
         return getDefaultAsrModel(context) == modelId
     }
 
+    /**
+     * HNN CN ET v1.0.3: Agent 工作模式开关。
+     * 开启后 AI 可在聊天中帮你打开应用、发消息、看视频、听音乐、创建文件。
+     */
+    fun isAgentModeEnabled(context: Context): Boolean {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        return sharedPreferences.getBoolean("agent_mode", false)
+    }
+
+    fun setAgentModeEnabled(context: Context, enabled: Boolean) {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        sharedPreferences.edit().putBoolean("agent_mode", enabled).apply()
+    }
+
+    /**
+     * MCP 服务器列表（JSON 数组字符串）。
+     */
+    fun getMcpServersJson(context: Context): String {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        return sharedPreferences.getString("mcp_servers", "") ?: ""
+    }
+
+    fun setMcpServersJson(context: Context, json: String) {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        sharedPreferences.edit().putString("mcp_servers", json).apply()
+    }
 }

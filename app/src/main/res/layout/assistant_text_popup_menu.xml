@@ -21,6 +21,37 @@
         android:showDividers="middle">
 
         <LinearLayout
+            android:id="@+id/assistant_text_copy_code_row"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="?attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="20dp"
+            android:paddingEnd="16dp">
+
+            <TextView
+                android:id="@+id/assistant_text_copy_code"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:duplicateParentState="true"
+                android:text="@string/copy_code"
+                android:textColor="?colorOnSurface"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/assistant_text_copy_code_icon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="@null"
+                android:duplicateParentState="true"
+                android:src="@drawable/ic_copy"
+                android:tint="?colorOnSurfaceVariant" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/assistant_text_copy_row"
             android:layout_width="match_parent"
             android:layout_height="56dp"

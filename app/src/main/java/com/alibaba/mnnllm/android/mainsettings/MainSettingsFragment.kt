@@ -88,6 +88,21 @@ class MainSettingsFragment : Fragment() {
             MainSettings.setAiSafetyFilterEnabled(requireContext(), isChecked)
         }
 
+        // HNN CN ET v1.0.3: Agent 工作模式开关
+        binding.itemAgentMode.isChecked = MainSettings.isAgentModeEnabled(requireContext())
+        binding.itemAgentMode.setOnCheckedChangeListener { isChecked ->
+            MainSettings.setAgentModeEnabled(requireContext(), isChecked)
+            if (isChecked) {
+                // 开启 Agent 模式时申请存储 + 悬浮窗权限
+                com.alibaba.mnnllm.android.agent.AgentPermissions.requestAll(requireActivity())
+            }
+        }
+
+        // HNN CN ET v1.0.3: MCP 连接配置入口
+        binding.itemMcpConfig.setOnClickListener {
+            startActivity(Intent(requireContext(), com.alibaba.mnnllm.android.agent.McpSettingsActivity::class.java))
+        }
+
         setupDownloadProvider(sharedPreferences)
         setupVoiceModelManagement()
         setupStorageManagement()

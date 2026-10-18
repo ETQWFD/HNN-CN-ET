@@ -60,6 +60,38 @@
                     android:layout_marginStart="16dp"
                     android:layout_marginEnd="16dp" />
 
+                <com.alibaba.mnnllm.android.modelsettings.SettingsItemView
+                    android:id="@+id/item_agent_mode"
+                    style="@style/SettingsRowContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    app:itemText="@string/agent_mode_title"
+                    app:itemSummary="@string/agent_mode_summary" />
+
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp" />
+
+                <com.alibaba.mnnllm.android.modelsettings.SettingsItemView
+                    android:id="@+id/item_mcp_config"
+                    style="@style/SettingsRowContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    app:itemText="@string/mcp_config_title"
+                    app:itemSummary="@string/mcp_config_summary" />
+
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp" />
+
                 <com.alibaba.mnnllm.android.modelsettings.DropDownLineView
                     android:id="@+id/dropdown_download_provider"
                     style="@style/SettingsRowContainer"

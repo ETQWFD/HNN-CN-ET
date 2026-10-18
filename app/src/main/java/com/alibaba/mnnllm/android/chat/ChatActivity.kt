@@ -12,6 +12,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -198,6 +199,16 @@ class ChatActivity : AppCompatActivity() {
             }
             setOnSendMessage{
                 lifecycleScope.launch {
+                    // HNN CN ET v1.0.3: Agent 工作模式 — 设备操作指令先交给 Agent 引擎
+                    if (com.alibaba.mnnllm.android.mainsettings.MainSettings.isAgentModeEnabled(this@ChatActivity)) {
+                        val agentResult = withContext(Dispatchers.IO) {
+                            com.alibaba.mnnllm.android.agent.AgentEngine.tryHandle(this@ChatActivity, it.text ?: "")
+                        }
+                        if (agentResult != null) {
+                            handleAgentResult(it, agentResult)
+                            return@launch
+                        }
+                    }
                     this@ChatActivity.handleSendMessage(it)
                 }
             }
@@ -642,6 +653,34 @@ class ChatActivity : AppCompatActivity() {
         return chatPresenter.sendMessage(userData)
     }
 
+    /**
+     * HNN CN ET v1.0.3: 显示 Agent 执行结果（不经过大模型）。
+     */
+    private fun handleAgentResult(userData: ChatDataItem, result: com.alibaba.mnnllm.android.agent.AgentResult) {
+        onGenerateStart(userData)
+        val assistant = ChatDataItem(ChatViewHolders.ASSISTANT)
+        assistant.text = result.reply
+        assistant.displayText = result.reply
+        assistant.loading = false
+        chatListComponent.updateAssistantResponse(assistant)
+        setIsGenerating(false)
+        chatPresenter.saveResponseToDatabase(assistant)
+        if (result.needsAccessibility) {
+            showAccessibilityPrompt()
+        }
+    }
+
+    private fun showAccessibilityPrompt() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.agent_mode_title)
+            .setMessage(R.string.agent_needs_accessibility)
+            .setPositiveButton(R.string.agent_enable_accessibility) { _, _ ->
+                com.alibaba.mnnllm.android.agent.HnnAccessibilityService.openSettings(this)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         mockStreamRunnable?.let(mockStreamHandler::removeCallbacks)
@@ -653,6 +692,11 @@ class ChatActivity : AppCompatActivity() {
         wavFileWriter?.clear()
         wavFileWriter = null
         bufferedAudioFilePath = null
+        
+        // HNN CN ET v1.0.3: Agent 工作模式 — 退出聊天界面后常驻悬浮窗
+        if (com.alibaba.mnnllm.android.mainsettings.MainSettings.isAgentModeEnabled(this)) {
+            com.alibaba.mnnllm.android.agent.FloatingAgentWindow.show(applicationContext)
+        }
         
         if (::chatPresenter.isInitialized) {
             chatPresenter.destroy()
@@ -793,6 +837,11 @@ class ChatActivity : AppCompatActivity() {
         
         // Always save to database, even for errors, to maintain conversation history
         try {
+            // HNN CN ET v1.0.3 fix: ensure the last message is persisted with visible
+            // content even when the model only produced raw (e.g. thinking) output.
+            if (recentItem.displayText.isNullOrEmpty() && !recentItem.text.isNullOrEmpty()) {
+                recentItem.displayText = recentItem.text
+            }
             chatPresenter.saveResponseToDatabase(recentItem)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save response to database", e)

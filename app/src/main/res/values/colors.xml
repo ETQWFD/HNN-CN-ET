@@ -69,4 +69,5 @@
     <color name="benchmark_card_bg">#FFFFFF</color>
     <color name="benchmark_card_border">#E0E0E0</color>
     <color name="benchmark_accent">#00B38A</color>
+    <color name="code_chip_bg">#E0F2EE</color>
 </resources>

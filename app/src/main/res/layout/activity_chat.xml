@@ -223,7 +223,7 @@
                             app:iconPadding="8dp"
                             app:iconGravity="textStart"
                             app:icon="@drawable/ic_think"
-                            android:text="Thinking"
+                            android:text="@string/deep_thinking"
                             android:textAllCaps="false"
                             android:textColor="@color/toggle_tint"
                             app:drawableTint="@color/toggle_tint"

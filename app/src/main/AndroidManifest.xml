@@ -14,10 +14,13 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:name="com.alibaba.mnnllm.android.MnnLlmApplication"
         android:allowBackup="true"
+        android:requestLegacyExternalStorage="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher"
@@ -168,6 +171,25 @@
             android:name=".benchmark.CustomQRScannerActivity"
             android:exported="false"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
+
+        <activity
+            android:name=".agent.McpSettingsActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
+        <!-- HNN CN ET v1.0.3: Agent 无障碍服务 -->
+        <service
+            android:name=".agent.HnnAccessibilityService"
+            android:exported="false"
+            android:label="@string/agent_mode_title"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibilityservice_config" />
+        </service>
 
     </application>
 

@@ -228,7 +228,7 @@ object ChatViewHolders {
                     } else {
                         chatDataItem.displayText ?: ""
                     }
-                    markdown.setMarkdown(viewText, streamText)
+                    MarkdownCodeChip.render(markdown, viewText, streamText)
                 }
             }
 
@@ -313,7 +313,7 @@ object ChatViewHolders {
                     if (AssistantTextRenderPolicy.usePlainText(data)) {
                         viewText.text = data.displayText
                     } else {
-                        markdown.setMarkdown(viewText, data.displayText!!)
+                        MarkdownCodeChip.render(markdown, viewText, data.displayText!!)
                     }
                 }
                 imageGenerated.visibility =
@@ -327,18 +327,25 @@ object ChatViewHolders {
 
             updateThinkingView(data, itemView.context)
             if (AssistantTextRenderPolicy.usePlainText(data)) {
-                viewText.text = data.displayText
+                val fallbackPlain = data.displayText ?: data.text ?: ""
+                viewText.visibility = if (fallbackPlain.isEmpty()) View.GONE else View.VISIBLE
+                viewText.text = fallbackPlain
             } else {
                 val streamText = if (data.loading) {
                     preprocessStreamingMarkdown(data.displayText ?: "", true)
                 } else {
                     data.displayText ?: ""
                 }
-                if (streamText.isEmpty()) {
+                // HNN CN ET v1.0.3 fix: never let the last assistant message
+                // become invisible. When displayText is empty (e.g. thinking-only
+                // output or reloaded history), fall back to the raw text so the
+                // message stays visible instead of appearing "deleted".
+                val renderText = if (streamText.isEmpty()) (data.text ?: "") else streamText
+                if (renderText.isEmpty() && data.loading) {
                     viewText.visibility = View.GONE
                 } else {
                     viewText.visibility = View.VISIBLE
-                    markdown.setMarkdown(viewText, streamText)
+                    MarkdownCodeChip.render(markdown, viewText, renderText)
                 }
             }
 
@@ -428,17 +435,26 @@ object ChatViewHolders {
             
             val textView = v as? TextView ?: return false
             v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            val hasCode = MarkdownCodeChip.extractCodeBlocks(chatDataItem.text ?: chatDataItem.displayText).isNotEmpty()
             PopupWindowHelper().showPopupWindow(
-                v.getContext(), v
-            ) { v ->
-                if (v.id == R.id.assistant_text_copy) {
+                v.getContext(), v,
+                onClickListener = { clicked ->
+                    if (clicked.id == R.id.assistant_text_copy_code) {
+                    val code = MarkdownCodeChip.extractCodeBlocks(chatDataItem.text ?: chatDataItem.displayText)
+                        .joinToString("\n\n")
+                    if (code.isNotEmpty()) {
+                        MarkdownCodeChip.copyCode(itemView.context, code)
+                    } else {
+                        UiUtils.copyText(itemView.context, textView)
+                    }
+                } else if (clicked.id == R.id.assistant_text_copy) {
                     UiUtils.copyText(itemView.context, textView)
-                } else if (v.id == R.id.assistant_text_select) {
-                    val intent = Intent(v.context, SelectTextActivity::class.java)
+                } else if (clicked.id == R.id.assistant_text_select) {
+                    val intent = Intent(clicked.context, SelectTextActivity::class.java)
                     intent.putExtra("content", chatDataItem.text)
-                    v.context.startActivity(intent)
-                } else if (v.id == R.id.assistant_text_report) {
-                    val chatActivity = UiUtils.getActivity(v.context) as ChatActivity
+                    clicked.context.startActivity(intent)
+                } else if (clicked.id == R.id.assistant_text_report) {
+                    val chatActivity = UiUtils.getActivity(clicked.context) as ChatActivity
                     ClipboardUtils.copyToClipboard(
                         itemView.context,
                         """
@@ -451,9 +467,9 @@ object ChatViewHolders {
                         R.string.debug_message_copied,
                         Toast.LENGTH_LONG
                     ).show()
-                    GithubUtils.reportIssue(v.context)
+                    GithubUtils.reportIssue(clicked.context)
                 }
-            }
+            })
             return true
         }
         
