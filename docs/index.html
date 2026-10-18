@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HNN CN ET — 安卓端侧离线大模型聊天</title>
-  <meta name="description" content="HNN CN ET：基于 MNN 的安卓端侧大模型聊天应用，支持 32 位与 64 位设备，离线可用，内置自动更新、日志反馈与模型下载。" />
+  <meta name="description" content="HNN CN ET：安卓端侧离线大模型聊天应用，基于 MNN，32 位与 64 位设备可用，聊天记录不上传，免费无广告。" />
   <link rel="icon" href="assets/icons/favicon.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32x32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16x16.png" />
@@ -14,7 +14,7 @@
 <body>
 
 <div class="announce-bar" id="announceBar" style="display:none;">
-  <div class="container">
+  <div class="container announce-inner">
     <b id="announceTag">公告</b><span id="announceText"></span>
   </div>
 </div>
@@ -22,7 +22,7 @@
 <nav class="nav">
   <div class="container nav-inner">
     <a class="brand" href="#">
-      <img src="assets/logo.svg" alt="HNN CN ET" />
+      <img src="assets/icons/logo.png" alt="HNN CN ET" />
       <span>HNN CN ET</span>
     </a>
     <button class="nav-toggle" id="navToggle" aria-label="菜单">☰</button>
@@ -39,155 +39,110 @@
 
 <header class="hero">
   <div class="container">
-    <img src="assets/logo.svg" alt="logo" width="84" height="84" style="margin-bottom:8px;" />
+    <span class="hero-badge">安卓端侧离线大模型聊天</span>
     <h1>HNN CN ET</h1>
-    <p class="tagline">在安卓手机上本地跑大模型聊天。不用联网、不用付费、不上传聊天记录，32 位老设备也能正常用。</p>
-    <div class="hero-badges">
-      <span class="badge">架构 <b>armeabi-v7a</b> + <b>arm64-v8a</b></span>
-      <span class="badge">推理引擎 <b>MNN</b></span>
-      <span class="badge">协议 <b>MIT</b></span>
-      <span class="badge">版本 <b id="heroVer">—</b></span>
-    </div>
-    <div class="hero-cta">
-      <a class="btn btn-primary" id="btnDownload" href="https://github.com/ETQWFD/HNN-CN-ET/releases/latest" target="_blank" rel="noopener">立即下载 APK</a>
+    <p class="hero-copy">在安卓手机上本地运行大模型聊天。不用联网、不用付费、聊天记录不上传，32 位老设备也能正常用。</p>
+    <div class="hero-btns">
+      <a class="btn btn-primary" id="btnDownload" href="https://github.com/ETQWFD/HNN-CN-ET/releases/latest">立即下载 APK</a>
       <a class="btn btn-ghost" href="https://github.com/ETQWFD/HNN-CN-ET" target="_blank" rel="noopener">查看源码</a>
     </div>
-    <p class="hero-note" id="downloadNote">正在获取最新版本信息…</p>
+    <div class="hero-meta">
+      <span>架构 armeabi-v7a + arm64-v8a</span>
+      <span>推理引擎 MNN</span>
+      <span>协议 MIT</span>
+      <span>版本 <b id="heroVer">v1.0.4</b></span>
+    </div>
   </div>
 </header>
 
-<section id="features">
+<section class="section" id="features">
   <div class="container">
     <h2 class="section-title">功能特性</h2>
-    <div class="grid grid-3">
-      <div class="card">
-        <h3><span class="dot"></span>端侧离线聊天</h3>
-        <p>模型在本地运行，聊天记录只存在你手机里，不会上传到任何服务器。</p>
-      </div>
-      <div class="card green">
-        <h3><span class="dot"></span>真实 32 位支持</h3>
-        <p>安装包同时包含 32 位与 64 位原生库，老设备、新设备都能装能跑，不是只给演示用。</p>
-      </div>
-      <div class="card">
-        <h3><span class="dot"></span>应用内自动更新</h3>
-        <p>启动时检查新版本，有更新会提示，下载支持断点续传，完成后直接调起系统安装。</p>
-      </div>
-      <div class="card green">
-        <h3><span class="dot"></span>完整日志页</h3>
-        <p>记录启动、下载、加载、推理和错误信息，可一键复制，方便排查问题。</p>
-      </div>
-      <div class="card">
-        <h3><span class="dot"></span>模型下载器</h3>
-        <p>内置模型下载，显示进度和速度，支持断点续传与文件校验，下完就能对话。</p>
-      </div>
-      <div class="card green">
-        <h3><span class="dot"></span>联系作者</h3>
-        <p>设置页有「联系作者」入口，直接发邮件；也可以加 QQ 群反馈。</p>
-      </div>
+    <div class="cards">
+      <div class="card"><h3>端侧离线</h3><p>模型在手机本地运行，断网也能聊，不用等云端。</p></div>
+      <div class="card"><h3>隐私本地</h3><p>聊天记录默认不上传服务器，数据留在自己的设备里。</p></div>
+      <div class="card"><h3>32 位兼容</h3><p>同时支持 arm64-v8a 与 armeabi-v7a，老设备也能装。</p></div>
+      <div class="card"><h3>多模型切换</h3><p>应用内下载与管理多种模型，按需更换，随时切换。</p></div>
+      <div class="card"><h3>深度思考</h3><p>可开启深度思考模式，先分析再回答；关闭则直接回答。</p></div>
+      <div class="card"><h3>Agent 助手</h3><p>可打开应用、发消息、看视频、听音乐、创建文件，支持无障碍与悬浮窗。</p></div>
     </div>
   </div>
 </section>
 
-<section id="download">
+<section class="section section-alt" id="download">
   <div class="container">
-    <h2 class="section-title">版本下载</h2>
-    <p class="section-sub">所有版本都发布在 GitHub Releases，累计下载 <b id="dlTotal">0</b> 次。</p>
+    <h2 class="section-title">下载</h2>
     <div class="download-card">
-      <div class="download-meta">
-        <div><span class="ver" id="dlVer">—</span><span class="size" id="dlSize"></span></div>
-        <div id="dlTime">发布时间：—</div>
-        <div style="margin-top:6px;">包名：<code id="dlName">HNN-CN-ET-*.apk</code></div>
+      <div class="download-info">
+        <h3>最新版本 <span id="dlVer">v1.0.4</span></h3>
+        <p id="downloadNote">最新版本 v1.0.4 · HNN-CN-ET-1.0.4.apk</p>
+        <p class="download-meta"><span id="dlName">HNN-CN-ET-1.0.4.apk</span><span id="dlSize"></span></p>
+        <p class="download-meta"><span id="dlTime"></span><span>累计下载 <b id="dlTotal">—</b> 次</span></p>
       </div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="btn btn-primary" id="btnApk" href="https://github.com/ETQWFD/HNN-CN-ET/releases/latest" target="_blank" rel="noopener">下载 APK</a>
-        <a class="btn btn-ghost" href="https://github.com/ETQWFD/HNN-CN-ET/releases" target="_blank" rel="noopener">全部版本</a>
-      </div>
+      <a class="btn btn-primary" id="btnApk" href="https://github.com/ETQWFD/HNN-CN-ET/releases/latest">下载 APK</a>
     </div>
   </div>
 </section>
 
-<section id="guide">
+<section class="section" id="guide">
   <div class="container">
     <h2 class="section-title">使用说明</h2>
-    <div class="card">
-      <div class="steps">
-        <div class="step">
-          <div class="step-num">1</div>
-          <div class="step-body">
-            <h4>安装 APK</h4>
-            <p>下载最新 APK 并安装。首次安装系统会提示「未知来源」，允许安装即可（Android 8+ 需要在设置里授权）。</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-body">
-            <h4>下载模型</h4>
-            <p>首次打开会引导下载模型。建议在 Wi-Fi 下下载，进度和速度实时显示，支持断点续传。</p>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <div class="step-body">
-            <h4>开始聊天</h4>
-            <p>模型加载完就能对话，之后离线可用。遇到问题可在「日志」页复制日志反馈给我。</p>
-          </div>
-        </div>
-      </div>
+    <div class="steps">
+      <div class="step"><b>1</b><p>下载 APK 并安装到安卓手机。</p></div>
+      <div class="step"><b>2</b><p>首次打开，按提示下载一个模型。</p></div>
+      <div class="step"><b>3</b><p>选好模型进入聊天，等待初始化完成后即可对话。</p></div>
+      <div class="step"><b>4</b><p>需要联网功能时，在设置里开启 API 服务或 Agent 模式。</p></div>
     </div>
   </div>
 </section>
 
-<section id="changelog">
+<section class="section section-alt" id="changelog">
   <div class="container">
     <h2 class="section-title">更新日志</h2>
-    <div class="card">
-      <div class="changelog-item">
-        <h4>v1.0.2 <span class="tag">最新</span></h4>
-        <p>反馈改为直接发邮件给运营团队；Star 入口指向 HNN CN ET 仓库；补齐标签翻译（安全审核/语音识别/语音合成/英语/中英双语）；安全审核模型单独归类，不再误当聊天模型；新增「AI 模型审核」开关（默认关闭，关闭时使用所选模型原生对话）；新增公告系统；生成卡住超时会提示而不是一直转圈；引擎显示为 HNN 1.0.2 · 基于 MNN 3.6.0；界面统一为青绿色。</p>
+    <div class="changelog">
+      <div class="change">
+        <h3>v1.0.4 <small>（2026-10-18）</small></h3>
+        <ul>
+          <li>优化模型初始化与加载流程，进入聊天更流畅。</li>
+          <li>官网改为明亮简洁版，使用应用图标。</li>
+        </ul>
       </div>
-      <div class="changelog-item">
-        <h4>v1.0.1 <span class="tag">修复</span></h4>
-        <p>补齐 32 位语音识别原生库，老设备语音识别可用。</p>
+      <div class="change">
+        <h3>v1.0.3 <small>（2026-10-18）</small></h3>
+        <ul>
+          <li>新增「深度思考」开关。</li>
+          <li>新增「MCP 连接配置」与「Agent 工作模式」。</li>
+          <li>Agent 支持打开应用、发消息、看视频、听音乐、创建文件，支持无障碍与悬浮窗常驻。</li>
+          <li>AI 代码块可单独复制。</li>
+          <li>修复聊天记录最后一条消息消失的问题。</li>
+        </ul>
       </div>
-      <div class="changelog-item">
-        <h4>v1.0.0 <span class="tag">首个 ET 版</span></h4>
-        <p>基于 longluo/MnnLlmChat (MIT) 与 alibaba/MNN 重新打包；补齐 32 位 armeabi-v7a 原生库；新增应用内自动更新、日志页、模型下载断点续传；品牌统一为 HNN CN ET。</p>
+      <div class="change">
+        <h3>v1.0.2 <small>（2026-10-18）</small></h3>
+        <ul>
+          <li>修复聊天卡住与标签显示问题。</li>
+          <li>新增「AI 模型审核」开关（默认关闭，原生对话）。</li>
+          <li>反馈可直接发邮件，新增公告系统。</li>
+        </ul>
       </div>
     </div>
   </div>
 </section>
 
-<section id="contact">
+<section class="section" id="contact">
   <div class="container">
-    <h2 class="section-title">联系作者</h2>
-    <div class="card" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
-      <div>
-        <h3 style="margin-top:0;">ET</h3>
-        <p>邮箱：<a href="mailto:2416444244@qq.com">2416444244@qq.com</a><br/>QQ 群号：917902000</p>
-      </div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="btn btn-primary" href="mailto:2416444244@qq.com">发邮件</a>
-        <a class="btn btn-green" href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&amp;k=U-cTOkqDyq6AxSaXIw3JKzW6z-CpI6-G&amp;authKey=jNbP%2FSn08WY%2FU9or2kiKqewkNeXfoMvnVUXda7k98aunYkYwn2J9zZlCeg0OtKjK&amp;noverify=0&amp;group_code=917902000" target="_blank" rel="noopener">加入 QQ 群</a>
-      </div>
+    <h2 class="section-title">联系</h2>
+    <div class="contact-row">
+      <p>QQ 群：<a href="https://qm.qq.com/q/ETQWFD-HNN" target="_blank" rel="noopener">917902000</a></p>
+      <p>邮箱：<a href="mailto:2416444244@qq.com">2416444244@qq.com</a></p>
     </div>
   </div>
 </section>
 
-<footer>
-  <div class="container cols">
-    <div>
-      <div>© 2026 ET · HNN CN ET</div>
-      <div style="margin-top:6px;">
-        基于 <a href="https://github.com/longluo/MnnLlmChat" target="_blank" rel="noopener">longluo/MnnLlmChat</a> (MIT, Copyright © 2025 Frank Luo)
-        与 <a href="https://github.com/alibaba/MNN" target="_blank" rel="noopener">alibaba/MNN</a> 二次开发。<br/>
-        Modifications Copyright © 2026 ET. 以 <a href="https://github.com/ETQWFD/HNN-CN-ET/blob/main/LICENSE" target="_blank" rel="noopener">MIT 许可证</a> 发布。
-      </div>
-    </div>
-    <div>
-      <a href="https://github.com/ETQWFD/HNN-CN-ET" target="_blank" rel="noopener">源码仓库</a> ·
-      <a href="https://github.com/ETQWFD/HNN-CN-ET/releases" target="_blank" rel="noopener">Releases</a> ·
-      <a href="dan.html" rel="nofollow">下载统计</a>
-    </div>
+<footer class="footer">
+  <div class="container">
+    <p>HNN CN ET · 基于 MNN · MIT License · © ET</p>
+    <p><a href="https://github.com/ETQWFD/HNN-CN-ET" target="_blank" rel="noopener">GitHub 仓库</a></p>
   </div>
 </footer>
 

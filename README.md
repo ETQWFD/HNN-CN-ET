@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/logo.svg" width="120" alt="HNN CN ET" />
+  <img src="docs/assets/icons/app-icon-192.png" width="120" alt="HNN CN ET" />
 </p>
 
 <h1 align="center">HNN CN ET</h1>
