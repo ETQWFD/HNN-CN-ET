@@ -261,12 +261,22 @@ class ChatListComponent(private val context: Context,
         return (range - extent - offset).coerceAtLeast(0)
     }
 
+    // HNN CN ET v1.0.8: optional placeholder text override (e.g. "Calling MCP tool…").
+    @Volatile
+    private var placeholderTextOverride: String? = null
+
+    fun setPlaceholderText(text: String?) {
+        placeholderTextOverride = text
+    }
+
     private fun addResponsePlaceholder() {
         val holderItem = ChatDataItem(dateFormat.format(Date()), ChatViewHolders.ASSISTANT, "")
         holderItem.hasOmniAudio = ModelTypeUtils.isOmni(modelName!!)
         holderItem.loading = true
         holderItem.forceShowLoadingWithText = true
-        holderItem.text = context.getString(R.string.thinking_indicator)
+        val text = placeholderTextOverride ?: context.getString(R.string.thinking_indicator)
+        placeholderTextOverride = null
+        holderItem.text = text
         holderItem.displayText = holderItem.text
         adapter.addItem(holderItem)
         smoothScrollToBottom()

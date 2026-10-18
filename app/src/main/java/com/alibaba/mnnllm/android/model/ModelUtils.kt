@@ -120,14 +120,16 @@ object ModelUtils {
         if (metrics.containsKey("total_timeus")) {
             return generateDiffusionBenchMarkString(metrics)
         }
-        val promptLen = metrics.getOrDefault("prompt_len", 0L) as Long
-        val decodeLen = metrics.getOrDefault("decode_len", 0L) as Long
-        val prefillTimeUs = metrics.getOrDefault("prefill_time", 0L) as Long
-        val decodeTimeUs = metrics.getOrDefault("decode_time", 0L) as Long
-        var visionTimeUs = if (metrics.containsKey("vision_time")) metrics["vision_time"] as Long else 0L
-        var audioTimeUs = if (metrics.containsKey("audio_time")) metrics["audio_time"] as Long else 0L
+        // HNN CN ET v1.0.8: type-safe reads — C++ may report numbers as Int;
+        // and hide internal errors instead of showing "generateBenchMarkString error".
+        val promptLen = metrics["prompt_len"]?.let { (it as? Number)?.toLong() } ?: 0L
+        val decodeLen = metrics["decode_len"]?.let { (it as? Number)?.toLong() } ?: 0L
+        val prefillTimeUs = metrics["prefill_time"]?.let { (it as? Number)?.toLong() } ?: 0L
+        val decodeTimeUs = metrics["decode_time"]?.let { (it as? Number)?.toLong() } ?: 0L
+        val visionTimeUs = metrics["vision_time"]?.let { (it as? Number)?.toLong() } ?: 0L
+        val audioTimeUs = metrics["audio_time"]?.let { (it as? Number)?.toLong() } ?: 0L
         if (promptLen == 0L || decodeLen == 0L) {
-            return "generateBenchMarkString error"
+            return ""
         }
         // Calculate speeds in tokens per second
         var totalPrefillTimeUs = prefillTimeUs + visionTimeUs + audioTimeUs
@@ -143,8 +145,8 @@ object ModelUtils {
 
     @SuppressLint("DefaultLocale")
     fun generateDiffusionBenchMarkString(metrics: HashMap<String, Any>): String {
-        val totalDuration = metrics["total_timeus"] as Long * 1.0 / 1000000.0
-        return String.format("Generate time: %.2f s", totalDuration)
+        val totalDuration = (metrics["total_timeus"] as? Number)?.toLong() ?: 0L
+        return String.format("Generate time: %.2f s", totalDuration * 1.0 / 1000000.0)
     }
 
 

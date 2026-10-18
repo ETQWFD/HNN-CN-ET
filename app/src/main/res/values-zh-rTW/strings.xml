@@ -744,10 +744,12 @@
     <string name="agent_storage_needed">Agent 需要儲存權限才能讀寫檔案。請在設定中開啟「所有檔案存取」或儲存權限後重試。</string>
     <string name="thinking_indicator">正在思考…</string>
     <string name="empty_reply_fallback">（暫無回覆，請換個說法重試）</string>
+    <string name="generation_failed">（生成失敗，請重試一次）</string>
     <string name="direct_mode_title">高速直答</string>
     <string name="direct_mode_summary">開啟後 AI 直接回答、不拒絕問題，並跳過深度思考，回覆更快。</string>
     <string name="mcp_testing">測試中…</string>
-    <string name="mcp_err_connect">無法連線伺服器</string>
+    <string name="mcp_calling">正在呼叫 MCP 工具…</string>
+    <string name="mcp_err_connect">無法連線伺服器：請確認 MCP 服務已啟動、位址連接埠正確</string>
     <string name="mcp_err_timeout">連線逾時，請確認伺服器已啟動</string>
     <string name="mcp_err_no_tools">伺服器無可用工具</string>
     <string name="agent_read_file">已讀取「%1$s」：

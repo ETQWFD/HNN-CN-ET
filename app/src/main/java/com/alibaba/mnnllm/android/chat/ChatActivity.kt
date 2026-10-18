@@ -219,16 +219,21 @@ class ChatActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     // HNN CN ET v1.0.3: Agent 工作模式 — 设备操作指令先交给 Agent 引擎
                     if (com.alibaba.mnnllm.android.mainsettings.MainSettings.isAgentModeEnabled(this@ChatActivity)) {
+                        // HNN CN ET v1.0.8: show a "Calling MCP tool…" placeholder while executing.
+                        val cmd = it.text ?: ""
+                        if (cmd.matches(Regex("^(调用工具|调用mcp|调用MCP|mcp)\\s+.*"))) {
+                            chatListComponent.setPlaceholderText(getString(R.string.mcp_calling))
+                        }
                         val agentResult = withContext(Dispatchers.IO) {
                             try {
-                                com.alibaba.mnnllm.android.agent.AgentEngine.tryHandle(this@ChatActivity, it.text ?: "")
+                                com.alibaba.mnnllm.android.agent.AgentEngine.tryHandle(this@ChatActivity, cmd)
                             } catch (e: Exception) {
                                 Log.e(TAG, "AgentEngine error", e)
                                 com.alibaba.mnnllm.android.agent.AgentResult("Agent 执行出错：${e.message ?: "未知错误"}")
                             }
                         }
                         if (agentResult != null) {
-                            handleAgentResult(it, agentResult, it.text ?: "")
+                            handleAgentResult(it, agentResult, cmd)
                             return@launch
                         }
                     }
@@ -897,12 +902,14 @@ class ChatActivity : AppCompatActivity() {
         hasMeaningfulDiffusionProgress = false
         showDiffusionPercentWhenZero = false
         
-        // Handle error cases
+        // Handle error cases — HNN CN ET v1.0.8: never surface raw technical
+        // errors (e.g. SQLite "Could not allocate CursorWindow") into the chat
+        // bubble; log the detail and show a friendly message instead.
         if (benchMarkResult.containsKey("error") && benchMarkResult["error"] as Boolean) {
             val errorMessage = benchMarkResult["message"] as? String ?: "generation_failed"
-            recentItem.text = errorMessage
-            recentItem.displayText = errorMessage
             Log.e(TAG, "Generation failed: $errorMessage")
+            recentItem.text = getString(R.string.generation_failed)
+            recentItem.displayText = recentItem.text
         } else {
             // Normal success case - set response if available
             val response = benchMarkResult["response"] as? String

@@ -15,9 +15,19 @@ class ChatDataManager private constructor(context: Context) {
     
     init {
         ensureLastChatTimeColumn()
-        fixAllMissingLastChatTimes()
+        // HNN CN ET v1.0.8: repair runs in the background so app startup and the
+        // first chat are never blocked by a full-table scan, and the DB is not
+        // held during model loading.
+        Thread({
+            try {
+                fixAllMissingLastChatTimes()
+            } catch (e: Exception) {
+                Log.e(TAG, "background lastChatTime repair failed", e)
+            }
+        }, "chat-db-repair").start()
     }
 
+    @Synchronized
     fun addOrUpdateSession(sessionId: String, modelId: String?) {
         Log.d(TAG, "addOrUpdateSession: sessionId: $sessionId modelId: $modelId")
         val db = dbHelper.writableDatabase
@@ -51,6 +61,7 @@ class ChatDataManager private constructor(context: Context) {
         db.close()
     }
 
+    @Synchronized
     fun addChatData(sessionId: String?, chatDataItem: ChatDataItem) {
         if (sessionId.isNullOrEmpty()) {
             Log.e(TAG, "addChatData: sessionId is null or empty")
@@ -139,6 +150,7 @@ class ChatDataManager private constructor(context: Context) {
     }
 
     @SuppressLint("Range")
+    @Synchronized
     fun getChatDataBySession(sessionId: String): List<ChatDataItem> {
         val chatDataItemList: MutableList<ChatDataItem> = ArrayList()
         val db = dbHelper.readableDatabase
@@ -210,6 +222,7 @@ class ChatDataManager private constructor(context: Context) {
         return chatDataItemList
     }
 
+    @Synchronized
     fun updateSessionName(sessionId: String, newName: String?) {
         val db = dbHelper.writableDatabase
 
@@ -224,6 +237,7 @@ class ChatDataManager private constructor(context: Context) {
         db.close()
     }
 
+    @Synchronized
     fun updateSessionModelId(sessionId: String, newModelId: String) {
         val db = dbHelper.writableDatabase
 
@@ -239,6 +253,7 @@ class ChatDataManager private constructor(context: Context) {
     }
 
     @get:SuppressLint("Range")
+    @get:Synchronized
     val allSessions: MutableList<SessionItem>
         get() {
             val list: MutableList<SessionItem> =
@@ -290,6 +305,7 @@ class ChatDataManager private constructor(context: Context) {
             return list
         }
 
+    @Synchronized
     fun deleteAllChatData(sessionId: String) {
         val db = dbHelper.writableDatabase
         db.delete(
@@ -300,6 +316,7 @@ class ChatDataManager private constructor(context: Context) {
         db.close()
     }
 
+    @Synchronized
     fun deleteSession(sessionId: String) {
         val db = dbHelper.writableDatabase
         try {
@@ -323,6 +340,7 @@ class ChatDataManager private constructor(context: Context) {
      * Delete all sessions for a given modelId.
      * Returns the list of deleted session IDs for resource cleanup.
      */
+    @Synchronized
     fun deleteSessionsByModelId(modelId: String): List<String> {
         val deletedSessionIds = mutableListOf<String>()
         val db = dbHelper.writableDatabase
@@ -361,6 +379,7 @@ class ChatDataManager private constructor(context: Context) {
         return deletedSessionIds
     }
 
+    @Synchronized
     fun recordDownloadHistory(modelId: String, modelPath: String, modelType: String = "LLM") {
         val db = dbHelper.writableDatabase
         val values = ContentValues()
@@ -375,6 +394,7 @@ class ChatDataManager private constructor(context: Context) {
     }
 
     @SuppressLint("Range")
+    @Synchronized
     fun getDownloadTime(modelId: String): Long {
         val db = dbHelper.readableDatabase
         val cursor = db.query(
@@ -394,6 +414,7 @@ class ChatDataManager private constructor(context: Context) {
     }
 
     @SuppressLint("Range")
+    @Synchronized
     fun getDownloadModelType(modelId: String): String? {
         val db = dbHelper.readableDatabase
         val cursor = db.query(
@@ -413,6 +434,7 @@ class ChatDataManager private constructor(context: Context) {
     }
 
     @SuppressLint("Range")
+    @Synchronized
     fun getLastChatTime(modelId: String): Long {
         val db = dbHelper.readableDatabase
         var lastChatTime = 0L
@@ -443,6 +465,7 @@ class ChatDataManager private constructor(context: Context) {
 
 
     @SuppressLint("Range")
+    @Synchronized
     fun getSessionsForModel(modelId: String): List<SessionItem> {
         val list: MutableList<SessionItem> = ArrayList()
         val db = dbHelper.readableDatabase
@@ -471,6 +494,7 @@ class ChatDataManager private constructor(context: Context) {
     }
 
     @SuppressLint("Range")
+    @Synchronized
     fun getAllDownloadedModels(): List<DownloadedModelInfo> {
         val list: MutableList<DownloadedModelInfo> = ArrayList()
         val db = dbHelper.readableDatabase
@@ -538,6 +562,7 @@ class ChatDataManager private constructor(context: Context) {
     }
     
     @SuppressLint("Range")
+    @Synchronized
     fun fixAllMissingLastChatTimes() {
         val db = dbHelper.readableDatabase
         try {
