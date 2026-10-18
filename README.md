@@ -1,6 +1,6 @@
 # MNN Chat Android App
 
-> ## HNN CN ET  <img src="./assets/icons/android-chrome-512x512.png" width="32" alt="HNN CN ET">
+> ## HNN CN ET  <img src="./docs/assets/icons/android-chrome-192x192.png" width="32" alt="HNN CN ET">
 >
 >
 > - 仓库：<https://github.com/ETQWFD/HNN-CN-ET>
@@ -15,7 +15,7 @@
 [Download](#releases)  [下载](./README_CN.md#releases)
 
 ## Introduction
-This is our full multimodal language model (LLM) Android app
+This is our full multimodal language model (CN ET) Android app
 <p align="center">
   <img width="20%" alt="Icon"  src="./assets/image_home_new.jpg" style="margin: 0 10px;">
   <img width="20%" alt="Icon" src="./assets/image_diffusion_new.jpg" style="margin: 0 10px;">
