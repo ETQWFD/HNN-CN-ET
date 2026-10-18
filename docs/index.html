@@ -50,7 +50,7 @@
       <span>架构 armeabi-v7a + arm64-v8a</span>
       <span>推理引擎 MNN</span>
       <span>协议 MIT</span>
-      <span>版本 <b id="heroVer">v1.0.5</b></span>
+      <span>版本 <b id="heroVer">v1.0.6</b></span>
     </div>
   </div>
 </header>
@@ -74,9 +74,9 @@
     <h2 class="section-title">下载</h2>
     <div class="download-card">
       <div class="download-info">
-        <h3>最新版本 <span id="dlVer">v1.0.5</span></h3>
-        <p id="downloadNote">最新版本 v1.0.5 · HNN-CN-ET-1.0.5.apk</p>
-        <p class="download-meta"><span id="dlName">HNN-CN-ET-1.0.5.apk</span><span id="dlSize"></span></p>
+        <h3>最新版本 <span id="dlVer">v1.0.6</span></h3>
+        <p id="downloadNote">最新版本 v1.0.6 · HNN-CN-ET-1.0.6.apk</p>
+        <p class="download-meta"><span id="dlName">HNN-CN-ET-1.0.6.apk</span><span id="dlSize"></span></p>
         <p class="download-meta"><span id="dlTime"></span><span>累计下载 <b id="dlTotal">—</b> 次</span></p>
       </div>
       <a class="btn btn-primary" id="btnApk" href="https://github.com/ETQWFD/HNN-CN-ET/releases/latest">下载 APK</a>
@@ -115,6 +115,14 @@
           <li>设置内下载 AI 模型到本地 models 目录并直接使用；侧栏历史记录、随时检测更新。</li>
           <li>Agent 工作模式可操作电脑（打开应用/创建、读取、修改文件/回到桌面），操作前密码确认，可限制工作文件夹；MCP 连接配置可添加与测试。</li>
           <li>内置 API 服务（OpenAI 兼容）：开启后显示连接地址与 66 位 Key（etc- 开头），可真实流式调用，限制可开可关。</li>
+        </ul>
+      </div>
+      <div class="change">
+        <h3>v1.0.6 <small>（2026-10-18）</small></h3>
+        <ul>
+          <li>修复 MCP 服务器无法连接问题：放开 Android 明文 HTTP 限制，局域网 http://IP:port 的 MCP 服务可直接测试与真实调用。</li>
+          <li>Agent 完全听懂设备指令：打开软件/发消息/看视频/听音乐/返回桌面，无无障碍权限时自动弹出申请，授权后自动继续执行未完成的任务。</li>
+          <li>AI 可通过「调用工具 名称 参数=值」真实调用 MCP 工具，创建、读取、修改、删除文件。</li>
         </ul>
       </div>
       <div class="change">

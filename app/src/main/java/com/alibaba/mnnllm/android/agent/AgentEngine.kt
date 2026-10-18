@@ -24,6 +24,14 @@ object AgentEngine {
     private const val TAG = "AgentEngine"
 
     /**
+     * HNN CN ET v1.0.6: the last device-action command that was blocked by a
+     * missing accessibility permission. Kept until the user grants the
+     * permission, then re-executed automatically by ChatActivity.
+     */
+    @Volatile
+    var pendingCommand: String? = null
+
+    /**
      * Try to handle [input] as a device-action request.
      * Returns null when the request is not an Agent command (normal chat).
      */
@@ -66,11 +74,18 @@ object AgentEngine {
             return handleToolCall(context, toolMatch.groupValues[2], toolMatch.groupValues[3].trim())
         }
 
-        // 打开/启动/开启 应用
+        // 打开/启动/开启 应用 — HNN CN ET v1.0.6: 无无障碍权限时先申请，
+        // 用户授权后自动继续执行该任务（见 ChatActivity.onResume 的重试逻辑）。
         val openMatch = Regex("^(请|帮我)?(打开|启动|开启|打开一下)\\s*([\\u4e00-\\u9fa5A-Za-z0-9·+_\\-]{1,12})")
             .find(trimmed)
         if (openMatch != null && !trimmed.contains("发消息")) {
             val label = openMatch.groupValues[3]
+            if (!HnnAccessibilityService.isEnabled(context)) {
+                return AgentResult(
+                    context.getString(R.string.agent_needs_accessibility),
+                    needsAccessibility = true
+                )
+            }
             if (launchAppByLabel(context, label)) {
                 return AgentResult(context.getString(R.string.agent_opened, label))
             }

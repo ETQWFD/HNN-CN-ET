@@ -739,7 +739,7 @@
     <string name="mcp_test_ok">Connected. Tools available: %1$d</string>
     <string name="mcp_test_fail">Connection failed: %1$s</string>
     <string name="agent_accessibility_description">HNN CN ET Agent accessibility service. When Agent Mode is on, it can open apps and perform actions for you after you grant permission.</string>
-    <string name="agent_needs_accessibility">Agent needs the accessibility service to operate other apps. Please enable &quot;HNN CN ET accessibility service&quot; on the next screen.</string>
+    <string name="agent_needs_accessibility">Agent needs the accessibility service to operate other apps. Please enable &quot;HNN CN ET accessibility service&quot; on the next screen; the pending task will continue automatically after you grant it.</string>
     <string name="agent_enable_accessibility">Enable accessibility</string>
     <string name="agent_open_failed">No app named &quot;%1$s&quot; was found.</string>
     <string name="agent_opened">Opened &quot;%1$s&quot;.</string>

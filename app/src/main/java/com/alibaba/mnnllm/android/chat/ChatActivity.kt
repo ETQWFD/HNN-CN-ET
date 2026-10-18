@@ -228,7 +228,7 @@ class ChatActivity : AppCompatActivity() {
                             }
                         }
                         if (agentResult != null) {
-                            handleAgentResult(it, agentResult)
+                            handleAgentResult(it, agentResult, it.text ?: "")
                             return@launch
                         }
                     }
@@ -678,8 +678,13 @@ class ChatActivity : AppCompatActivity() {
 
     /**
      * HNN CN ET v1.0.3: 显示 Agent 执行结果（不经过大模型）。
+     * HNN CN ET v1.0.6: 记录待继续任务，授权无障碍后自动重试。
      */
-    private fun handleAgentResult(userData: ChatDataItem, result: com.alibaba.mnnllm.android.agent.AgentResult) {
+    private fun handleAgentResult(
+        userData: ChatDataItem,
+        result: com.alibaba.mnnllm.android.agent.AgentResult,
+        originalText: String
+    ) {
         onGenerateStart(userData)
         val replyText = if (result.reply.isNullOrBlank()) {
             getString(R.string.empty_reply_fallback)
@@ -694,6 +699,7 @@ class ChatActivity : AppCompatActivity() {
         setIsGenerating(false)
         chatPresenter.saveResponseToDatabase(assistant)
         if (result.needsAccessibility) {
+            com.alibaba.mnnllm.android.agent.AgentEngine.pendingCommand = originalText
             showAccessibilityPrompt()
         }
     }
@@ -707,6 +713,56 @@ class ChatActivity : AppCompatActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    /**
+     * HNN CN ET v1.0.6: 无障碍授权后自动继续执行未完成的任务。
+     * 用户从系统无障碍设置返回本页时触发。
+     */
+    override fun onResume() {
+        super.onResume()
+        val pending = com.alibaba.mnnllm.android.agent.AgentEngine.pendingCommand
+        if (pending.isNullOrBlank()) return
+        if (com.alibaba.mnnllm.android.agent.HnnAccessibilityService.isEnabled(this)) {
+            com.alibaba.mnnllm.android.agent.AgentEngine.pendingCommand = null
+            retryPendingAgentCommand(pending)
+        } else {
+            showAccessibilityPrompt()
+        }
+    }
+
+    private fun retryPendingAgentCommand(command: String) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    com.alibaba.mnnllm.android.agent.AgentEngine.tryHandle(this@ChatActivity, command)
+                } catch (e: Exception) {
+                    Log.e(TAG, "AgentEngine retry error", e)
+                    com.alibaba.mnnllm.android.agent.AgentResult("Agent 执行出错：${e.message ?: "未知错误"}")
+                }
+            }
+            if (result == null) {
+                // 指令不属于 Agent 操作，交给正常聊天流程
+                showAccessibilityPrompt()
+                return@launch
+            }
+            val replyText = if (result.reply.isNullOrBlank()) {
+                getString(R.string.empty_reply_fallback)
+            } else {
+                result.reply
+            }
+            val assistant = ChatDataItem(ChatViewHolders.ASSISTANT)
+            assistant.text = replyText
+            assistant.displayText = replyText
+            assistant.loading = false
+            chatListComponent.updateAssistantResponse(assistant)
+            setIsGenerating(false)
+            chatPresenter.saveResponseToDatabase(assistant)
+            if (result.needsAccessibility) {
+                com.alibaba.mnnllm.android.agent.AgentEngine.pendingCommand = command
+                showAccessibilityPrompt()
+            }
+        }
     }
 
     override fun onDestroy() {

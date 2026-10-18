@@ -725,7 +725,7 @@
     <string name="mcp_test_ok">连接成功，可用工具：%1$d 个</string>
     <string name="mcp_test_fail">连接失败：%1$s</string>
     <string name="agent_accessibility_description">HNN CN ET Agent 无障碍服务。开启 Agent 工作模式并授权后，可帮你操作其他应用。</string>
-    <string name="agent_needs_accessibility">Agent 需要无障碍权限才能操作其他应用。请在接下来弹出的页面中开启「HNN CN ET 无障碍服务」。</string>
+    <string name="agent_needs_accessibility">Agent 需要无障碍权限才能操作其他应用。请在接下来弹出的页面中开启「HNN CN ET 无障碍服务」，开启后将自动继续执行未完成的任务。</string>
     <string name="agent_enable_accessibility">开启无障碍</string>
     <string name="agent_open_failed">没有找到名为「%1$s」的应用。</string>
     <string name="agent_opened">已打开「%1$s」。</string>
