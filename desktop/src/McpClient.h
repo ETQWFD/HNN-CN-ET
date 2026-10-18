@@ -25,6 +25,10 @@ public:
     void listTools(const Server& s);
     void callTool(const Server& s, const QString& tool, const QMap<QString, QString>& args);
 
+    // HNN CN ET v1.0.1: synchronous helpers for the Agent engine (real MCP calls).
+    static QStringList listToolsSync(const QString& url);
+    static QString callToolSync(const QString& url, const QString& tool, const QMap<QString, QString>& args);
+
 signals:
     void testResult(const QString& name, bool ok, int toolCount, const QString& error);
     void toolsListed(const QString& name, const QStringList& tools);

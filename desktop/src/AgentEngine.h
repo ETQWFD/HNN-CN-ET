@@ -43,4 +43,9 @@ private:
     QString openApp(const QString& label);
     QString openPath(const QString& path);
     QString sandboxPath(const QString& path) const;
+    // HNN CN ET v1.0.1: real MCP tool calls + installed-app discovery.
+    QString callMcpTool(const QString& toolName, const QString& argsText);
+    QStringList findInstalledApps(const QString& label) const;
+    // Try to run a file operation through an MCP tool first (falls back to local).
+    QString runMcpFileTool(const QStringList& candidates, const QMap<QString, QString>& args);
 };

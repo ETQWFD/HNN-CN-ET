@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     app.setApplicationName("HNN CN ET");
     app.setApplicationDisplayName("HNN CN ET");
     app.setOrganizationName("ET");
-    app.setApplicationVersion("1.0.0");
+    app.setApplicationVersion("1.0.1");
     app.setWindowIcon(QIcon(":/app.png"));
 
     QFont font("Microsoft YaHei UI");

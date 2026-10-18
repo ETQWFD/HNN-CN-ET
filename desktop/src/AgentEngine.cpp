@@ -2,10 +2,12 @@
 
 #include <QFile>
 #include <QDir>
+#include <QDirIterator>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QDateTime>
 #include "ThemeManager.h"
+#include "McpClient.h"
 
 AgentEngine& AgentEngine::instance() {
     static AgentEngine engine;
@@ -109,7 +111,7 @@ void AgentEngine::runConfirmed(const QString& input, bool passwordOk) {
         QRegularExpression re("^(调用工具|调用mcp|调用MCP|mcp)\\s+([A-Za-z0-9_.\\-]+)\\s*(.*)");
         auto m = re.match(trimmed);
         if (m.hasMatch()) {
-            reply = QStringLiteral("MCP 工具「%1」将在聊天工具中执行（请使用 MCP 管理面板）。").arg(m.captured(2));
+            reply = callMcpTool(m.captured(2), m.captured(3));
         } else {
             reply = QStringLiteral("用法：调用工具 工具名 参数=值");
         }
@@ -144,6 +146,8 @@ QString AgentEngine::sandboxPath(const QString& path) const {
 }
 
 QString AgentEngine::createFile(const QString& path, const QString& content) {
+    QString mcp = runMcpFileTool({"create_file", "write_file"}, {{"path", path}, {"content", content}});
+    if (!mcp.isEmpty()) return mcp;
     QString target = sandboxPath(path);
     QFileInfo fi(target);
     QDir().mkpath(fi.absolutePath());
@@ -157,6 +161,8 @@ QString AgentEngine::createFile(const QString& path, const QString& content) {
 }
 
 QString AgentEngine::readFile(const QString& path) {
+    QString mcp = runMcpFileTool({"read_file", "read_text_file", "read"}, {{"path", path}});
+    if (!mcp.isEmpty()) return mcp;
     QString target = sandboxPath(path);
     QFile f(target);
     if (!f.open(QIODevice::ReadOnly)) {
@@ -169,6 +175,8 @@ QString AgentEngine::readFile(const QString& path) {
 }
 
 QString AgentEngine::listDir(const QString& path) {
+    QString mcp = runMcpFileTool({"list_files", "list_directory", "list_dir"}, {{"path", path}});
+    if (!mcp.isEmpty()) return mcp;
     QString target = sandboxPath(path);
     QDir d(target);
     if (!d.exists()) {
@@ -185,6 +193,8 @@ QString AgentEngine::listDir(const QString& path) {
 }
 
 QString AgentEngine::deleteFile(const QString& path) {
+    QString mcp = runMcpFileTool({"delete_file", "remove_file"}, {{"path", path}});
+    if (!mcp.isEmpty()) return mcp;
     QString target = sandboxPath(path);
     QFileInfo fi(target);
     if (fi.isDir()) {
@@ -200,6 +210,8 @@ QString AgentEngine::deleteFile(const QString& path) {
 }
 
 QString AgentEngine::editFile(const QString& path, const QString& content) {
+    QString mcp = runMcpFileTool({"write_file", "edit_file", "update_file"}, {{"path", path}, {"content", content}});
+    if (!mcp.isEmpty()) return mcp;
     QString target = sandboxPath(path);
     QFileInfo fi(target);
     QDir().mkpath(fi.absolutePath());
@@ -212,6 +224,29 @@ QString AgentEngine::editFile(const QString& path, const QString& content) {
     return QStringLiteral("已写入文件：%1").arg(target);
 }
 
+// HNN CN ET v1.0.1: run a file operation via the first configured MCP server that
+// exposes one of [candidates]. Returns an empty string when no usable MCP tool exists.
+QString AgentEngine::runMcpFileTool(const QStringList& candidates, const QMap<QString, QString>& args) {
+    const auto servers = McpClient::instance().servers();
+    if (servers.isEmpty()) return QString();
+    for (const auto& s : servers) {
+        const QStringList tools = McpClient::listToolsSync(s.url);
+        if (tools.isEmpty()) continue;
+        QString matched;
+        for (const auto& t : tools) {
+            for (const auto& c : candidates) {
+                if (t.contains(c, Qt::CaseInsensitive)) { matched = t; break; }
+            }
+            if (!matched.isEmpty()) break;
+        }
+        if (matched.isEmpty()) continue;
+        QString out = McpClient::callToolSync(s.url, matched, args);
+        if (out.isEmpty() || out == "timeout" || out == "connect") continue;
+        return QStringLiteral("【MCP %1】\n%2").arg(matched, out.left(3000));
+    }
+    return QString();
+}
+
 QString AgentEngine::openApp(const QString& label) {
     // Common Windows apps; best-effort start.
     struct Known { const char* label; const char* cmd; };
@@ -221,14 +256,91 @@ QString AgentEngine::openApp(const QString& label) {
         {"资源管理器", "explorer.exe"}, {"我的电脑", "explorer.exe"},
         {"控制面板", "control.exe"}, {"任务管理器", "taskmgr.exe"},
         {"命令行", "cmd.exe"}, {"终端", "cmd.exe"},
+        {"设置", "ms-settings:"}, {"注册表", "regedit.exe"},
+        {"相机", "microsoft.windows.camera:"}, {"照片", "ms-photos:"},
     };
     for (const auto& k : known) {
         if (QString(k.label).contains(label, Qt::CaseInsensitive) || label.contains(k.label, Qt::CaseInsensitive)) {
-            QProcess::startDetached(QString::fromLatin1(k.cmd), QStringList());
+            if (QString(k.cmd).contains(':')) {
+                QProcess::startDetached(QStringLiteral("explorer.exe"), QStringList() << k.cmd);
+            } else {
+                QProcess::startDetached(QString::fromLatin1(k.cmd), QStringList());
+            }
             return QStringLiteral("已打开「%1」。").arg(label);
         }
     }
-    return QStringLiteral("未找到应用「%1」，请尝试：打开记事本 / 打开计算器 / 打开浏览器。").arg(label);
+
+    // HNN CN ET v1.0.1: scan installed apps (Start Menu shortcuts) by name.
+    QStringList found = findInstalledApps(label);
+    if (!found.isEmpty()) {
+        QProcess::startDetached(found.first(), QStringList());
+        return QStringLiteral("已打开「%1」。").arg(label);
+    }
+    return QStringLiteral("未找到应用「%1」。").arg(label);
+}
+
+// HNN CN ET v1.0.1: search Start Menu shortcut locations and the system
+// executable folders for an installed app matching [label].
+QStringList AgentEngine::findInstalledApps(const QString& label) const {
+    QStringList dirs;
+    const QString pd = qgetenv("ProgramData");
+    const QString ad = qgetenv("APPDATA");
+    const QString sys = QDir::rootPath() + "Windows/System32";
+    if (!pd.isEmpty()) dirs << QDir(pd).filePath("Microsoft/Windows/Start Menu/Programs");
+    if (!ad.isEmpty()) dirs << QDir(ad).filePath("Microsoft/Windows/Start Menu/Programs");
+    dirs << sys;
+
+    QStringList hits;
+    QString key = label;
+    for (const auto& d : dirs) {
+        QDirIterator it(d, QStringList() << "*.lnk" << "*.exe", QDir::Files, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            QString path = it.next();
+            QString name = QFileInfo(path).completeBaseName();
+            if (name.contains(key, Qt::CaseInsensitive) || key.contains(name, Qt::CaseInsensitive)) {
+                hits << path;
+                if (hits.size() >= 5) return hits;
+            }
+        }
+    }
+    return hits;
+}
+
+// HNN CN ET v1.0.1: run an MCP tool for real across configured servers.
+QString AgentEngine::callMcpTool(const QString& toolName, const QString& argsText) {
+    const auto servers = McpClient::instance().servers();
+    if (servers.isEmpty()) {
+        return QStringLiteral("未配置 MCP 服务器（请到设置中添加）。");
+    }
+    QMap<QString, QString> args;
+    QRegularExpression kv("([A-Za-z0-9_.\\-]+)\\s*=\\s*([^\\s]+|\"[^\"]*\")");
+    auto it = kv.globalMatch(argsText);
+    bool has = false;
+    while (it.hasNext()) {
+        auto mm = it.next();
+        args[mm.captured(1)] = mm.captured(2).remove('"');
+        has = true;
+    }
+    if (!has && !argsText.trimmed().isEmpty()) args["text"] = argsText.trimmed();
+
+    QString lastErr;
+    for (const auto& s : servers) {
+        const QStringList tools = McpClient::listToolsSync(s.url);
+        if (tools.isEmpty()) { lastErr = "无法连接 MCP 服务器或该服务器无工具"; continue; }
+        QString matched;
+        for (const auto& t : tools) {
+            if (t.compare(toolName, Qt::CaseInsensitive) == 0 || t.contains(toolName, Qt::CaseInsensitive)) {
+                matched = t; break;
+            }
+        }
+        if (matched.isEmpty()) { lastErr = QStringLiteral("服务器「%1」未找到工具「%2」").arg(s.name, toolName); continue; }
+        QString out = McpClient::callToolSync(s.url, matched, args);
+        if (out.isEmpty()) { lastErr = "工具返回空结果"; continue; }
+        if (out == "timeout") { lastErr = "工具调用超时"; continue; }
+        if (out == "connect") { lastErr = "无法连接 MCP 服务器"; continue; }
+        return QStringLiteral("【MCP %1】\n%2").arg(matched, out.left(3000));
+    }
+    return QStringLiteral("MCP 调用失败：%1").arg(lastErr);
 }
 
 QString AgentEngine::openPath(const QString& path) {

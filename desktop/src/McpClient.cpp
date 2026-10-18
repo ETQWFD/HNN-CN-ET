@@ -75,6 +75,27 @@ static QJsonObject rpc(const QString& urlStr, const QString& method, const QJson
     return obj;
 }
 
+// Build JSON-RPC params for tools/call.
+static QJsonObject paramsFor(const QString& tool, const QMap<QString, QString>& args) {
+    QJsonObject params;
+    params.insert("name", tool);
+    QJsonObject a;
+    for (auto it = args.begin(); it != args.end(); ++it) a.insert(it.key(), it.value());
+    params.insert("arguments", a);
+    return params;
+}
+
+// Extract the human-readable text from a tools/call result.
+static QString extractText(const QJsonObject& res) {
+    QString text;
+    QJsonArray content = res.value("content").toArray();
+    for (const auto& c : content) {
+        QString t = c.toObject().value("text").toString();
+        if (!t.isEmpty()) { if (!text.isEmpty()) text += "\n"; text += t; }
+    }
+    return text;
+}
+
 void McpClient::testServer(const Server& s) {
     QTimer::singleShot(0, this, [this, s]() {
         QString err;
@@ -106,24 +127,41 @@ void McpClient::listTools(const Server& s) {
 
 void McpClient::callTool(const Server& s, const QString& tool, const QMap<QString, QString>& args) {
     QTimer::singleShot(0, this, [this, s, tool, args]() {
-        QJsonObject params;
-        params.insert("name", tool);
-        QJsonObject a;
-        for (auto it = args.begin(); it != args.end(); ++it) a.insert(it.key(), it.value());
-        params.insert("arguments", a);
         QString err;
-        QJsonObject res = rpc(s.url, "tools/call", &params, 8000, &err);
+        QJsonObject p = paramsFor(tool, args);
+        QJsonObject res = rpc(s.url, "tools/call", &p, 8000, &err);
         if (!err.isEmpty()) {
             emit toolResult(tool, QString(), err);
             return;
         }
-        QString text;
-        QJsonArray content = res.value("content").toArray();
-        for (const auto& c : content) {
-            QString t = c.toObject().value("text").toString();
-            if (!t.isEmpty()) { if (!text.isEmpty()) text += "\n"; text += t; }
-        }
+        QString text = extractText(res);
         if (text.isEmpty()) text = res.value("result").toString();
         emit toolResult(tool, text, QString());
     });
+}
+
+// ---------- HNN CN ET v1.0.1: synchronous helpers (Agent engine) ----------
+
+QStringList McpClient::listToolsSync(const QString& url) {
+    QString err;
+    QJsonObject res = rpc(url, "tools/list", nullptr, 8000, &err);
+    QStringList names;
+    if (err.isEmpty()) {
+        QJsonArray tools = res.value("tools").toArray();
+        for (const auto& t : tools) {
+            QString n = t.toObject().value("name").toString();
+            if (!n.isEmpty()) names.append(n);
+        }
+    }
+    return names;
+}
+
+QString McpClient::callToolSync(const QString& url, const QString& tool, const QMap<QString, QString>& args) {
+    QString err;
+    QJsonObject p = paramsFor(tool, args);
+    QJsonObject res = rpc(url, "tools/call", &p, 8000, &err);
+    if (!err.isEmpty()) return err == "timeout" ? "timeout" : "connect";
+    QString text = extractText(res);
+    if (text.isEmpty()) text = res.value("result").toString();
+    return text;
 }
