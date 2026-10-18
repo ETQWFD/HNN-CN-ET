@@ -103,6 +103,12 @@ class MainSettingsFragment : Fragment() {
             startActivity(Intent(requireContext(), com.alibaba.mnnllm.android.agent.McpSettingsActivity::class.java))
         }
 
+        // HNN CN ET v1.0.5: 高速直答模式（直接回答、不拒绝、跳过深度思考）
+        binding.itemDirectReply.isChecked = MainSettings.isDirectReplyEnabled(requireContext())
+        binding.itemDirectReply.setOnCheckedChangeListener { isChecked ->
+            MainSettings.setDirectReplyEnabled(requireContext(), isChecked)
+        }
+
         setupDownloadProvider(sharedPreferences)
         setupVoiceModelManagement()
         setupStorageManagement()

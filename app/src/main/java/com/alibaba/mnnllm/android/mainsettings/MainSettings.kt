@@ -131,6 +131,21 @@ object MainSettings {
         return sharedPreferences.getString("mcp_servers", "") ?: ""
     }
 
+
+    /**
+     * HNN CN ET v1.0.5: 高速直答模式开关。
+     * 开启后 AI 直接回答、不拒绝问题，并跳过深度思考，回复更快。
+     */
+    fun isDirectReplyEnabled(context: Context): Boolean {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        return sharedPreferences.getBoolean("direct_reply", false)
+    }
+
+    fun setDirectReplyEnabled(context: Context, enabled: Boolean) {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        sharedPreferences.edit().putBoolean("direct_reply", enabled).apply()
+    }
+
     fun setMcpServersJson(context: Context, json: String) {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
         sharedPreferences.edit().putString("mcp_servers", json).apply()

@@ -755,4 +755,21 @@
     <string name="code_copied">Code copied to clipboard</string>
     <string name="agent_overlay_request">Agent 需要「悬浮窗」权限，开启后退出聊天界面时会在屏幕上常驻 Agent 悬浮窗（可拖动、点击回到应用）。请在弹出的页面中允许。</string>
     <string name="agent_storage_needed">Agent 需要存储权限才能读写文件。请在设置中开启存储权限后重试。</string>
+    <string name="thinking_indicator">Thinking…</string>
+    <string name="empty_reply_fallback">(No reply yet. Please try again.)</string>
+    <string name="direct_mode_title">Direct Answer</string>
+    <string name="direct_mode_summary">Answer directly, never refuse, and skip deep thinking for faster replies.</string>
+    <string name="mcp_testing">Testing…</string>
+    <string name="mcp_err_connect">Cannot reach server</string>
+    <string name="mcp_err_timeout">Connection timed out. Please make sure the server is running.</string>
+    <string name="mcp_err_no_tools">Server exposes no tools</string>
+    <string name="agent_read_file">Read %1$s:
+%2$s</string>
+    <string name="agent_list_dir">%1$s:
+%2$s</string>
+    <string name="agent_deleted">Deleted %1$s</string>
+    <string name="agent_wrote">Wrote %1$s</string>
+    <string name="agent_mcp_tool_done">MCP tool %1$s result:
+%2$s</string>
+    <string name="agent_no_file_tool">No usable file tool on the MCP server</string>
 </resources>

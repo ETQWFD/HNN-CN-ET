@@ -740,4 +740,21 @@
     <string name="code_copied">程式碼已複製到剪貼簿</string>
     <string name="agent_overlay_request">Agent 需要「懸浮視窗」權限：開啟後離開聊天介面時，螢幕上會常駐一個可拖動的 Agent 懸浮球，點擊即可回到應用。請在彈出的頁面中允許。</string>
     <string name="agent_storage_needed">Agent 需要儲存權限才能讀寫檔案。請在設定中開啟「所有檔案存取」或儲存權限後重試。</string>
+    <string name="thinking_indicator">正在思考…</string>
+    <string name="empty_reply_fallback">（暫無回覆，請換個說法重試）</string>
+    <string name="direct_mode_title">高速直答</string>
+    <string name="direct_mode_summary">開啟後 AI 直接回答、不拒絕問題，並跳過深度思考，回覆更快。</string>
+    <string name="mcp_testing">測試中…</string>
+    <string name="mcp_err_connect">無法連線伺服器</string>
+    <string name="mcp_err_timeout">連線逾時，請確認伺服器已啟動</string>
+    <string name="mcp_err_no_tools">伺服器無可用工具</string>
+    <string name="agent_read_file">已讀取「%1$s」：
+%2$s</string>
+    <string name="agent_list_dir">「%1$s」內容：
+%2$s</string>
+    <string name="agent_deleted">已刪除「%1$s」</string>
+    <string name="agent_wrote">已寫入「%1$s」</string>
+    <string name="agent_mcp_tool_done">MCP 工具「%1$s」執行結果：
+%2$s</string>
+    <string name="agent_no_file_tool">MCP 伺服器沒有可用檔案工具</string>
 </resources>

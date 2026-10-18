@@ -264,6 +264,10 @@ class ChatListComponent(private val context: Context,
     private fun addResponsePlaceholder() {
         val holderItem = ChatDataItem(dateFormat.format(Date()), ChatViewHolders.ASSISTANT, "")
         holderItem.hasOmniAudio = ModelTypeUtils.isOmni(modelName!!)
+        holderItem.loading = true
+        holderItem.forceShowLoadingWithText = true
+        holderItem.text = context.getString(R.string.thinking_indicator)
+        holderItem.displayText = holderItem.text
         adapter.addItem(holderItem)
         smoothScrollToBottom()
     }

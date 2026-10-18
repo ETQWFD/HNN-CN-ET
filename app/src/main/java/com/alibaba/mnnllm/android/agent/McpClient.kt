@@ -48,8 +48,10 @@ object McpClient {
 
     private const val TAG = "McpClient"
 
-    /** POST a JSON-RPC request and return the result object (or null on error). */
-    private fun rpc(urlStr: String, method: String, params: JSONObject?, timeoutMs: Int = 8000): JSONObject? {
+    data class RpcOutcome(val ok: Boolean, val json: JSONObject?, val error: String?)
+
+    /** POST a JSON-RPC request; returns a structured outcome with an error reason. */
+    private fun rpcEx(urlStr: String, method: String, params: JSONObject?, timeoutMs: Int = 8000): RpcOutcome {
         return try {
             val url = URL(urlStr)
             val conn = url.openConnection() as HttpURLConnection
@@ -72,37 +74,70 @@ object McpClient {
             val text = (if (code in 200..299) conn.inputStream else conn.errorStream)
                 ?.bufferedReader()?.use { it.readText() } ?: ""
             conn.disconnect()
-            if (text.isBlank()) return null
+            if (text.isBlank()) return RpcOutcome(false, null, "empty")
             val json = JSONObject(text)
-            if (json.has("result")) json.getJSONObject("result") else json
+            val result = if (json.has("result")) json.getJSONObject("result") else json
+            RpcOutcome(true, result, null)
+        } catch (e: java.net.SocketTimeoutException) {
+            Log.w(TAG, "MCP rpc timeout ($method @ $urlStr)")
+            RpcOutcome(false, null, "timeout")
+        } catch (e: java.net.ConnectException) {
+            Log.w(TAG, "MCP rpc connect failed ($method @ $urlStr): ${e.message}")
+            RpcOutcome(false, null, "connect")
         } catch (e: Exception) {
             Log.w(TAG, "MCP rpc failed ($method @ $urlStr): ${e.message}")
-            null
+            RpcOutcome(false, null, e.message ?: "error")
         }
     }
 
+    /** POST a JSON-RPC request and return the result object (or null on error). */
+    private fun rpc(urlStr: String, method: String, params: JSONObject?, timeoutMs: Int = 8000): JSONObject? {
+        val outcome = rpcEx(urlStr, method, params, timeoutMs)
+        return if (outcome.ok) outcome.json else null
+    }
+
     /** List tools exposed by the server. Returns tool names or empty list. */
-    fun listTools(server: McpServer): List<String> {
-        val result = rpc(server.url, "tools/list", null) ?: return emptyList()
-        val tools = result.optJSONArray("tools") ?: return emptyList()
+    fun listTools(server: McpServer): List<String> = listToolsWithError(server).first
+
+    /** List tools with an error reason string (null when successful). */
+    fun listToolsWithError(server: McpServer): Pair<List<String>, String?> {
+        val outcome = rpcEx(server.url, "tools/list", null)
+        if (!outcome.ok) return emptyList<String>() to describeError(outcome.error)
+        val result = outcome.json ?: return emptyList<String>() to "empty"
+        val tools = result.optJSONArray("tools") ?: return emptyList<String>() to "no_tools"
         val names = mutableListOf<String>()
         for (i in 0 until tools.length()) {
             val t = tools.getJSONObject(i)
             t.optString("name").takeIf { it.isNotBlank() }?.let { names.add(it) }
         }
-        return names
+        return names to null
+    }
+
+    private fun describeError(code: String?): String? {
+        return when (code) {
+            "timeout" -> "timeout"
+            "connect" -> "connect"
+            "empty" -> "empty"
+            else -> code
+        }
     }
 
     /**
      * Call a tool. `arguments` is a plain JSON object map.
      * Returns the tool result text, or null on failure.
      */
-    fun callTool(server: McpServer, toolName: String, arguments: Map<String, String>): String? {
+    fun callTool(server: McpServer, toolName: String, arguments: Map<String, String>): String? =
+        callToolWithError(server, toolName, arguments).first
+
+    /** Call a tool; returns (result text, error reason). */
+    fun callToolWithError(server: McpServer, toolName: String, arguments: Map<String, String>): Pair<String?, String?> {
         val params = JSONObject().put("name", toolName)
         val args = JSONObject()
         arguments.forEach { (k, v) -> args.put(k, v) }
         params.put("arguments", args)
-        val result = rpc(server.url, "tools/call", params) ?: return null
+        val outcome = rpcEx(server.url, "tools/call", params)
+        if (!outcome.ok) return null to describeError(outcome.error)
+        val result = outcome.json ?: return null to "empty"
         val content = result.optJSONArray("content")
         if (content != null) {
             val sb = StringBuilder()
@@ -114,8 +149,8 @@ object McpClient {
                     sb.append(t)
                 }
             }
-            if (sb.isNotEmpty()) return sb.toString()
+            if (sb.isNotEmpty()) return sb.toString() to null
         }
-        return result.optString("result", result.toString())
+        return result.optString("result", result.toString()) to null
     }
 }

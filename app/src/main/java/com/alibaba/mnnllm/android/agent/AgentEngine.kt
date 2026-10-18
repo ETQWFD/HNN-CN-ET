@@ -36,6 +36,36 @@ object AgentEngine {
             return handleCreateFile(context, trimmed)
         }
 
+        // 读取/查看文件
+        val readMatch = Regex("^(读取|查看|打开一下文件|读一下)\\s*文件\\s*[:：]?\\s*(.+)").find(trimmed)
+        if (readMatch != null) {
+            return handleReadFile(context, readMatch.groupValues[2].trim())
+        }
+
+        // 列出/查看目录
+        val listMatch = Regex("^(列出|查看|浏览)\\s*(文件|目录|文件夹)\\s*[:：]?\\s*(.+)").find(trimmed)
+        if (listMatch != null) {
+            return handleListDir(context, listMatch.groupValues[3].trim())
+        }
+
+        // 删除文件
+        val delMatch = Regex("^(删除|移除)\\s*文件\\s*[:：]?\\s*(.+)").find(trimmed)
+        if (delMatch != null) {
+            return handleDeleteFile(context, delMatch.groupValues[2].trim())
+        }
+
+        // 修改/追加文件
+        val editMatch = Regex("^(修改|编辑|追加|覆盖)\\s*文件\\s*[:：]?\\s*(.+)").find(trimmed)
+        if (editMatch != null) {
+            return handleEditFile(context, editMatch.groupValues[2].trim())
+        }
+
+        // 直接调用 MCP 工具：调用工具 <name> [k=v ...] 或 调用MCP <name> ...
+        val toolMatch = Regex("^(调用工具|调用mcp|调用MCP|mcp)\\s+([A-Za-z0-9_.\\-]+)\\s*(.*)").find(trimmed)
+        if (toolMatch != null) {
+            return handleToolCall(context, toolMatch.groupValues[2], toolMatch.groupValues[3].trim())
+        }
+
         // 打开/启动/开启 应用
         val openMatch = Regex("^(请|帮我)?(打开|启动|开启|打开一下)\\s*([\\u4e00-\\u9fa5A-Za-z0-9·+_\\-]{1,12})")
             .find(trimmed)
@@ -74,6 +104,139 @@ object AgentEngine {
         }
 
         return null
+    }
+
+    // ---------- MCP file & tool operations ----------
+
+    private fun mcpServers(context: Context): List<McpServer> = McpConfigStore.loadServers(context)
+
+    /** Try to run [op] against the first MCP server exposing a matching tool; returns (result, usedServer). */
+    private fun withMcpTool(
+        context: Context,
+        candidates: List<String>,
+        args: Map<String, String>
+    ): Pair<String?, McpServer?> {
+        for (server in mcpServers(context)) {
+            val (tools, _) = McpClient.listToolsWithError(server)
+            val tool = tools.firstOrNull { t ->
+                candidates.any { c -> t.contains(c, ignoreCase = true) }
+            }
+            if (tool != null) {
+                val (out, err) = McpClient.callToolWithError(server, tool, args)
+                if (out != null) return out to server
+                if (err != null && err != "timeout" && err != "connect") {
+                    // tool exists but the call failed with a server-side error
+                    return null to server
+                }
+            }
+        }
+        return null to null
+    }
+
+    private fun handleReadFile(context: Context, path: String): AgentResult {
+        val (out, _) = withMcpTool(context, listOf("read_file", "read_text_file", "read"), mapOf("path" to path))
+        if (out != null) {
+            return AgentResult(context.getString(R.string.agent_read_file, path, out.take(4000)))
+        }
+        val file = localFile(path)
+        if (file == null || !file.exists()) {
+            return AgentResult(context.getString(R.string.agent_open_failed, "文件 $path"))
+        }
+        return try {
+            AgentResult(context.getString(R.string.agent_read_file, path, file.readText().take(4000)))
+        } catch (e: Exception) {
+            AgentResult("读取文件失败：${e.message}")
+        }
+    }
+
+    private fun handleListDir(context: Context, path: String): AgentResult {
+        val (out, _) = withMcpTool(context, listOf("list_files", "list_directory", "list_dir"), mapOf("path" to path))
+        if (out != null) {
+            return AgentResult(context.getString(R.string.agent_list_dir, path, out.take(3000)))
+        }
+        val dir = File(context.filesDir, "agent")
+        val target = File(dir, path)
+        val base = if (target.exists() && target.isDirectory) target else dir
+        val names = (base.list() ?: emptyArray()).sorted().take(60).joinToString("\n")
+        return AgentResult(context.getString(R.string.agent_list_dir, base.absolutePath, names.ifBlank { "（空目录）" }))
+    }
+
+    private fun handleDeleteFile(context: Context, path: String): AgentResult {
+        val (out, _) = withMcpTool(context, listOf("delete_file", "remove_file"), mapOf("path" to path))
+        if (out != null) {
+            return AgentResult(context.getString(R.string.agent_deleted, path))
+        }
+        val file = localFile(path)
+        if (file != null && file.exists() && file.delete()) {
+            return AgentResult(context.getString(R.string.agent_deleted, path))
+        }
+        return AgentResult("删除文件失败：$path")
+    }
+
+    private fun handleEditFile(context: Context, trimmed: String): AgentResult {
+        var body = trimmed
+        var content = ""
+        val marker = Regex("(?:，|,|\\s)(?:内容|内容为|内容是|内容：)[:：]?\\s*(.*)").find(body)
+        if (marker != null) {
+            body = body.substring(0, marker.range.first).trim()
+            content = marker.groupValues[1]
+        }
+        val path = body
+        if (path.isBlank()) return AgentResult("请提供要修改的文件路径")
+        if (content.isBlank()) content = ""
+        val (out, _) = withMcpTool(context, listOf("write_file", "edit_file", "update_file"), mapOf("path" to path, "content" to content))
+        if (out != null) {
+            return AgentResult(context.getString(R.string.agent_wrote, path) + "\n" + out.take(800))
+        }
+        val file = localFile(path)
+        if (file != null) {
+            return try {
+                file.writeText(content, Charsets.UTF_8)
+                AgentResult(context.getString(R.string.agent_wrote, file.absolutePath))
+            } catch (e: Exception) {
+                AgentResult("修改文件失败：${e.message}")
+            }
+        }
+        return AgentResult("修改文件失败：$path")
+    }
+
+    private fun handleToolCall(context: Context, toolName: String, argsText: String): AgentResult {
+        val servers = mcpServers(context)
+        if (servers.isEmpty()) {
+            return AgentResult(context.getString(R.string.agent_mcp_fail, "未配置 MCP 服务器"))
+        }
+        val args = HashMap<String, String>()
+        if (argsText.isNotBlank()) {
+            Regex("([A-Za-z0-9_.\\-]+)\\s*=\\s*([^\\s]+|\"[^\"]*\")").findAll(argsText).forEach { m ->
+                args[m.groupValues[1]] = m.groupValues[2].trim('"')
+            }
+            if (args.isEmpty()) args["text"] = argsText
+        }
+        var lastErr: String? = "connect"
+        for (server in servers) {
+            val (tools, _) = McpClient.listToolsWithError(server)
+            val tool = tools.firstOrNull { it.equals(toolName, true) || it.contains(toolName, true) }
+            if (tool != null) {
+                val (out, err) = McpClient.callToolWithError(server, tool, args)
+                if (out != null) {
+                    return AgentResult(context.getString(R.string.agent_mcp_tool_done, tool, out.take(3000)))
+                }
+                lastErr = err
+            }
+        }
+        val reason = when (lastErr) {
+            "timeout" -> context.getString(R.string.mcp_err_timeout)
+            "connect" -> context.getString(R.string.mcp_err_connect)
+            else -> "未找到工具或调用失败"
+        }
+        return AgentResult(context.getString(R.string.agent_mcp_fail, reason))
+    }
+
+    private fun localFile(path: String): File? {
+        val dir = File(android.os.Environment.getExternalStorageDirectory(), "HNN-CN-ET/agent")
+        val f1 = File(dir, path)
+        if (f1.parentFile != null) f1.parentFile.mkdirs()
+        return f1
     }
 
     // ---------- open app ----------
@@ -139,7 +302,7 @@ object AgentEngine {
         }
 
         // Prefer MCP create_file / write_file tools
-        val servers = McpConfigStore.loadServers(context)
+        val servers = try { McpConfigStore.loadServers(context) } catch (e: Exception) { emptyList() }
         if (servers.isNotEmpty()) {
             for (server in servers) {
                 val tools = McpClient.listTools(server)
@@ -147,12 +310,15 @@ object AgentEngine {
                     t.contains("create_file", true) || t.contains("write_file", true)
                 }
                 if (createTool != null) {
-                    val result = McpClient.callTool(
+                    val (result, err) = McpClient.callToolWithError(
                         server, createTool,
                         mapOf("path" to path, "content" to content)
                     )
                     if (result != null) {
-                        return AgentResult(context.getString(R.string.agent_created_file, path))
+                        return AgentResult(context.getString(R.string.agent_created_file, path) + "\n" + result.take(800))
+                    }
+                    if (err != null && err != "timeout" && err != "connect") {
+                        return AgentResult(context.getString(R.string.agent_mcp_fail, err))
                     }
                 }
             }

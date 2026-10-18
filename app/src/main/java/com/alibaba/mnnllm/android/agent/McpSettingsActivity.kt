@@ -47,7 +47,7 @@ class McpSettingsActivity : AppCompatActivity() {
             row.findViewById<TextView>(R.id.tv_name).text = server.name
             row.findViewById<TextView>(R.id.tv_url).text = server.url
             row.findViewById<Button>(R.id.btn_test).setOnClickListener {
-                testServer(server)
+                testServer(server, row.findViewById(R.id.tv_status))
             }
             row.findViewById<Button>(R.id.btn_delete).setOnClickListener {
                 servers.removeAt(index)
@@ -58,15 +58,27 @@ class McpSettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun testServer(server: McpServer) {
-        Toast.makeText(this, "正在测试…", Toast.LENGTH_SHORT).show()
+    private fun testServer(server: McpServer, statusView: TextView?) {
+        statusView?.visibility = View.VISIBLE
+        statusView?.text = getString(R.string.mcp_testing)
+        statusView?.setTextColor(0xFF9E9E9E.toInt())
         Thread {
-            val tools = McpClient.listTools(server)
+            val (tools, error) = McpClient.listToolsWithError(server)
             runOnUiThread {
-                if (tools.isEmpty()) {
-                    Toast.makeText(this, getString(R.string.mcp_test_fail, "无可用工具"), Toast.LENGTH_LONG).show()
+                if (error != null) {
+                    val reason = when (error) {
+                        "timeout" -> getString(R.string.mcp_err_timeout)
+                        "connect" -> getString(R.string.mcp_err_connect)
+                        else -> getString(R.string.mcp_test_fail, error)
+                    }
+                    statusView?.text = reason
+                    statusView?.setTextColor(0xFFE53935.toInt())
+                } else if (tools.isEmpty()) {
+                    statusView?.text = getString(R.string.mcp_err_no_tools)
+                    statusView?.setTextColor(0xFFFB8C00.toInt())
                 } else {
-                    Toast.makeText(this, getString(R.string.mcp_test_ok, tools.size), Toast.LENGTH_LONG).show()
+                    statusView?.text = getString(R.string.mcp_test_ok, tools.size)
+                    statusView?.setTextColor(0xFF00B38A.toInt())
                 }
             }
         }.start()
