@@ -341,19 +341,39 @@
 
     <RelativeLayout
         android:id="@+id/layout_model_loading"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#33333333"
-        android:fitsSystemWindows="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|bottom"
+        android:layout_marginBottom="128dp"
+        android:background="@drawable/bg_loading_pill"
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
         android:visibility="gone">
 
-        <com.github.ybq.android.spinkit.SpinKitView
-            android:id="@+id/model_list_loading_view"
-            style="@style/SpinKitView.Large.FadingCircle"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:layout_centerInParent="true"
-            app:SpinKit_Color="?colorPrimary" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.github.ybq.android.spinkit.SpinKitView
+                android:id="@+id/model_list_loading_view"
+                style="@style/SpinKitView.Small.FadingCircle"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                app:SpinKit_Color="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/model_loading_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:text="@string/model_loading_tip"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp" />
+        </LinearLayout>
     </RelativeLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

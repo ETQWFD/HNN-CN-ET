@@ -147,7 +147,7 @@ class ChatDataManager private constructor(context: Context) {
             ChatDatabaseHelper.TABLE_CHAT,
             null,
             ChatDatabaseHelper.COLUMN_SESSION_ID + "=?",
-            arrayOf(sessionId), null, null, null
+            arrayOf(sessionId), null, null, ChatDatabaseHelper.COLUMN_ID + " ASC"
         )
         while (cursor.moveToNext()) {
             val time = cursor.getString(cursor.getColumnIndex(ChatDatabaseHelper.COLUMN_TIME))

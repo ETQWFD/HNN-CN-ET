@@ -5,6 +5,7 @@
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="action_settings">Settings</string>
     <string name="main_describe">hnn-llm</string>
+    <string name="model_loading_tip">正在初始化模型…首次加载可能需要一些时间</string>
     <string name="model_loading">模型加载中...</string>
     <string name="model_load_failed">模型加载失败: %1$s</string>
     <string name="download_not_started">%1$s</string>
