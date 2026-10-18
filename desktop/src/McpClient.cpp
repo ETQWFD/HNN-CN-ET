@@ -23,14 +23,14 @@ void McpClient::loadServers() {
         ThemeManager::instance().string("mcpServersJson").toUtf8()).array();
     for (const auto& v : arr) {
         QJsonObject o = v.toObject();
-        m_servers.append({o.value("name").toString(), o.value("url").toString()});
+        m_servers.append({o.value("name").toString(), o.value("url").toString(), o.value("token").toString()});
     }
 }
 
 void McpClient::saveServers(const QList<Server>& servers) {
     QJsonArray arr;
     for (const auto& s : servers) {
-        arr.append(QJsonObject{{"name", s.name}, {"url", s.url}});
+        arr.append(QJsonObject{{"name", s.name}, {"url", s.url}, {"token", s.token}});
     }
     ThemeManager::instance().set("mcpServersJson", QString::fromUtf8(QJsonDocument(arr).toJson(QJsonDocument::Compact).trimmed()));
     ThemeManager::instance().save();
@@ -42,10 +42,13 @@ void McpClient::addServer(const Server& s) {
     saveServers(m_servers);
 }
 
-static QJsonObject rpc(const QString& urlStr, const QString& method, const QJsonObject* params, int timeoutMs, QString* errOut) {
+static QJsonObject rpc(const QString& urlStr, const QString& token, const QString& method, const QJsonObject* params, int timeoutMs, QString* errOut) {
     QNetworkAccessManager nam;
     QNetworkRequest req{QUrl(urlStr)};
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    if (!token.isEmpty()) {
+        req.setRawHeader("Authorization", ("Bearer " + token).toUtf8());
+    }
     req.setTransferTimeout(timeoutMs);
     QJsonObject body;
     body.insert("jsonrpc", "2.0");
@@ -67,7 +70,11 @@ static QJsonObject rpc(const QString& urlStr, const QString& method, const QJson
     QJsonParseError err;
     QJsonDocument doc = QJsonDocument::fromJson(data, &err);
     if (err.error != QJsonParseError::NoError || !doc.isObject()) {
-        if (errOut) *errOut = "empty";
+        if (errOut) {
+            const int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            *errOut = (code == 401 || code == 403 || data.contains("Unauthorized"))
+                    ? "unauthorized" : "empty";
+        }
         return QJsonObject();
     }
     QJsonObject obj = doc.object();
@@ -99,7 +106,7 @@ static QString extractText(const QJsonObject& res) {
 void McpClient::testServer(const Server& s) {
     QTimer::singleShot(0, this, [this, s]() {
         QString err;
-        QJsonObject res = rpc(s.url, "tools/list", nullptr, 8000, &err);
+        QJsonObject res = rpc(s.url, s.token, "tools/list", nullptr, 8000, &err);
         if (err.isEmpty()) {
             QJsonArray tools = res.value("tools").toArray();
             emit testResult(s.name, true, tools.size(), QString());
@@ -112,7 +119,7 @@ void McpClient::testServer(const Server& s) {
 void McpClient::listTools(const Server& s) {
     QTimer::singleShot(0, this, [this, s]() {
         QString err;
-        QJsonObject res = rpc(s.url, "tools/list", nullptr, 8000, &err);
+        QJsonObject res = rpc(s.url, s.token, "tools/list", nullptr, 8000, &err);
         QStringList names;
         if (err.isEmpty()) {
             QJsonArray tools = res.value("tools").toArray();
@@ -129,7 +136,7 @@ void McpClient::callTool(const Server& s, const QString& tool, const QMap<QStrin
     QTimer::singleShot(0, this, [this, s, tool, args]() {
         QString err;
         QJsonObject p = paramsFor(tool, args);
-        QJsonObject res = rpc(s.url, "tools/call", &p, 8000, &err);
+        QJsonObject res = rpc(s.url, s.token, "tools/call", &p, 8000, &err);
         if (!err.isEmpty()) {
             emit toolResult(tool, QString(), err);
             return;
@@ -142,9 +149,9 @@ void McpClient::callTool(const Server& s, const QString& tool, const QMap<QStrin
 
 // ---------- HNN CN ET v1.0.1: synchronous helpers (Agent engine) ----------
 
-QStringList McpClient::listToolsSync(const QString& url) {
+QStringList McpClient::listToolsSync(const QString& url, const QString& token) {
     QString err;
-    QJsonObject res = rpc(url, "tools/list", nullptr, 8000, &err);
+    QJsonObject res = rpc(url, token, "tools/list", nullptr, 8000, &err);
     QStringList names;
     if (err.isEmpty()) {
         QJsonArray tools = res.value("tools").toArray();
@@ -156,11 +163,12 @@ QStringList McpClient::listToolsSync(const QString& url) {
     return names;
 }
 
-QString McpClient::callToolSync(const QString& url, const QString& tool, const QMap<QString, QString>& args) {
+QString McpClient::callToolSync(const QString& url, const QString& token, const QString& tool, const QMap<QString, QString>& args) {
     QString err;
     QJsonObject p = paramsFor(tool, args);
-    QJsonObject res = rpc(url, "tools/call", &p, 8000, &err);
-    if (!err.isEmpty()) return err == "timeout" ? "timeout" : "connect";
+    QJsonObject res = rpc(url, token, "tools/call", &p, 8000, &err);
+    if (!err.isEmpty()) return err == "timeout" ? "timeout"
+                  : (err == "unauthorized" ? "unauthorized" : "connect");
     QString text = extractText(res);
     if (text.isEmpty()) text = res.value("result").toString();
     return text;

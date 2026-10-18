@@ -11,6 +11,7 @@ public:
     struct Server {
         QString name;
         QString url;
+        QString token; // HNN CN ET v1.0.2: optional Bearer access token (empty = no auth)
     };
 
     static McpClient& instance();
@@ -26,8 +27,8 @@ public:
     void callTool(const Server& s, const QString& tool, const QMap<QString, QString>& args);
 
     // HNN CN ET v1.0.1: synchronous helpers for the Agent engine (real MCP calls).
-    static QStringList listToolsSync(const QString& url);
-    static QString callToolSync(const QString& url, const QString& tool, const QMap<QString, QString>& args);
+    static QStringList listToolsSync(const QString& url, const QString& token = QString());
+    static QString callToolSync(const QString& url, const QString& token, const QString& tool, const QMap<QString, QString>& args);
 
 signals:
     void testResult(const QString& name, bool ok, int toolCount, const QString& error);

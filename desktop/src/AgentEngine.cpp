@@ -230,7 +230,7 @@ QString AgentEngine::runMcpFileTool(const QStringList& candidates, const QMap<QS
     const auto servers = McpClient::instance().servers();
     if (servers.isEmpty()) return QString();
     for (const auto& s : servers) {
-        const QStringList tools = McpClient::listToolsSync(s.url);
+        const QStringList tools = McpClient::listToolsSync(s.url, s.token);
         if (tools.isEmpty()) continue;
         QString matched;
         for (const auto& t : tools) {
@@ -240,7 +240,7 @@ QString AgentEngine::runMcpFileTool(const QStringList& candidates, const QMap<QS
             if (!matched.isEmpty()) break;
         }
         if (matched.isEmpty()) continue;
-        QString out = McpClient::callToolSync(s.url, matched, args);
+        QString out = McpClient::callToolSync(s.url, s.token, matched, args);
         if (out.isEmpty() || out == "timeout" || out == "connect") continue;
         return QStringLiteral("【MCP %1】\n%2").arg(matched, out.left(3000));
     }
@@ -325,7 +325,7 @@ QString AgentEngine::callMcpTool(const QString& toolName, const QString& argsTex
 
     QString lastErr;
     for (const auto& s : servers) {
-        const QStringList tools = McpClient::listToolsSync(s.url);
+        const QStringList tools = McpClient::listToolsSync(s.url, s.token);
         if (tools.isEmpty()) { lastErr = "无法连接 MCP 服务器或该服务器无工具"; continue; }
         QString matched;
         for (const auto& t : tools) {
@@ -334,10 +334,11 @@ QString AgentEngine::callMcpTool(const QString& toolName, const QString& argsTex
             }
         }
         if (matched.isEmpty()) { lastErr = QStringLiteral("服务器「%1」未找到工具「%2」").arg(s.name, toolName); continue; }
-        QString out = McpClient::callToolSync(s.url, matched, args);
+        QString out = McpClient::callToolSync(s.url, s.token, matched, args);
         if (out.isEmpty()) { lastErr = "工具返回空结果"; continue; }
         if (out == "timeout") { lastErr = "工具调用超时"; continue; }
         if (out == "connect") { lastErr = "无法连接 MCP 服务器"; continue; }
+        if (out == "unauthorized") { lastErr = "服务器要求访问令牌（Unauthorized），请在配置中填写令牌"; continue; }
         return QStringLiteral("【MCP %1】\n%2").arg(matched, out.left(3000));
     }
     return QStringLiteral("MCP 调用失败：%1").arg(lastErr);

@@ -471,8 +471,13 @@ void SettingsDialog::openMcpManager() {
                                             QStringLiteral("地址，如 http://192.168.0.108:5080/mcp"),
                                             QLineEdit::Normal, QStringLiteral("http://"), &ok);
         if (!ok || url.isEmpty()) return;
+        // HNN CN ET v1.0.2: optional access token — empty = public server without auth.
+        QString token = QInputDialog::getText(&dlg, QStringLiteral("添加 MCP 服务器"),
+                                              QStringLiteral("访问令牌（可选；无令牌的公共服务器留空即可，MT 等需要令牌则填写）"),
+                                              QLineEdit::Normal, QString(), &ok);
+        if (!ok) return;
         auto servers = McpClient::instance().servers();
-        servers.append({name, url});
+        servers.append({name, url, token});
         McpClient::instance().saveServers(servers);
         refresh();
     });
