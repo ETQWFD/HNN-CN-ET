@@ -39,6 +39,11 @@ HNN CN ET 是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 ## 更新日志
 
+### v1.1.2 (2026-10-19)
+- Fix "调用mcp在那个目录中创建一个vs.txt" stuck loading: broad create-file intent auto-detects the filename and calls the MCP file tool (server picker when several).
+- Unnamed files ("文本文档") get an auto-generated default name.
+- Filter blank streaming deltas; when the model produces no visible text, show a notice instead of spinning forever. API stream closes cleanly.
+- Windows v1.0.6: broadened create-file intent + listing tools when only "调用mcp" is said.
 ### v1.1.1 (2026-10-19)
 - Fix AI not calling MCP tools: broad intent recognition for "先调用一下mcp", "帮我用用mcp", etc. — no strict word order required.
 - MCP calls no longer depend on the Agent mode toggle; any MCP intent is intercepted. Without a tool name, the app lists all available tools.
