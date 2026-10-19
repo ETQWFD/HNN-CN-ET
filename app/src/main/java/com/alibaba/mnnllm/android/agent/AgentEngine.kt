@@ -74,6 +74,14 @@ object AgentEngine {
             return handleEditFile(context, editMatch.groupValues[2].trim())
         }
 
+        // HNN CN ET v1.1.0: MCP master switch — if disabled, tell the user to enable it.
+        val mcpEnabled = try {
+            com.alibaba.mnnllm.android.mainsettings.MainSettings.isMcpEnabled(context)
+        } catch (e: Exception) { false }
+        if (!mcpEnabled && (trimmed.contains("mcp", true) || trimmed.contains("调用工具") || trimmed.contains("调用MCP"))) {
+            return AgentResult("MCP 功能未开启。请在「设置 → MCP 连接配置」中打开开关并添加服务器后再试。")
+        }
+
         // 直接调用 MCP 工具：调用工具 <name> [k=v ...] 或 调用MCP <name> ...
         val toolMatch = Regex("^(调用工具|调用mcp|调用MCP|mcp)\\s+([A-Za-z0-9_.\\-]+)\\s*(.*)").find(trimmed)
         if (toolMatch != null) {

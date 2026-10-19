@@ -146,6 +146,17 @@ object MainSettings {
         sharedPreferences.edit().putBoolean("direct_reply", enabled).apply()
     }
 
+    // ---------- HNN CN ET v1.1.0: MCP master enable switch ----------
+    fun isMcpEnabled(context: Context): Boolean {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        return sharedPreferences.getBoolean("mcp_enabled", false)
+    }
+
+    fun setMcpEnabled(context: Context, enabled: Boolean) {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        sharedPreferences.edit().putBoolean("mcp_enabled", enabled).apply()
+    }
+
     fun setMcpServersJson(context: Context, json: String) {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
         sharedPreferences.edit().putString("mcp_servers", json).apply()

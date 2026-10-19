@@ -4,6 +4,7 @@
 #include <QVBoxLayout>
 #include <QGridLayout>
 #include <QGroupBox>
+#include <QCheckBox>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QInputDialog>
@@ -219,9 +220,17 @@ QWidget* SettingsDialog::buildAgentPage() {
 }
 
 QWidget* SettingsDialog::buildMcpPage() {
+    auto& tm = ThemeManager::instance();
     QWidget* page = new QWidget;
     QVBoxLayout* v = new QVBoxLayout(page);
     v->setSpacing(12);
+    QCheckBox* enable = new QCheckBox(QStringLiteral("启用 MCP 功能（AI 可调用 MCP 工具）"));
+    enable->setChecked(tm.boolean("mcpEnabled", false));
+    connect(enable, &QCheckBox::toggled, this, [](bool on){
+        ThemeManager::instance().set("mcpEnabled", on);
+        ThemeManager::instance().save();
+    });
+    v->addWidget(enable);
     QLabel* hint = new QLabel(QStringLiteral("MCP 服务器列表："));
     v->addWidget(hint);
     QPushButton* manage = new QPushButton(QStringLiteral("管理 MCP 服务器（添加 / 测试 / 删除）"));

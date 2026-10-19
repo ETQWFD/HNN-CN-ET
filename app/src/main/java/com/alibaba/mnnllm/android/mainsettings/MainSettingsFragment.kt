@@ -98,17 +98,13 @@ class MainSettingsFragment : Fragment() {
             }
         }
 
-        // HNN CN ET v1.0.3: MCP 连接配置入口
-        binding.itemMcpConfig.setOnClickListener {
-            startActivity(Intent(requireContext(), com.alibaba.mnnllm.android.agent.McpSettingsActivity::class.java))
-        }
-
         // HNN CN ET v1.0.5: 高速直答模式（直接回答、不拒绝、跳过深度思考）
         binding.itemDirectReply.isChecked = MainSettings.isDirectReplyEnabled(requireContext())
         binding.itemDirectReply.setOnCheckedChangeListener { isChecked ->
             MainSettings.setDirectReplyEnabled(requireContext(), isChecked)
         }
 
+        setupMcpPanel()
         setupAppearance()
         setupDownloadProvider(sharedPreferences)
         setupVoiceModelManagement()
@@ -124,6 +120,155 @@ class MainSettingsFragment : Fragment() {
         setupUpdateAndVersion()
         setupContactAndLogs()
         setupDebugMode(sharedPreferences)
+    }
+
+    private fun setupMcpPanel() {
+        val enabled = MainSettings.isMcpEnabled(requireContext())
+        binding.switchMcpEnable.isChecked = enabled
+        binding.panelMcpServers.visibility = if (enabled) View.VISIBLE else View.GONE
+        renderMcpServers()
+
+        binding.switchMcpEnable.setOnCheckedChangeListener { _, isChecked ->
+            MainSettings.setMcpEnabled(requireContext(), isChecked)
+            binding.panelMcpServers.visibility = if (isChecked) View.VISIBLE else View.GONE
+            if (isChecked) renderMcpServers()
+        }
+        binding.rowMcpHeader.setOnClickListener {
+            binding.switchMcpEnable.isChecked = !binding.switchMcpEnable.isChecked
+        }
+        binding.btnMcpAdd.setOnClickListener { showMcpAddDialog() }
+    }
+
+    private fun renderMcpServers() {
+        val container = binding.listMcpServers
+        container.removeAllViews()
+        val servers = com.alibaba.mnnllm.android.agent.McpConfigStore.loadServers(requireContext())
+        if (servers.isEmpty()) {
+            val empty = android.widget.TextView(requireContext()).apply {
+                text = getString(R.string.mcp_empty)
+                setPadding(0, 16, 0, 16)
+                setTextColor(0xFF9E9E9E.toInt())
+            }
+            container.addView(empty)
+            return
+        }
+        servers.forEachIndexed { index, server ->
+            val card = com.google.android.material.card.MaterialCardView(requireContext()).apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = dpv(10) }
+                cardElevation = dpv(2).toFloat()
+                radius = dpv(12).toFloat()
+                setContentPadding(dpv(14), dpv(12), dpv(14), dpv(12))
+            }
+            val inner = android.widget.LinearLayout(requireContext()).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+            }
+            val nameTv = android.widget.TextView(requireContext()).apply {
+                text = server.name
+                textSize = 16f
+                setTextColor(0xFFFFFFFF.toInt())
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+            }
+            val urlTv = android.widget.TextView(requireContext()).apply {
+                text = server.url
+                textSize = 13f
+                setTextColor(0xFFB0B0B0.toInt())
+                setPadding(0, 2, 0, 0)
+            }
+            val tokenTv = android.widget.TextView(requireContext()).apply {
+                text = if (server.token.isBlank()) "（无令牌）" else "（已配置令牌）"
+                textSize = 12f
+                setTextColor(0xFF80CBC4.toInt())
+                setPadding(0, 2, 0, 8)
+            }
+            val statusTv = android.widget.TextView(requireContext()).apply {
+                text = ""
+                textSize = 13f
+                setPadding(0, 4, 0, 8)
+            }
+            val btnRow = android.widget.LinearLayout(requireContext()).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+            }
+            val testBtn = com.google.android.material.button.MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                text = getString(R.string.mcp_test)
+                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = dpv(8) }
+            }
+            val delBtn = com.google.android.material.button.MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                text = getString(R.string.mcp_delete)
+                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            testBtn.setOnClickListener {
+                statusTv.text = getString(R.string.mcp_testing)
+                statusTv.setTextColor(0xFF9E9E9E.toInt())
+                lifecycleScope.launch {
+                    val (tools, error) = withContext(Dispatchers.IO) {
+                        com.alibaba.mnnllm.android.agent.McpClient.listToolsWithError(server)
+                    }
+                    if (error != null) {
+                        val reason = when (error) {
+                            "timeout" -> getString(R.string.mcp_err_timeout)
+                            "connect" -> getString(R.string.mcp_err_connect)
+                            "unauthorized" -> getString(R.string.mcp_err_unauthorized)
+                            else -> getString(R.string.mcp_test_fail, error)
+                        }
+                        statusTv.text = reason
+                        statusTv.setTextColor(0xFFE53935.toInt())
+                    } else if (tools.isEmpty()) {
+                        statusTv.text = getString(R.string.mcp_err_no_tools)
+                        statusTv.setTextColor(0xFFFB8C00.toInt())
+                    } else {
+                        statusTv.text = getString(R.string.mcp_test_ok, tools.size)
+                        statusTv.setTextColor(0xFF00B38A.toInt())
+                    }
+                }
+            }
+            delBtn.setOnClickListener {
+                val list = com.alibaba.mnnllm.android.agent.McpConfigStore.loadServers(requireContext()).toMutableList()
+                list.removeAt(index)
+                com.alibaba.mnnllm.android.agent.McpConfigStore.saveServers(requireContext(), list)
+                renderMcpServers()
+            }
+            btnRow.addView(testBtn)
+            btnRow.addView(delBtn)
+            inner.addView(nameTv)
+            inner.addView(urlTv)
+            inner.addView(tokenTv)
+            inner.addView(statusTv)
+            inner.addView(btnRow)
+            card.addView(inner)
+            container.addView(card)
+        }
+    }
+
+    private fun showMcpAddDialog() {
+        val view = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_mcp_add, null)
+        val nameInput = view.findViewById<android.widget.EditText>(R.id.input_name)
+        val urlInput = view.findViewById<android.widget.EditText>(R.id.input_url)
+        val tokenInput = view.findViewById<android.widget.EditText>(R.id.input_token)
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.mcp_add)
+            .setView(view)
+            .setPositiveButton(R.string.mcp_add) { _, _ ->
+                val name = nameInput.text.toString().trim()
+                var url = urlInput.text.toString().trim()
+                if (name.isBlank() || url.isBlank()) {
+                    Toast.makeText(requireContext(), "名称和地址不能为空", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                    url = "http://$url"
+                }
+                val token = tokenInput.text.toString().trim()
+                val list = com.alibaba.mnnllm.android.agent.McpConfigStore.loadServers(requireContext()).toMutableList()
+                list.add(com.alibaba.mnnllm.android.agent.McpServer(name, url, token))
+                com.alibaba.mnnllm.android.agent.McpConfigStore.saveServers(requireContext(), list)
+                renderMcpServers()
+                Toast.makeText(requireContext(), getString(R.string.mcp_added_ok), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun setupAppearance() {

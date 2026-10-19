@@ -108,12 +108,16 @@ void AgentEngine::runConfirmed(const QString& input, bool passwordOk) {
         if (m.hasMatch()) { path = body.left(m.capturedStart(1)).trimmed(); content = m.captured(1); }
         reply = editFile(path, content);
     } else if (trimmed.startsWith("调用工具") || trimmed.startsWith("调用mcp") || trimmed.startsWith("调用MCP") || trimmed.startsWith("mcp ")) {
+        if (!ThemeManager::instance().boolean("mcpEnabled", false)) {
+            reply = QStringLiteral("MCP 功能未开启。请在「设置 → MCP 连接配置」中打开开关并添加服务器后再试。");
+        } else {
         QRegularExpression re("^(调用工具|调用mcp|调用MCP|mcp)\\s+([A-Za-z0-9_.\\-]+)\\s*(.*)");
         auto m = re.match(trimmed);
         if (m.hasMatch()) {
             reply = callMcpTool(m.captured(2), m.captured(3));
         } else {
             reply = QStringLiteral("用法：调用工具 工具名 参数=值");
+        }
         }
     } else if (trimmed == "返回" || trimmed == "回到桌面" || trimmed == "回桌面") {
         reply = QStringLiteral("已返回桌面（开始菜单）。");

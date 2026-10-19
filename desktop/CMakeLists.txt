@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(HNN_CN_ET_Desktop VERSION 1.0.3 LANGUAGES CXX)
+project(HNN_CN_ET_Desktop VERSION 1.0.4 LANGUAGES CXX)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC OFF)

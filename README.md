@@ -39,6 +39,12 @@ HNN CN ET 是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 ## 更新日志
 
+### v1.1.0 (2026-10-19)
+- MCP config redesigned: inline expandable panel in Settings — toggle on, then add/test/delete servers right below, no more separate page.
+- New MCP master switch: when off, the AI clearly tells you to enable it in Settings instead of silently failing.
+- MCP server cards show token status (no token / token configured); additions take effect immediately.
+- Agent mode and MCP are decoupled: opening apps uses accessibility, file/tool calls use MCP.
+- Windows v1.0.4: MCP page gains an "Enable MCP" checkbox, matching the mobile behavior.
 ### v1.0.9 (2026-10-19)
 - MCP tools are now really callable: the AI recognizes "call MCP / call tool / create file" instructions and executes them; when multiple servers exist, a chooser appears and you may pin one server for the whole session.
 - Agent mode enhanced: "open Douyin/WeChat/QQ…" launches the installed app directly (built-in map of common apps); if the accessibility permission is missing, the app asks for it and then continues the pending task.
