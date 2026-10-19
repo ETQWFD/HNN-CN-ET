@@ -55,6 +55,7 @@ class ResponseHandler {
             // Producer Coroutine: Runs the LLM inference on IO thread
             launch(kotlinx.coroutines.Dispatchers.IO) {
                 var isFinished = false
+                var sentAnyDelta = false
                 try {
                     val llmSession = getLlmSession()
                     if (llmSession != null) {
@@ -63,7 +64,7 @@ class ResponseHandler {
                             override fun onProgress(progress: String?): Boolean {
                                 return try {
                                     when {
-                                        progress != null -> {
+                                        progress != null && progress.isNotBlank() -> {
                                             // Send progress token
                                             logger.logStreamDelta(traceId, progress)
                                             val json = chatResponseFormatter.createDeltaResponse(
@@ -73,6 +74,7 @@ class ResponseHandler {
                                                 false
                                             )
                                             // Send to channel non-blocking
+                                            sentAnyDelta = true
                                             val sendResult = channel.trySend(ServerSentEvent(data = json))
                                             
                                             // If channel is closed (consumer failed/disconnected), stop generation
@@ -100,6 +102,19 @@ class ResponseHandler {
                         // Generation complete, send final chunk with usage
                         if (isFinished) {
                             val usage = chatResponseFormatter.createUsageFromMetrics(result)
+                            // HNN CN ET v1.1.2: if the model produced no visible text at
+                            // all (e.g. only blank tokens), tell the client instead of
+                            // leaving it stuck on "thinking…".
+                            if (!sentAnyDelta) {
+                                logger.logWarning(traceId, "Stream ended without any visible content")
+                                val noticeJson = chatResponseFormatter.createDeltaResponse(
+                                    responseMetadata.responseId,
+                                    responseMetadata.created,
+                                    "（模型未产生可显示内容，请重试或更换模型）",
+                                    false
+                                )
+                                channel.send(ServerSentEvent(data = noticeJson))
+                            }
                             val finalJson = chatResponseFormatter.createDeltaResponse(
                                 responseMetadata.responseId,
                                 responseMetadata.created,

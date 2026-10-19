@@ -147,7 +147,7 @@ QWidget* MainWindow::buildSidebar() {
     connect(settings, &QPushButton::clicked, this, &MainWindow::openSettings);
     v->addWidget(settings);
 
-    QLabel* ver = new QLabel(QStringLiteral("v1.0.5 · © ET"));
+    QLabel* ver = new QLabel(QStringLiteral("v1.0.6 · © ET"));
     ver->setStyleSheet("color: #888; font-size: 11px;");
     ver->setAlignment(Qt::AlignCenter);
     v->addWidget(ver);

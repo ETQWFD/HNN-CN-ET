@@ -49,6 +49,13 @@ object AgentEngine {
         if (trimmed.matches(Regex("^(创建|新建|生成)\\s*文件.*"))) {
             return handleCreateFile(context, trimmed)
         }
+        // HNN CN ET v1.1.2: broad create-file intent —
+        // "调用mcp在那个目录中创建一个vs.txt" / "创建一个文本文档" / "帮我新建文件 xxx"
+        if ((trimmed.contains("创建") || trimmed.contains("新建") || trimmed.contains("生成")) &&
+            (trimmed.contains("文件") || trimmed.contains(".txt") || trimmed.contains("文档") ||
+             trimmed.contains("vs."))) {
+            return handleCreateFileSmart(context, trimmed)
+        }
 
         // 读取/查看文件
         val readMatch = Regex("^(读取|查看|打开一下文件|读一下)\\s*文件\\s*[:：]?\\s*(.+)").find(trimmed)
@@ -283,8 +290,8 @@ object AgentEngine {
             }
             if (args.isEmpty()) args["text"] = argsText
         }
-        // No explicit tool name → list available tools.
-        if (toolName.isBlank()) {
+        // No explicit tool name (incl. the "mcp" literal) → list available tools.
+        if (toolName.isBlank() || toolName.equals("mcp", true) || toolName.equals("工具", true)) {
             val (tools, _) = McpClient.listToolsWithError(server)
             if (tools.isEmpty()) {
                 return AgentResult(context.getString(R.string.agent_mcp_fail, "服务器无可调用工具"))
@@ -422,8 +429,33 @@ object AgentEngine {
         }
     }
 
+    /**
+     * HNN CN ET v1.1.2: route a broad create-file sentence.
+     * When the user mentions MCP, use an MCP file tool (pick server if several);
+     * otherwise create the file locally.
+     */
+    private fun handleCreateFileSmart(context: Context, trimmed: String): AgentResult {
+        val wantsMcp = trimmed.contains("mcp", true)
+        if (wantsMcp) {
+            val servers = mcpServers(context)
+            if (servers.isEmpty()) {
+                return AgentResult(context.getString(R.string.agent_mcp_fail, "未配置 MCP 服务器"))
+            }
+            if (servers.size == 1) {
+                return handleCreateFileWithServer(context, trimmed, servers[0].name)
+            }
+            // Let the UI ask which server to use.
+            return AgentResult("", mcpServerSelection = servers)
+        }
+        return handleCreateFile(context, trimmed)
+    }
+
     private fun handleCreateFileWithServer(context: Context, trimmed: String, serverName: String): AgentResult {
-        val pathContent = trimmed.replace(Regex("^(创建|新建|生成)\\s*文件\\s*[:：]?"), "")
+        // HNN CN ET v1.1.2: strip action words so both
+        // "调用mcp在那个目录中创建一个vs.txt" and "创建文件 1.txt，内容：xxx" resolve to a path.
+        var pathContent = trimmed
+            .replace(Regex("^(?:调用|使用|运行|执行|用|试试)\\s*(?:mcp|MCP|工具)\\s*(?:在\\S*目录中|在目录中|在那?个目录中|在那?个文件夹中)?\\s*(?:创建|新建|生成|建立)(?:一个|个)?\\s*"), "")
+            .replace(Regex("^(?:创建|新建|生成)\\s*(?:一个|个)?\\s*文件\\s*[:：]?"), "")
         var path = pathContent
         var content = ""
         val marker = Regex("(?:，|,|\\s)(?:内容|内容为|内容是|内容：)[:：]?\\s*(.*)").find(pathContent)
@@ -431,7 +463,13 @@ object AgentEngine {
             path = pathContent.substring(0, marker.range.first).trim()
             content = marker.groupValues[1]
         }
-        if (path.isBlank()) path = "agent_${System.currentTimeMillis()}.txt"
+        path = path.split(Regex("[，,。\\s]")).firstOrNull { it.isNotBlank() } ?: ""
+        if (path.isBlank() || path.contains("文本文档") || path.contains("文档") || path == "文件" ||
+            path.contains("目录") || path == "一个") {
+            path = "agent_${System.currentTimeMillis()}.txt"
+        } else if (!path.contains(".")) {
+            path = "$path.txt"
+        }
         if (content.isBlank()) content = "由 HNN CN ET Agent 创建"
         val server = mcpServers(context).firstOrNull { it.name == serverName }
             ?: return AgentResult("未找到 MCP 服务器：$serverName")

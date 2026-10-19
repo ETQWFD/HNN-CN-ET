@@ -86,13 +86,26 @@ void AgentEngine::runConfirmed(const QString& input, bool passwordOk) {
     }
     QString trimmed = input.trimmed();
     QString reply;
-    if (QRegularExpression("^(创建|新建|生成)\\s*文件.*").match(trimmed).hasMatch()) {
-        QString body = trimmed.remove(QRegularExpression("^(创建|新建|生成)\\s*文件\\s*[:：]?"));
+    bool broadCreate = ((trimmed.contains("创建") || trimmed.contains("新建") || trimmed.contains("生成")) &&
+                         (trimmed.contains("文件") || trimmed.contains(".txt") || trimmed.contains("文档") || trimmed.contains("vs."))) &&
+                        !trimmed.contains("文件夹") && !trimmed.contains("创建目录");
+    if (QRegularExpression("^(创建|新建|生成)\\s*文件.*").match(trimmed).hasMatch() || broadCreate) {
+
+        // HNN CN ET v1.0.6: broad create-file — "调用mcp在那个目录中创建一个vs.txt"
+        QString body = trimmed;
+        body.remove(QRegularExpression("^(?:调用|使用|运行|执行|用|试试)\\s*(?:mcp|MCP|工具)?\\s*(?:在\\S*目录中|在目录中|在那?个目录中|在那?个文件夹中)?\\s*(?:创建|新建|生成|建立)(?:一个|个)?\\s*"));
+        body.remove(QRegularExpression("^(?:创建|新建|生成)\\s*(?:一个|个)?\\s*文件\\s*[:：]?"));
         QString path = body, content;
         QRegularExpression marker("(?:，|,|\\s)(?:内容|内容为|内容是|内容：)[:：]?\\s*(.*)");
         auto m = marker.match(body);
         if (m.hasMatch()) { path = body.left(m.capturedStart(1)).trimmed(); content = m.captured(1); }
-        if (path.isEmpty()) path = "agent_" + QString::number(QDateTime::currentMSecsSinceEpoch()) + ".txt";
+        path = path.split(QRegularExpression("[，,。\\s]")).first().trimmed();
+        if (path.isEmpty() || path.contains("文本文档") || path.contains("文档") || path == "文件" ||
+            path.contains("目录") || path == "一个") {
+            path = "agent_" + QString::number(QDateTime::currentMSecsSinceEpoch()) + ".txt";
+        } else if (!path.contains(".")) {
+            path = path + ".txt";
+        }
         if (content.isEmpty()) content = "由 HNN CN ET Agent 创建";
         reply = createFile(path, content);
     } else if (trimmed.startsWith("读取") || trimmed.startsWith("查看") || trimmed.startsWith("打开一下文件") || trimmed.startsWith("读一下")) {
@@ -324,6 +337,17 @@ QString AgentEngine::callMcpTool(const QString& toolName, const QString& argsTex
     const auto servers = McpClient::instance().servers();
     if (servers.isEmpty()) {
         return QStringLiteral("未配置 MCP 服务器（请到设置中添加）。");
+    }
+    // HNN CN ET v1.0.6: no explicit tool name ("mcp" literal) -> list tools.
+    if (toolName.trimmed().isEmpty() || toolName.trimmed().compare("mcp", Qt::CaseInsensitive) == 0) {
+        for (const auto& s : servers) {
+            const QStringList tools = McpClient::listToolsSync(s.url, s.token);
+            if (!tools.isEmpty()) {
+                return QStringLiteral("已连接到 MCP 服务器「%1」，可用工具：\n%2")
+                    .arg(s.name).arg(tools.mid(0, 40).join("\n"));
+            }
+        }
+        return QStringLiteral("无法连接 MCP 服务器或服务器无可用工具。");
     }
     QMap<QString, QString> args;
     QRegularExpression kv("([A-Za-z0-9_.\\-]+)\\s*=\\s*([^\\s]+|\"[^\"]*\")");
