@@ -652,9 +652,22 @@ class BenchmarkPresenter(
         stateMachine.transitionTo(BenchmarkState.STOPPING)
         updateUIForState(BenchmarkState.STOPPING)
         
-        // Stop the benchmark - the actual state transition will happen in callback
+        // Stop the benchmark - the actual state transition will happen in callback.
+        // HNN CN ET v1.0.9: guard against a never-arriving callback (MNN inference
+        // sometimes cannot be interrupted) so the UI is never stuck on STOPPING.
         Log.d(TAG, "Calling model.stopBenchmark(), waiting for callback to complete state transition")
         model.stopBenchmark()
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            try {
+                if (stateMachine.getCurrentState() == BenchmarkState.STOPPING) {
+                    Log.w(TAG, "stopBenchmark callback timed out, force-resetting UI")
+                    stateMachine.transitionTo(BenchmarkState.READY)
+                    updateUIForState(BenchmarkState.READY)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "force reset failed: ${e.message}")
+            }
+        }, 12000)
     }
     
 

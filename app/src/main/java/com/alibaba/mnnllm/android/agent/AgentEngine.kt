@@ -17,7 +17,13 @@ import android.util.Log
 import com.alibaba.mnnllm.android.R
 import java.io.File
 
-data class AgentResult(val reply: String, val needsAccessibility: Boolean = false)
+data class AgentResult(
+    val reply: String,
+    val needsAccessibility: Boolean = false,
+    // HNN CN ET v1.0.9: when multiple MCP servers are configured and no
+    // per-session choice was made, the UI shows a picker with this list.
+    val mcpServerSelection: List<McpServer>? = null
+)
 
 object AgentEngine {
 
@@ -71,7 +77,16 @@ object AgentEngine {
         // 直接调用 MCP 工具：调用工具 <name> [k=v ...] 或 调用MCP <name> ...
         val toolMatch = Regex("^(调用工具|调用mcp|调用MCP|mcp)\\s+([A-Za-z0-9_.\\-]+)\\s*(.*)").find(trimmed)
         if (toolMatch != null) {
-            return handleToolCall(context, toolMatch.groupValues[2], toolMatch.groupValues[3].trim())
+            return handleToolCall(context, null, toolMatch.groupValues[2], toolMatch.groupValues[3].trim())
+        }
+        // HNN CN ET v1.0.9: "尝试调用mcp" / "帮我调用工具" style input is also an MCP intent.
+        if (trimmed.contains("mcp", true) || trimmed.contains("工具")) {
+            val loose = Regex("^(?:尝试|帮我|请|麻烦)?\\s*(?:调用|使用|运行|执行|试试)?\\s*(?:mcp|MCP|工具)\\s*(?:调用)?\\s*(.*)").find(trimmed)
+            if (loose != null) {
+                val rest = loose.groupValues[1].trim()
+                val explicit = Regex("^([A-Za-z0-9_.\\-]+)\\s*(.*)").find(rest)?.groupValues?.get(1) ?: ""
+                return handleToolCall(context, null, explicit, rest)
+            }
         }
 
         // 打开/启动/开启 应用 — HNN CN ET v1.0.6: 无无障碍权限时先申请，
@@ -215,10 +230,34 @@ object AgentEngine {
         return AgentResult("修改文件失败：$path")
     }
 
-    private fun handleToolCall(context: Context, toolName: String, argsText: String): AgentResult {
+    private fun handleToolCall(
+        context: Context,
+        pinnedServerName: String?,
+        toolName: String,
+        argsText: String
+    ): AgentResult {
         val servers = mcpServers(context)
         if (servers.isEmpty()) {
             return AgentResult(context.getString(R.string.agent_mcp_fail, "未配置 MCP 服务器"))
+        }
+        // Resolve which server to use: pinned > per-session choice > only server > user picks.
+        var server: McpServer? = null
+        if (pinnedServerName != null) {
+            server = servers.firstOrNull { it.name == pinnedServerName }
+        }
+        if (server == null) {
+            val sessionId = context.getSharedPreferences("session", 0)
+                .getString("current_session_id", "") ?: ""
+            val chosen = com.alibaba.mnnllm.android.mainsettings.MainSettings
+                .getMcpServerChoice(context, sessionId)
+            server = servers.firstOrNull { it.name == chosen }
+        }
+        if (server == null && servers.size == 1) {
+            server = servers[0]
+        }
+        if (server == null) {
+            // Ask the user to pick a server (UI shows a chooser dialog).
+            return AgentResult("", mcpServerSelection = servers)
         }
         val args = HashMap<String, String>()
         if (argsText.isNotBlank()) {
@@ -227,24 +266,47 @@ object AgentEngine {
             }
             if (args.isEmpty()) args["text"] = argsText
         }
-        var lastErr: String? = "connect"
-        for (server in servers) {
+        // No explicit tool name → list available tools.
+        if (toolName.isBlank()) {
             val (tools, _) = McpClient.listToolsWithError(server)
-            val tool = tools.firstOrNull { it.equals(toolName, true) || it.contains(toolName, true) }
-            if (tool != null) {
-                val (out, err) = McpClient.callToolWithError(server, tool, args)
-                if (out != null) {
-                    return AgentResult(context.getString(R.string.agent_mcp_tool_done, tool, out.take(3000)))
-                }
-                lastErr = err
+            if (tools.isEmpty()) {
+                return AgentResult(context.getString(R.string.agent_mcp_fail, "服务器无可调用工具"))
             }
+            return AgentResult(
+                context.getString(R.string.agent_mcp_tools_hint, server.name) + "\n" +
+                        tools.take(40).joinToString("\n")
+            )
         }
-        val reason = when (lastErr) {
+        val (tools, _) = McpClient.listToolsWithError(server)
+        val tool = tools.firstOrNull { it.equals(toolName, true) || it.contains(toolName, true) }
+        if (tool == null) {
+            return AgentResult(context.getString(R.string.agent_mcp_fail, "未找到工具：$toolName"))
+        }
+        val (out, err) = McpClient.callToolWithError(server, tool, args)
+        if (out != null) {
+            return AgentResult(context.getString(R.string.agent_mcp_tool_done, tool, out.take(3000)))
+        }
+        val reason = when (err) {
             "timeout" -> context.getString(R.string.mcp_err_timeout)
             "connect" -> context.getString(R.string.mcp_err_connect)
-            else -> "未找到工具或调用失败"
+            "unauthorized" -> "服务器要求访问令牌（Unauthorized），请在配置中填写令牌"
+            else -> "调用失败：${err ?: "未知错误"}"
         }
         return AgentResult(context.getString(R.string.agent_mcp_fail, reason))
+    }
+
+    /**
+     * HNN CN ET v1.0.9: re-run a tool-call command against a user-picked server.
+     */
+    fun runToolCallWithServer(context: Context, input: String, serverName: String): AgentResult? {
+        val trimmed = input.trim()
+        val toolMatch = Regex("^(?:尝试|帮我|请|麻烦)?\\s*(?:调用|使用|运行|执行|试试)?\\s*(?:mcp|MCP|工具)\\s*(?:调用)?\\s*([A-Za-z0-9_.\\-]+)\\s*(.*)").find(trimmed)
+        val toolName = toolMatch?.groupValues?.get(1) ?: ""
+        val argsText = toolMatch?.groupValues?.get(2)?.trim() ?: ""
+        if (trimmed.contains("创建文件") || trimmed.contains("新建文件") || trimmed.contains("生成文件")) {
+            return handleCreateFileWithServer(context, trimmed, serverName)
+        }
+        return handleToolCall(context, serverName, toolName, argsText)
     }
 
     private fun localFile(path: String): File? {
@@ -256,12 +318,58 @@ object AgentEngine {
 
     // ---------- open app ----------
 
+    // HNN CN ET v1.0.9: known package shortcuts for common Chinese apps.
+    private val KNOWN_PACKAGES = mapOf(
+        "抖音" to "com.ss.android.ugc.aweme",
+        "微信" to "com.tencent.mm",
+        "QQ" to "com.tencent.mobileqq",
+        "淘宝" to "com.taobao.taobao",
+        "京东" to "com.jingdong.app.mall",
+        "支付宝" to "com.eg.android.AlipayGphone",
+        "哔哩哔哩" to "tv.danmaku.bili",
+        "bilibili" to "tv.danmaku.bili",
+        "快手" to "com.smile.gifmaker",
+        "微博" to "com.sina.weibo",
+        "小红书" to "com.xingin.xhs",
+        "美团" to "com.sankuai.meituan",
+        "百度" to "com.baidu.searchbox",
+        "高德地图" to "com.autonavi.minimap",
+        "网易云音乐" to "com.netease.cloudmusic",
+        "QQ音乐" to "com.tencent.qqmusic",
+        "酷狗音乐" to "com.kugou.android",
+        "爱奇艺" to "com.qiyi.video",
+        "优酷" to "com.youku.phone",
+        "腾讯视频" to "com.tencent.qqlive",
+        "钉钉" to "com.alibaba.android.rimet",
+        "WPS" to "cn.wps.moffice_eng",
+        "浏览器" to "com.android.browser",
+        "相机" to "com.android.camera",
+        "设置" to "com.android.settings",
+        "文件管理" to "com.android.documentsui"
+    )
+
     /**
      * Launch an app by matching its label or package name against [label].
      * Works without the accessibility permission.
      */
     fun launchAppByLabel(context: Context, label: String): Boolean {
         val pm = context.packageManager
+        // 1) known package shortcuts
+        KNOWN_PACKAGES.entries.firstOrNull { (key, pkg) ->
+            label.contains(key, true) || key.contains(label, true)
+        }?.let { (_, pkg) ->
+            try {
+                pm.getPackageInfo(pkg, 0)
+                val launch = pm.getLaunchIntentForPackage(pkg)
+                if (launch != null) {
+                    launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(launch)
+                    return true
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Known package $pkg not installed: ${e.message}")
+            }
+        }
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val apps = pm.queryIntentActivities(intent, 0)
         val candidates = mutableListOf<android.content.pm.ResolveInfo>()
@@ -295,6 +403,33 @@ object AgentEngine {
             Log.w(TAG, "Failed to launch ${exact.activityInfo.packageName}: ${e.message}")
             return false
         }
+    }
+
+    private fun handleCreateFileWithServer(context: Context, trimmed: String, serverName: String): AgentResult {
+        val pathContent = trimmed.replace(Regex("^(创建|新建|生成)\\s*文件\\s*[:：]?"), "")
+        var path = pathContent
+        var content = ""
+        val marker = Regex("(?:，|,|\\s)(?:内容|内容为|内容是|内容：)[:：]?\\s*(.*)").find(pathContent)
+        if (marker != null) {
+            path = pathContent.substring(0, marker.range.first).trim()
+            content = marker.groupValues[1]
+        }
+        if (path.isBlank()) path = "agent_${System.currentTimeMillis()}.txt"
+        if (content.isBlank()) content = "由 HNN CN ET Agent 创建"
+        val server = mcpServers(context).firstOrNull { it.name == serverName }
+            ?: return AgentResult("未找到 MCP 服务器：$serverName")
+        val tools = McpClient.listTools(server)
+        val createTool = tools.firstOrNull { t -> t.contains("create_file", true) || t.contains("write_file", true) }
+        if (createTool != null) {
+            val (result, err) = McpClient.callToolWithError(
+                server, createTool, mapOf("path" to path, "content" to content)
+            )
+            if (result != null) {
+                return AgentResult(context.getString(R.string.agent_created_file, path) + "\n" + result.take(800))
+            }
+            return AgentResult(context.getString(R.string.agent_mcp_fail, err ?: "未知错误"))
+        }
+        return AgentResult(context.getString(R.string.agent_mcp_fail, "服务器无创建文件工具"))
     }
 
     // ---------- create file ----------

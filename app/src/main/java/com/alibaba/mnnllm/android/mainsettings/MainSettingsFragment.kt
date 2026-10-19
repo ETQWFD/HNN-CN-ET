@@ -109,6 +109,7 @@ class MainSettingsFragment : Fragment() {
             MainSettings.setDirectReplyEnabled(requireContext(), isChecked)
         }
 
+        setupAppearance()
         setupDownloadProvider(sharedPreferences)
         setupVoiceModelManagement()
         setupStorageManagement()
@@ -124,6 +125,189 @@ class MainSettingsFragment : Fragment() {
         setupContactAndLogs()
         setupDebugMode(sharedPreferences)
     }
+
+    private fun setupAppearance() {
+        // Theme mode: system / dark / light
+        binding.rowThemeMode.setOnClickListener {
+            val mode = MainSettings.getThemeMode(requireContext())
+            val labels = arrayOf(
+                getString(R.string.theme_mode_system),
+                getString(R.string.theme_mode_dark),
+                getString(R.string.theme_mode_light)
+            )
+            val keys = arrayOf("system", "dark", "light")
+            val checked = keys.indexOf(mode).coerceAtLeast(0)
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.settings_theme_mode)
+                .setSingleChoiceItems(labels, checked) { d, which ->
+                    MainSettings.setThemeMode(requireContext(), keys[which])
+                    androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                        when (keys[which]) {
+                            "light" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+                            "dark" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                            else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                        }
+                    )
+                    requireActivity().recreate()
+                    d.dismiss()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+
+        // Theme color: presets + custom
+        binding.rowThemeColor.setOnClickListener {
+            val presets = arrayOf(
+                "blue" to 0xFF2E6BFF.toInt(),
+                "green" to 0xFF00B38A.toInt(),
+                "red" to 0xFFE5484D.toInt(),
+                "yellow" to 0xFFF5A623.toInt(),
+                "purple" to 0xFF8B5CF6.toInt(),
+                "cyan" to 0xFF06B6D4.toInt()
+            )
+            val holder = android.widget.LinearLayout(requireContext()).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(24, 16, 24, 16)
+                addView(android.widget.TextView(context).apply {
+                    text = getString(R.string.theme_color_presets)
+                    setTextColor(0xFF9E9E9E.toInt())
+                    textSize = 14f
+                })
+                val row = android.widget.LinearLayout(context).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER
+                    setPadding(0, 8, 0, 8)
+                }
+                presets.forEach { (key, color) ->
+                    val dot = android.view.View(context)
+                    val size = dpv(40)
+                    dot.layoutParams = android.widget.LinearLayout.LayoutParams(size, size).apply {
+                        marginEnd = dpv(14)
+                    }
+                    dot.background = android.graphics.drawable.GradientDrawable().apply {
+                        shape = android.graphics.drawable.GradientDrawable.OVAL
+                        setColor(color)
+                    }
+                    dot.setOnClickListener {
+                        MainSettings.setThemeColor(requireContext(), key)
+                        Toast.makeText(context, getString(R.string.settings_complete), Toast.LENGTH_SHORT).show()
+                    }
+                    row.addView(dot)
+                }
+                addView(row)
+                addView(android.widget.TextView(context).apply {
+                    text = getString(R.string.theme_color_custom)
+                    setTextColor(0xFF9E9E9E.toInt())
+                    textSize = 14f
+                    setPadding(0, 8, 0, 4)
+                })
+                val preview = android.view.View(context)
+                preview.layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dpv(48)
+                )
+                preview.background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(MainSettings.getCustomThemeColor(requireContext()))
+                    cornerRadius = dpv(8).toFloat()
+                }
+                val hexInput = android.widget.EditText(context).apply {
+                    setHint("#RRGGBB")
+                    setSingleLine(true)
+                    setPadding(dpv(12), dpv(4), dpv(12), dpv(4))
+                }
+                preview.setOnClickListener {
+                    try {
+                        val hex = hexInput.text.toString().trim().removePrefix("#")
+                        if (hex.length == 6) {
+                            MainSettings.setCustomThemeColor(requireContext(), android.graphics.Color.parseColor("#" + hex))
+                            preview.background = android.graphics.drawable.GradientDrawable().apply {
+                                setColor(android.graphics.Color.parseColor("#" + hex))
+                                cornerRadius = dpv(8).toFloat()
+                            }
+                            Toast.makeText(context, getString(R.string.settings_complete), Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "请输入 6 位颜色值，如 FF0000", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "颜色格式无效", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                addView(hexInput)
+                addView(preview)
+            }
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.settings_theme_color)
+                .setView(holder)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
+
+        // Chat background image (wallpaper)
+        binding.rowWallpaper.setOnClickListener {
+            val holder = android.widget.LinearLayout(requireContext()).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(24, 16, 24, 16)
+                addView(android.widget.Button(context).apply {
+                    text = getString(R.string.wallpaper_pick)
+                    setOnClickListener { pickWallpaper() }
+                })
+                addView(android.widget.Button(context).apply {
+                    text = getString(R.string.wallpaper_reset)
+                    setOnClickListener {
+                        MainSettings.setWallpaperPath(requireContext(), null)
+                        Toast.makeText(context, getString(R.string.settings_complete), Toast.LENGTH_SHORT).show()
+                    }
+                })
+            }
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.settings_wallpaper)
+                .setView(holder)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
+    }
+
+    private fun pickWallpaper() {
+        try {
+            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "image/*"
+                addCategory(Intent.CATEGORY_OPENABLE)
+            }
+            wallpaperLauncher.launch(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "无法打开图片选择器", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val wallpaperLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK && result.data?.data != null) {
+            val uri = result.data!!.data!!
+            lifecycleScope.launch {
+                val path = withContext(Dispatchers.IO) {
+                    try {
+                        val dir = requireContext().filesDir
+                        val dst = java.io.File(dir, "wallpaper.jpg")
+                        requireContext().contentResolver.openInputStream(uri)?.use { input ->
+                            dst.outputStream().use { out -> input.copyTo(out) }
+                        }
+                        dst.absolutePath
+                    } catch (e: Exception) {
+                        Log.e(TAG, "copy wallpaper failed: ${e.message}")
+                        null
+                    }
+                }
+                if (path != null) {
+                    MainSettings.setWallpaperPath(requireContext(), path)
+                    Toast.makeText(context, getString(R.string.settings_complete), Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "背景图保存失败", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun dpv(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun setupDownloadProvider(
         sharedPreferences: android.content.SharedPreferences

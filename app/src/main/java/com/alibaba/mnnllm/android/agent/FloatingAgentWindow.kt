@@ -63,16 +63,20 @@ object FloatingAgentWindow {
         try {
             val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             val view = TextView(context).apply {
-                text = "H"
-                textSize = 20f
+                text = "AI"
+                textSize = 16f
                 setTextColor(0xFFFFFFFF.toInt())
                 gravity = Gravity.CENTER
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
-                    setColor(0xFF00B38A.toInt())
+                    // HNN CN ET v1.0.9: gradient circle + soft shadow
+                    colors = intArrayOf(0xFF00D6A6.toInt(), 0xFF00B38A.toInt(), 0xFF0086B8.toInt())
+                    gradientType = GradientDrawable.RADIAL_GRADIENT
+                    gradientRadius = 60f
                 }
-                // 48dp circle
-                layoutParams = android.view.ViewGroup.LayoutParams(dp(48), dp(48))
+                elevation = dp(6).toFloat()
+                // 52dp circle with a thin light border
+                layoutParams = android.view.ViewGroup.LayoutParams(dp(52), dp(52))
                 contentDescription = "HNN CN ET Agent 运行中"
             }
             val wmParams = WindowManager.LayoutParams(
@@ -119,7 +123,7 @@ object FloatingAgentWindow {
                         }
                         MotionEvent.ACTION_UP -> {
                             if (!moved) {
-                                openMain(context)
+                                showBubbleMenu(context, view)
                             }
                             return true
                         }
@@ -134,6 +138,26 @@ object FloatingAgentWindow {
             Toast.makeText(context, "Agent 悬浮窗已开启", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to show floating window: ${e.message}")
+        }
+    }
+
+    /** HNN CN ET v1.0.9: tap the bubble → quick actions. */
+    private fun showBubbleMenu(context: Context, anchor: View) {
+        try {
+            val menu = android.widget.PopupMenu(context, anchor)
+            menu.menu.add(0, 1, 0, "继续聊天")
+            menu.menu.add(0, 2, 1, "暂停 Agent 悬浮窗")
+            menu.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    1 -> openMain(context)
+                    2 -> hide()
+                }
+                true
+            }
+            menu.show()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to show bubble menu: ${e.message}")
+            openMain(context)
         }
     }
 

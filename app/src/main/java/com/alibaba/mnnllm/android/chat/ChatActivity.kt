@@ -113,6 +113,12 @@ class ChatActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityChatBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        // HNN CN ET v1.0.9: wallpaper + theme accent
+        try {
+            com.alibaba.mnnllm.android.chat.ThemeDecor.applyWallpaper(this, binding.root)
+        } catch (e: Exception) {
+            Log.e(TAG, "wallpaper apply failed: ${e.message}")
+        }
         val toolbar = binding.toolbar
         setSupportActionBar(toolbar)
 
@@ -221,7 +227,7 @@ class ChatActivity : AppCompatActivity() {
                     if (com.alibaba.mnnllm.android.mainsettings.MainSettings.isAgentModeEnabled(this@ChatActivity)) {
                         // HNN CN ET v1.0.8: show a "Calling MCP tool…" placeholder while executing.
                         val cmd = it.text ?: ""
-                        if (cmd.matches(Regex("^(调用工具|调用mcp|调用MCP|mcp)\\s+.*"))) {
+                        if (cmd.contains("mcp", true) || (cmd.contains("调用") && cmd.contains("工具"))) {
                             chatListComponent.setPlaceholderText(getString(R.string.mcp_calling))
                         }
                         val agentResult = withContext(Dispatchers.IO) {
@@ -243,6 +249,23 @@ class ChatActivity : AppCompatActivity() {
             setOnStopGenerating{
                 chatPresenter.stopGenerate()
             }
+        }
+        // HNN CN ET v1.0.9: accent color on the send button
+        try {
+            val btnSend = chatInputModule?.let { m ->
+                (m as? com.alibaba.mnnllm.android.chat.input.ChatInputComponent)
+            }?.let { c ->
+                try {
+                    val f = c.javaClass.getDeclaredField("buttonSend")
+                    f.isAccessible = true
+                    f.get(c) as? android.widget.ImageView
+                } catch (e: Exception) { null }
+            }
+            if (btnSend != null) {
+                com.alibaba.mnnllm.android.chat.ThemeDecor.tintSendButton(this, btnSend)
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "send button tint skipped: ${e.message}")
         }
     }
 
@@ -690,6 +713,13 @@ class ChatActivity : AppCompatActivity() {
         result: com.alibaba.mnnllm.android.agent.AgentResult,
         originalText: String
     ) {
+        // HNN CN ET v1.0.9: multiple MCP servers → let the user pick one.
+        if (result.mcpServerSelection != null && result.mcpServerSelection.isNotEmpty()) {
+            onGenerateStart(userData)
+            setIsGenerating(false)
+            showMcpServerChooser(result.mcpServerSelection, originalText)
+            return
+        }
         onGenerateStart(userData)
         val replyText = if (result.reply.isNullOrBlank()) {
             getString(R.string.empty_reply_fallback)
@@ -709,8 +739,82 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * HNN CN ET v1.0.9: Material 3 chooser — which MCP server should the AI use?
+     * Optional checkbox: use it for the whole conversation (per-session memory).
+     */
+    private fun showMcpServerChooser(servers: List<com.alibaba.mnnllm.android.agent.McpServer>, originalText: String) {
+        val names = servers.map { it.name }.toTypedArray()
+        val checked = BooleanArray(servers.size) { false }
+        val remember = com.google.android.material.checkbox.MaterialCheckBox(this).apply {
+            text = getString(R.string.mcp_use_for_session)
+            isChecked = true
+        }
+        val holder = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            addView(remember)
+        }
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.mcp_choose_server_title)
+            .setSingleChoiceItems(names, -1) { _, which -> checked[which] = true }
+            .setView(holder, dp8(), 0, dp8(), 0)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val idx = checked.indexOfFirst { it }
+                if (idx < 0) return@setPositiveButton
+                val chosen = servers[idx]
+                if (remember.isChecked) {
+                    com.alibaba.mnnllm.android.mainsettings.MainSettings
+                        .setMcpServerChoice(this, sessionId ?: "", chosen.name)
+                }
+                lifecycleScope.launch {
+                    chatListComponent.setPlaceholderText(getString(R.string.mcp_calling))
+                    val result = withContext(Dispatchers.IO) {
+                        try {
+                            com.alibaba.mnnllm.android.agent.AgentEngine
+                                .runToolCallWithServer(this@ChatActivity, originalText, chosen.name)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "AgentEngine server-run error", e)
+                            com.alibaba.mnnllm.android.agent.AgentResult("Agent 执行出错：${e.message ?: "未知错误"}")
+                        }
+                    }
+                    if (result != null) {
+                        handlePinnedAgentResult(result, originalText)
+                    } else {
+                        this@ChatActivity.handleSendMessage(createUserMessage(originalText))
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun handlePinnedAgentResult(
+        result: com.alibaba.mnnllm.android.agent.AgentResult,
+        originalText: String
+    ) {
+        onGenerateStart(createUserMessage(originalText))
+        val replyText = if (result.reply.isNullOrBlank()) {
+            getString(R.string.empty_reply_fallback)
+        } else {
+            result.reply
+        }
+        val assistant = ChatDataItem(ChatViewHolders.ASSISTANT)
+        assistant.text = replyText
+        assistant.displayText = replyText
+        assistant.loading = false
+        chatListComponent.updateAssistantResponse(assistant)
+        setIsGenerating(false)
+        chatPresenter.saveResponseToDatabase(assistant)
+        if (result.needsAccessibility) {
+            com.alibaba.mnnllm.android.agent.AgentEngine.pendingCommand = originalText
+            showAccessibilityPrompt()
+        }
+    }
+
+    private fun dp8(): Int = (8 * resources.displayMetrics.density).toInt()
+
     private fun showAccessibilityPrompt() {
-        AlertDialog.Builder(this)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setTitle(R.string.agent_mode_title)
             .setMessage(R.string.agent_needs_accessibility)
             .setPositiveButton(R.string.agent_enable_accessibility) { _, _ ->

@@ -4,6 +4,9 @@
 #include <QTcpServer>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QMap>
+#include <QTcpSocket>
+#include <QByteArray>
 
 // Built-in OpenAI-compatible HTTP service (proxies to the configured model backend).
 class ApiService : public QObject {
@@ -30,4 +33,5 @@ private:
 
     QTcpServer m_server;
     QNetworkAccessManager m_nam;
+    QMap<QTcpSocket*, QByteArray> m_buffers;
 };

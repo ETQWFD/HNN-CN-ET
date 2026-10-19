@@ -10,8 +10,8 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.alibaba.mnnllm.android.R
 import com.alibaba.mnnllm.android.databinding.ActivityMcpSettingsBinding
 
@@ -90,7 +90,7 @@ class McpSettingsActivity : AppCompatActivity() {
         val nameInput = view.findViewById<EditText>(R.id.input_name)
         val urlInput = view.findViewById<EditText>(R.id.input_url)
         val tokenInput = view.findViewById<EditText>(R.id.input_token)
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.mcp_add)
             .setView(view)
             .setPositiveButton(R.string.mcp_add) { _, _ ->
@@ -107,6 +107,7 @@ class McpSettingsActivity : AppCompatActivity() {
                 servers.add(McpServer(name, url, token))
                 McpConfigStore.saveServers(this, servers)
                 renderList()
+                Toast.makeText(this, getString(R.string.mcp_added_ok), Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()

@@ -725,6 +725,7 @@
     <string name="mcp_token_hint">访问令牌（可选，Bearer 认证）</string>
     <string name="mcp_err_unauthorized">未授权：服务器要求访问令牌，请在配置中填写令牌后再测试。</string>
     <string name="mcp_test_ok">连接成功，可用工具：%1$d 个</string>
+    <string name="mcp_added_ok">已添加，AI 现在可以调用该服务器的工具</string>
     <string name="mcp_test_fail">连接失败：%1$s</string>
     <string name="agent_accessibility_description">HNN CN ET Agent 无障碍服务。开启 Agent 工作模式并授权后，可帮你操作其他应用。</string>
     <string name="agent_needs_accessibility">Agent 需要无障碍权限才能操作其他应用。请在接下来弹出的页面中开启「HNN CN ET 无障碍服务」，开启后将自动继续执行未完成的任务。</string>
@@ -746,6 +747,21 @@
     <string name="thinking_indicator">正在思考…</string>
     <string name="empty_reply_fallback">（暂无回复，请换个说法重试）</string>
     <string name="generation_failed">（生成失败，请重试一次）</string>
+    <string name="mcp_choose_server_title">选择要使用的 MCP 服务器</string>
+    <string name="mcp_use_for_session">本次对话全部使用这个服务器</string>
+    <string name="agent_mcp_tools_hint">已连接服务器 %1$s，可用工具如下，请告诉我要调用哪个（如：调用工具 read_file path=/sdcard/a.txt）：</string>
+    <string name="mcp_enabled_title">MCP 服务</string>
+    <string name="settings_appearance">主题与外观</string>
+    <string name="settings_theme_mode">主题模式</string>
+    <string name="settings_theme_color">主题颜色</string>
+    <string name="settings_wallpaper">聊天背景图片</string>
+    <string name="theme_mode_system">跟随系统</string>
+    <string name="theme_mode_dark">深色</string>
+    <string name="theme_mode_light">明亮</string>
+    <string name="theme_color_presets">预设颜色</string>
+    <string name="theme_color_custom">自定义颜色</string>
+    <string name="wallpaper_pick">选择图片</string>
+    <string name="wallpaper_reset">重置背景</string>
     <string name="direct_mode_title">高速直答</string>
     <string name="direct_mode_summary">开启后 AI 直接回答、不拒绝问题，并跳过深度思考，回复更快。</string>
     <string name="mcp_testing">测试中…</string>

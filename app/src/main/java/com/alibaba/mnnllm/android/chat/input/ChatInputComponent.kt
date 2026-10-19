@@ -137,18 +137,14 @@ class ChatInputComponent(
     }
     
     private fun setupThinkingMode() {
-        val extraTags = ModelListManager.getExtraTags(currentModelId)
-        if (!ModelTypeUtils.isSupportThinkingSwitchByTags(extraTags)) {
-            binding.btnToggleThinking.visibility = View.GONE
-        } else {
-            binding.btnToggleThinking.visibility = View.VISIBLE
-            // Load config off main thread to avoid ANR (file I/O)
-            chatActivity.lifecycleScope.launch {
-                val enableThinking = withContext(Dispatchers.IO) {
-                    ModelConfig.loadConfig(currentModelId)?.jinja?.context?.enableThinking != false
-                }
-                binding.btnToggleThinking.isSelected = enableThinking
+        // HNN CN ET v1.0.9: deep-think toggle is always visible for any model.
+        binding.btnToggleThinking.visibility = View.VISIBLE
+        // Load config off main thread to avoid ANR (file I/O)
+        chatActivity.lifecycleScope.launch {
+            val enableThinking = withContext(Dispatchers.IO) {
+                ModelConfig.loadConfig(currentModelId)?.jinja?.context?.enableThinking != false
             }
+            binding.btnToggleThinking.isSelected = enableThinking
         }
         binding.btnToggleThinking.setOnClickListener {
             Log.d(TAG, "handleSendClick isGenerating : ${chatActivity.isLoading}")
@@ -319,10 +315,7 @@ class ChatInputComponent(
             }
 
             override fun onLeaveRecordingMode() {
-                val extraTags = ModelListManager.getExtraTags(currentModelId)
-                if (ModelTypeUtils.isSupportThinkingSwitchByTags(extraTags)) {
-                    binding.btnToggleThinking.visibility = View.VISIBLE
-                }
+                binding.btnToggleThinking.visibility = View.VISIBLE
                 updateAudioOutput()
                 binding.btnSend.visibility = View.VISIBLE
                 editUserMessage.visibility = View.VISIBLE

@@ -20,6 +20,19 @@ class MnnLlmApplication : Application() {
     
     override fun onCreate() {
         super.onCreate()
+        // HNN CN ET v1.0.9: user-selected theme mode (system / light / dark).
+        try {
+            when (com.alibaba.mnnllm.android.mainsettings.MainSettings.getThemeMode(this)) {
+                "light" -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                    androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO)
+                "dark" -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                    androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES)
+                else -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                    androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+            }
+        } catch (e: Exception) {
+            // ignore — DayNight falls back to system
+        }
         ApplicationProvider.set(this)
         UpdateChecker.registerDownloadReceiver(applicationContext)
         CrashUtil.init(this)

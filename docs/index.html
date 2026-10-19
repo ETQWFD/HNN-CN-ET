@@ -50,7 +50,7 @@
       <span>架构 armeabi-v7a + arm64-v8a</span>
       <span>推理引擎 MNN</span>
       <span>协议 MIT</span>
-      <span>版本 <b id="heroVer">v1.0.8</b></span>
+      <span>版本 <b id="heroVer">v1.0.9</b></span>
     </div>
   </div>
 </header>
@@ -74,9 +74,9 @@
     <h2 class="section-title">下载</h2>
     <div class="download-card">
       <div class="download-info">
-        <h3>最新版本 <span id="dlVer">v1.0.8</span></h3>
-        <p id="downloadNote">最新版本 v1.0.8 · HNN-CN-ET-1.0.8.apk</p>
-        <p class="download-meta"><span id="dlName">HNN-CN-ET-1.0.8.apk</span><span id="dlSize"></span></p>
+        <h3>最新版本 <span id="dlVer">v1.0.9</span></h3>
+        <p id="downloadNote">最新版本 v1.0.9 · HNN-CN-ET-1.0.9.apk</p>
+        <p class="download-meta"><span id="dlName">HNN-CN-ET-1.0.9.apk</span><span id="dlSize"></span></p>
         <p class="download-meta"><span id="dlTime"></span><span>累计下载 <b id="dlTotal">—</b> 次</span></p>
       </div>
       <a class="btn btn-primary" id="btnApk" href="https://github.com/ETQWFD/HNN-CN-ET/releases/latest">下载 APK</a>
@@ -109,6 +109,21 @@
     <h2 class="section-title">更新日志</h2>
     <div class="changelog">
       <div class="change">
+        <h3>v1.0.9 <small>（2026-10-19）</small></h3>
+        <ul>
+          <li>MCP 工具真实可调用：AI 识别「调用 MCP / 调用工具 / 创建文件」等指令并执行；多个服务器时弹出选择框，可勾选本次对话固定使用某个服务器</li>
+          <li>Agent 工作模式增强：输入「帮我打开XX」可直接拉起已安装应用（内置抖音/微信/QQ 等常用应用映射）；无障碍权限未开启时主动弹窗申请，授权后继续完成任务</li>
+          <li>聊天输入框上方新增「深度思考」按钮：开启后模型先深度推理再回答（DeepSeek 风格），关闭则直接回答</li>
+          <li>设置新增「主题与外观」：主题模式（跟随系统/深色/明亮）、主题颜色（蓝/绿/红/黄/紫/青/自定义）、聊天背景图片（50% 透明度琉璃质感）</li>
+          <li>Agent 悬浮球改为圆形渐变 + 弹出菜单（继续聊天/暂停悬浮窗），可拖动</li>
+          <li>性能评测支持终止；所有弹窗升级为 Android 15（Material3）风格；MCP 添加成功即时生效</li>
+        </ul>
+        <h3>Windows 电脑版 v1.0.3 <small>（2026-10-19）</small></h3>
+        <ul>
+          <li>内置 OpenAI 兼容 API 服务可在局域网/浏览器正式调用：监听全部网卡、自动生成本机地址、支持 CORS 与 OPTIONS 预检</li>
+          <li>修复网页调用 API 时大请求体被截断的问题（HTTP body 完整缓冲）</li>
+          <li>API Key 格式：etc- + 62 位数字（共 66 位），鉴权后返回 SSE 流式响应</li>
+        </ul>
         <h3>v1.0.8 <small>（2026-10-19）</small></h3>
         <ul>
           <li>聊天中显示「正在调用 MCP 工具…」，MCP 令牌可填可不填（无令牌工具留空）</li>

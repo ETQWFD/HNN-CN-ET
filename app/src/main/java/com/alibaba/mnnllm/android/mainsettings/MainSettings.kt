@@ -150,4 +150,57 @@ object MainSettings {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
         sharedPreferences.edit().putString("mcp_servers", json).apply()
     }
+
+    // ---------- HNN CN ET v1.0.9: MCP per-session server choice ----------
+    /** Remember "use this MCP server for this whole conversation". */
+    fun getMcpServerChoice(context: Context, sessionId: String): String? {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        return sharedPreferences.getString("mcp_choice_$sessionId", null)
+    }
+
+    fun setMcpServerChoice(context: Context, sessionId: String, serverName: String?) {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        sharedPreferences.edit().putString("mcp_choice_$sessionId", serverName).apply()
+    }
+
+    // ---------- HNN CN ET v1.0.9: theme & wallpaper ----------
+    fun getThemeMode(context: Context): String {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        return sharedPreferences.getString("theme_mode", "system") ?: "system"
+    }
+
+    fun setThemeMode(context: Context, mode: String) {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        sharedPreferences.edit().putString("theme_mode", mode).apply()
+    }
+
+    fun getThemeColor(context: Context): String {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        return sharedPreferences.getString("theme_color", "blue") ?: "blue"
+    }
+
+    fun setThemeColor(context: Context, color: String) {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        sharedPreferences.edit().putString("theme_color", color).apply()
+    }
+
+    fun getCustomThemeColor(context: Context): Int {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        return sharedPreferences.getInt("custom_theme_color", 0xFF00B38A.toInt())
+    }
+
+    fun setCustomThemeColor(context: Context, color: Int) {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        sharedPreferences.edit().putInt("custom_theme_color", color).apply()
+    }
+
+    fun getWallpaperPath(context: Context): String? {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        return sharedPreferences.getString("wallpaper_path", null)
+    }
+
+    fun setWallpaperPath(context: Context, path: String?) {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        sharedPreferences.edit().putString("wallpaper_path", path).apply()
+    }
 }

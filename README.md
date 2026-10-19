@@ -39,6 +39,13 @@ HNN CN ET 是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 ## 更新日志
 
+### v1.0.9 (2026-10-19)
+- MCP tools are now really callable: the AI recognizes "call MCP / call tool / create file" instructions and executes them; when multiple servers exist, a chooser appears and you may pin one server for the whole session.
+- Agent mode enhanced: "open Douyin/WeChat/QQ…" launches the installed app directly (built-in map of common apps); if the accessibility permission is missing, the app asks for it and then continues the pending task.
+- A "Deep think" toggle now always sits above the input box: on, the model reasons deeply before answering (DeepSeek style); off, it answers directly.
+- Settings → new "Appearance" section: theme mode (system/dark/light), theme color (blue/green/red/yellow/purple/cyan/custom), chat wallpaper (50% translucent frosted glass).
+- Agent floating ball is now a draggable round gradient orb with a popup menu; benchmark can be stopped; all dialogs upgraded to Material 3 (Android 15) style.
+- Windows v1.0.3: the built-in OpenAI-compatible API service is now callable from the LAN/browser (binds all interfaces, auto LAN address, CORS + OPTIONS preflight, full HTTP body buffering); API key format etc- + 62 digits.
 ### v1.0.8 (2026-10-19)
 - Chat: Agent shows "Calling MCP tool…" when invoking MCP tools; MCP token is optional (leave blank for token-free servers).
 - Fix: raw technical errors (DB allocation failure / benchmark string) no longer leak into chat — friendly message shown, details logged; DB writes serialized + background repair to stop CursorWindow -12 on low-memory devices; generation failure no longer stuck at "Thinking…".
