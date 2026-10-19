@@ -39,6 +39,10 @@ HNN CN ET 是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 ## 更新日志
 
+### v1.1.1 (2026-10-19)
+- Fix AI not calling MCP tools: broad intent recognition for "先调用一下mcp", "帮我用用mcp", etc. — no strict word order required.
+- MCP calls no longer depend on the Agent mode toggle; any MCP intent is intercepted. Without a tool name, the app lists all available tools.
+- Windows v1.0.5: broad MCP intent matching + isAgentCommand fix + empty tool name lists tools.
 ### v1.1.0 (2026-10-19)
 - MCP config redesigned: inline expandable panel in Settings — toggle on, then add/test/delete servers right below, no more separate page.
 - New MCP master switch: when off, the AI clearly tells you to enable it in Settings instead of silently failing.

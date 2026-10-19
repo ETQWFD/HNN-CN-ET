@@ -223,11 +223,15 @@ class ChatActivity : AppCompatActivity() {
             }
             setOnSendMessage{
                 lifecycleScope.launch {
-                    // HNN CN ET v1.0.3: Agent 工作模式 — 设备操作指令先交给 Agent 引擎
-                    if (com.alibaba.mnnllm.android.mainsettings.MainSettings.isAgentModeEnabled(this@ChatActivity)) {
-                        // HNN CN ET v1.0.8: show a "Calling MCP tool…" placeholder while executing.
-                        val cmd = it.text ?: ""
-                        if (cmd.contains("mcp", true) || (cmd.contains("调用") && cmd.contains("工具"))) {
+                    val cmd = it.text ?: ""
+                    // HNN CN ET v1.1.1: MCP tool calls work independently of Agent mode —
+                    // any "mcp" / "call tool" intent is intercepted first.
+                    val isMcpIntent = cmd.contains("mcp", true) ||
+                            (cmd.contains("调用") && cmd.contains("工具"))
+                    val agentModeOn = com.alibaba.mnnllm.android.mainsettings.MainSettings
+                        .isAgentModeEnabled(this@ChatActivity)
+                    if (isMcpIntent || agentModeOn) {
+                        if (isMcpIntent) {
                             chatListComponent.setPlaceholderText(getString(R.string.mcp_calling))
                         }
                         val agentResult = withContext(Dispatchers.IO) {

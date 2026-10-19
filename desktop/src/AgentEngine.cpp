@@ -53,6 +53,13 @@ void AgentEngine::setWorkingFolder(const QString& dir) {
 }
 
 bool AgentEngine::isAgentCommand(const QString& input) {
+    QString t = input.trimmed();
+    // HNN CN ET v1.0.5: broad MCP intent — "先调用一下mcp", "帮我用用mcp".
+    if (t.contains("mcp", Qt::CaseInsensitive)) {
+        bool isQuestion = t.contains("是什么") || t.contains("什么意思") ||
+                          t.contains("解释") || t.contains("介绍");
+        if (!isQuestion) return true;
+    }
     static const QRegularExpression re(
         QStringLiteral("^(创建|新建|生成)\\s*文件|"
                        "^(读取|查看|打开一下文件|读一下)\\s*文件|"
@@ -62,7 +69,7 @@ bool AgentEngine::isAgentCommand(const QString& input) {
                        "^(调用工具|调用mcp|调用MCP|mcp)\\s+|"
                        "^(请|帮我)?(打开|启动|开启)\\s*[\\u4e00-\\u9fa5A-Za-z0-9·+_\\-]{1,12}|"
                        "^(返回|回到桌面|回桌面)"));
-    return re.match(input.trimmed()).hasMatch();
+    return re.match(t).hasMatch();
 }
 
 QString AgentEngine::tryHandle(const QString& input) {
@@ -107,17 +114,19 @@ void AgentEngine::runConfirmed(const QString& input, bool passwordOk) {
         auto m = marker.match(body);
         if (m.hasMatch()) { path = body.left(m.capturedStart(1)).trimmed(); content = m.captured(1); }
         reply = editFile(path, content);
-    } else if (trimmed.startsWith("调用工具") || trimmed.startsWith("调用mcp") || trimmed.startsWith("调用MCP") || trimmed.startsWith("mcp ")) {
-        if (!ThemeManager::instance().boolean("mcpEnabled", false)) {
+    } else if (trimmed.contains("mcp", Qt::CaseInsensitive) || trimmed.contains("调用工具")) {
+        // HNN CN ET v1.0.5: broad MCP intent — "先调用一下mcp", "帮我用用mcp", etc.
+        bool isQuestion = trimmed.contains("是什么") || trimmed.contains("什么意思") ||
+                          trimmed.contains("解释") || trimmed.contains("介绍");
+        if (isQuestion) {
+            // fall through to normal chat — do nothing here
+        } else if (!ThemeManager::instance().boolean("mcpEnabled", false)) {
             reply = QStringLiteral("MCP 功能未开启。请在「设置 → MCP 连接配置」中打开开关并添加服务器后再试。");
         } else {
-        QRegularExpression re("^(调用工具|调用mcp|调用MCP|mcp)\\s+([A-Za-z0-9_.\\-]+)\\s*(.*)");
-        auto m = re.match(trimmed);
-        if (m.hasMatch()) {
-            reply = callMcpTool(m.captured(2), m.captured(3));
-        } else {
-            reply = QStringLiteral("用法：调用工具 工具名 参数=值");
-        }
+            QRegularExpression re("(?:调用|使用|运行|执行|用)\\s*([A-Za-z0-9_.\\-]+)");
+            auto m = re.match(trimmed);
+            QString tool = m.hasMatch() ? m.captured(1) : QString();
+            reply = callMcpTool(tool, trimmed);
         }
     } else if (trimmed == "返回" || trimmed == "回到桌面" || trimmed == "回桌面") {
         reply = QStringLiteral("已返回桌面（开始菜单）。");

@@ -87,13 +87,22 @@ object AgentEngine {
         if (toolMatch != null) {
             return handleToolCall(context, null, toolMatch.groupValues[2], toolMatch.groupValues[3].trim())
         }
-        // HNN CN ET v1.0.9: "尝试调用mcp" / "帮我调用工具" style input is also an MCP intent.
-        if (trimmed.contains("mcp", true) || trimmed.contains("工具")) {
-            val loose = Regex("^(?:尝试|帮我|请|麻烦)?\\s*(?:调用|使用|运行|执行|试试)?\\s*(?:mcp|MCP|工具)\\s*(?:调用)?\\s*(.*)").find(trimmed)
-            if (loose != null) {
-                val rest = loose.groupValues[1].trim()
-                val explicit = Regex("^([A-Za-z0-9_.\\-]+)\\s*(.*)").find(rest)?.groupValues?.get(1) ?: ""
-                return handleToolCall(context, null, explicit, rest)
+        // HNN CN ET v1.1.1: broad MCP intent detection — keyword based, not strict order.
+        // Matches "先调用一下mcp", "帮我用用mcp", "试试mcp工具", "调用mcp", etc.
+        if (trimmed.contains("mcp", true)) {
+            val isQuestion = trimmed.contains("是什么") || trimmed.contains("什么意思") ||
+                    trimmed.contains("解释") || trimmed.contains("介绍")
+            val hasCallIntent = trimmed.contains("调用") || trimmed.contains("一下") ||
+                    trimmed.contains("试试") || trimmed.contains("帮我") ||
+                    trimmed.contains("使用") || trimmed.contains("运行") ||
+                    trimmed.contains("执行") || trimmed.contains("先") ||
+                    trimmed.contains("来") || trimmed.contains("用") ||
+                    trimmed.contains("工具")
+            if (hasCallIntent && !isQuestion) {
+                // Try to extract an explicit tool name after a call verb.
+                val explicit = Regex("(?:调用|使用|运行|执行|用)\\s*([A-Za-z0-9_.\\-]+)")
+                    .find(trimmed)?.groupValues?.get(1) ?: ""
+                return handleToolCall(context, null, explicit, trimmed)
             }
         }
 
