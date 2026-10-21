@@ -50,7 +50,7 @@
       <span>架构 armeabi-v7a + arm64-v8a</span>
       <span>推理引擎 MNN</span>
       <span>协议 MIT</span>
-      <span>版本 <b id="heroVer">v1.1.2</b></span>
+      <span>版本 <b id="heroVer">v1.1.3</b></span>
     </div>
   </div>
 </header>
@@ -74,9 +74,9 @@
     <h2 class="section-title">下载</h2>
     <div class="download-card">
       <div class="download-info">
-        <h3>最新版本 <span id="dlVer">v1.1.2</span></h3>
-        <p id="downloadNote">最新版本 v1.1.2 · HNN-CN-ET-1.1.2.apk</p>
-        <p class="download-meta"><span id="dlName">HNN-CN-ET-1.1.2.apk</span><span id="dlSize"></span></p>
+        <h3>最新版本 <span id="dlVer">v1.1.3</span></h3>
+        <p id="downloadNote">最新版本 v1.1.3 · 模型迁移到 /storage/emulated/0/hnn</p>
+        <p class="download-meta"><span id="dlName">HNN-CN-ET-1.1.3.apk</span><span id="dlSize"></span></p>
         <p class="download-meta"><span id="dlTime"></span><span>累计下载 <b id="dlTotal">—</b> 次</span></p>
       </div>
       <a class="btn btn-primary" id="btnApk" href="https://github.com/ETQWFD/HNN-CN-ET/releases/latest">下载 APK</a>
@@ -108,6 +108,13 @@
   <div class="container">
     <h2 class="section-title">更新日志</h2>
     <div class="changelog">
+      <div class="change">
+        <h3>v1.1.3 <small>（2026-10-21）</small></h3>
+        <ul>
+          <li>模型存储迁移到公共目录 /storage/emulated/0/hnn：启动时自动把已下载模型从应用私有目录迁移过去，模型下载、扫描、删除、缓存全部切到新目录</li>
+          <li>下载模型前自动检查「所有文件访问」权限，缺失时引导一键授权，不再静默失败</li>
+          <li>迁移期间新旧目录双扫描兜底，模型不会“消失”</li>
+        </ul>
       <div class="change">
         <h3>v1.1.2 <small>（2026-10-19）</small></h3>
         <ul>

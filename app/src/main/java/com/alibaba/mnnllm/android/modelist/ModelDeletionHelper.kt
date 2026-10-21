@@ -424,9 +424,11 @@ object ModelDeletionHelper {
             }
         }
 
-        // Calculate model storage size
-        val mnnModelsDir = File(filesDir, ".mnnmodels")
-        val modelStorageSize = if (mnnModelsDir.exists()) calculateDirSize(mnnModelsDir) else 0L
+        // HNN CN ET v1.1.3: model storage now lives in /storage/emulated/0/hnn
+        val mnnModelsDir = ModelPaths.modelsDir()
+        val legacyMnnModelsDir = ModelPaths.legacyModelsDir(context)
+        val modelStorageSize = if (mnnModelsDir.exists()) calculateDirSize(mnnModelsDir)
+            else if (legacyMnnModelsDir.exists()) calculateDirSize(legacyMnnModelsDir) else 0L
 
         // Get internal storage stats
         val internalStorageTotal = filesDir.totalSpace

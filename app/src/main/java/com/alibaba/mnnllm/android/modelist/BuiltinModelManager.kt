@@ -56,7 +56,7 @@ object BuiltinModelManager {
             // Check if builtin models have already been copied
             if (PreferenceUtils.getBoolean(context, BUILTIN_MODELS_COPIED_KEY, false)) {
                 // Double check that the builtin directory actually exists
-                val builtinModelsDir = File(context.filesDir, ".mnnmodels/builtin")
+                val builtinModelsDir = com.alibaba.mnnllm.android.modelist.ModelPaths.builtinModelsDir()
                 if (builtinModelsDir.exists() && builtinModelsDir.isDirectory) {
                     val modelDirs = builtinModelsDir.listFiles()?.filter { it.isDirectory }
                     if (!modelDirs.isNullOrEmpty()) {
@@ -74,7 +74,7 @@ object BuiltinModelManager {
             onProgress?.invoke(0, 100, context.getString(R.string.copying_builtin_models))
             
             val assetManager = context.assets
-            val builtinModelsDir = File(context.filesDir, ".mnnmodels/builtin")
+            val builtinModelsDir = com.alibaba.mnnllm.android.modelist.ModelPaths.builtinModelsDir()
             
             // Create builtin directory if it doesn't exist
             if (!builtinModelsDir.exists()) {

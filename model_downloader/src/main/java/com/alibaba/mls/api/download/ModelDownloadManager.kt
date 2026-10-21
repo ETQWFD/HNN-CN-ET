@@ -16,7 +16,10 @@ import java.io.File
  */
 class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDownloadCallback {
 
-    private val cacheDir: String = context.filesDir.absolutePath + "/.mnnmodels"
+    private val appContext: Context = context.applicationContext
+    // HNN CN ET v1.1.3: models are stored in public external storage /storage/emulated/0/hnn
+    // (legacy app-private filesDir/.mnnmodels is migrated at app startup by ModelPaths)
+    private val cacheDir: String = "/storage/emulated/0/hnn"
     private val hfDownloader: HfModelDownloader
     private val msDownloader: MsModelDownloader
 
@@ -30,6 +33,23 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
     
     // Cache for download info to support progress and pause states
     private val downloadInfoMap = java.util.concurrent.ConcurrentHashMap<String, DownloadInfo>()
+
+    // HNN CN ET v1.1.3: models are stored in public /storage/emulated/0/hnn which
+    // requires the "All files access" grant on Android 11+ (MANAGE_EXTERNAL_STORAGE)
+    // or the WRITE_EXTERNAL_STORAGE runtime permission on Android 8-10.
+    private fun hasExternalStoragePermission(): Boolean {
+        return try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                android.os.Environment.isExternalStorageManager()
+            } else {
+                appContext.checkSelfPermission(
+                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
+        } catch (t: Throwable) {
+            true // let the transfer fail with a real IO error rather than a permission bug
+        }
+    }
     
     // Helper to get or create info
     private fun getOrCreateInfo(modelId: String): DownloadInfo {
@@ -71,6 +91,15 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
     fun getProgressCallbackIntervalMs(): Long = progressCallbackIntervalMs
 
     fun startDownload(modelId: String) {
+        // HNN CN ET v1.1.3: models download into public /storage/emulated/0/hnn —
+        // require the external storage permission before starting any transfer.
+        if (!hasExternalStoragePermission()) {
+            val e = com.alibaba.mls.api.FileDownloadException(
+                "需要“所有文件访问”权限才能下载模型到 /storage/emulated/0/hnn，请在系统设置中授权"
+            )
+            downloadListeners.forEach { it.onDownloadFailed(modelId, e) }
+            return
+        }
         // Clear stale pause flags (e.g. after deleteModel on an idle task).
         hfDownloader.clearPause(modelId)
         msDownloader.clearPause(modelId)

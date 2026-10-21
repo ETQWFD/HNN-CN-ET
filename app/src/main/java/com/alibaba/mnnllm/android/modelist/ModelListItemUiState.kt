@@ -181,7 +181,8 @@ internal object ModelListItemUiStateFactory {
             localPath.contains("/modelscope/") -> context.getString(R.string.modelscope)
             localPath.contains("/modelers/") -> context.getString(R.string.modelers)
             localPath.contains("/builtin/") -> context.getString(R.string.builtin)
-            localPath.contains(".mnnmodels") -> context.getString(R.string.huggingface)
+            localPath.contains(".mnnmodels") || localPath.contains("/hnn/") ->
+                context.getString(R.string.huggingface)
             else -> null
         }
     }

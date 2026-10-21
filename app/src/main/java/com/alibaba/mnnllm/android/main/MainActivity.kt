@@ -470,7 +470,61 @@ class MainActivity : AppCompatActivity(), MainFragmentManager.FragmentLifecycleL
         // Handle intent extras for navigation from notification
         handleIntentExtras(intent)
 
+        // HNN CN ET v1.1.3: models now live in /storage/emulated/0/hnn — ensure the
+        // "All files access" (MANAGE_EXTERNAL_STORAGE) permission before any model op.
+        checkModelStoragePermission()
+
         AnalyticsTracker.logAppOpen(this)
+    }
+
+    /**
+     * HNN CN ET v1.1.3: model storage moved to public /storage/emulated/0/hnn.
+     * On Android 11+ this requires the MANAGE_EXTERNAL_STORAGE ("All files access")
+     * grant; on Android 8-10 we request WRITE_EXTERNAL_STORAGE at runtime.
+     */
+    private fun checkModelStoragePermission() {
+        try {
+            if (com.alibaba.mnnllm.android.modelist.ModelPaths.hasStoragePermission(this)) {
+                return
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                    .setTitle("需要存储权限")
+                    .setMessage(
+                        "HNN CN ET v1.1.3 起，模型将存放在公共存储目录 /storage/emulated/0/hnn。\n\n" +
+                        "请授予“所有文件访问”权限，以便迁移已下载模型并继续下载新模型。"
+                    )
+                    .setCancelable(false)
+                    .setPositiveButton("去授权") { _, _ ->
+                        try {
+                            val intent = android.content.Intent(
+                                android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                android.net.Uri.parse("package:$packageName")
+                            )
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            try {
+                                startActivity(
+                                    android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                )
+                            } catch (e2: Exception) {
+                                android.widget.Toast.makeText(
+                                    this, "请在系统设置中授予“所有文件访问”权限", android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
+                    .setNegativeButton("稍后", null)
+                    .show()
+            } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                requestPermissions(
+                    arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                    3001
+                )
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "checkModelStoragePermission failed", t)
+        }
     }
 
     override fun onRequestPermissionsResult(

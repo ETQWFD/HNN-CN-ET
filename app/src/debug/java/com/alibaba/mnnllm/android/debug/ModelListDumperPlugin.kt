@@ -85,7 +85,7 @@ internal object DefaultModelListDebugController : ModelListDebugController {
     override fun scanStorageEntries(): List<StorageEntry> {
         val result = mutableListOf<StorageEntry>()
         val context = ApplicationProvider.get()
-        val mnnModelsDir = File(context.filesDir, ".mnnmodels")
+        val mnnModelsDir = File("/storage/emulated/0/hnn")
         if (!mnnModelsDir.exists()) return result
 
         val containerNames = setOf("modelscope", "modelers", "builtin")
@@ -114,7 +114,7 @@ internal object DefaultModelListDebugController : ModelListDebugController {
 
     override fun deleteSymlink(absolutePath: String): Boolean {
         val context = ApplicationProvider.get()
-        val mnnModelsDir = File(context.filesDir, ".mnnmodels")
+        val mnnModelsDir = File("/storage/emulated/0/hnn")
         if (!absolutePath.startsWith(mnnModelsDir.absolutePath)) return false
 
         val file = File(absolutePath)

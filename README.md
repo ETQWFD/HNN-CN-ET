@@ -39,6 +39,10 @@ HNN CN ET 是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 ## 更新日志
 
+### v1.1.3 (2026-10-21)
+- Model storage migrated to public directory /storage/emulated/0/hnn: at startup, downloaded models are auto-migrated from the app-private folder; download, scan, delete and cache all use the new directory.
+- Before downloading, the app checks the "All files access" permission and guides you to grant it in one tap — no more silent failures.
+- During migration both old and new directories are scanned, so models never disappear.
 ### v1.1.2 (2026-10-19)
 - Fix "调用mcp在那个目录中创建一个vs.txt" stuck loading: broad create-file intent auto-detects the filename and calls the MCP file tool (server picker when several).
 - Unnamed files ("文本文档") get an auto-generated default name.

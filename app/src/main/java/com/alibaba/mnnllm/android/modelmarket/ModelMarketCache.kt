@@ -220,7 +220,7 @@ object ModelMarketCache {
     private suspend fun loadLocalAndBuiltinModels(context: Context) = withContext(Dispatchers.IO) {
         try {
             // Scan local config files under .mnnmodels directory
-            val mnnModelsDir = File(context.filesDir, ".mnnmodels")
+            val mnnModelsDir = com.alibaba.mnnllm.android.modelist.ModelPaths.modelsDir()
             if (mnnModelsDir.exists()) {
                 scanForLocalConfigs(mnnModelsDir)
             }

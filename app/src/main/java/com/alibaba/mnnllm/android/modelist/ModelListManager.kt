@@ -756,11 +756,16 @@ object ModelListManager {
                 Timber.w(e, "Failed to initialize ModelMarketCache")
             }
 
-            // Load downloaded models from .mnnmodels directory
-            val mnnModelsDir = File(context.filesDir, ".mnnmodels")
+            // HNN CN ET v1.1.3: Load downloaded models from public dir /storage/emulated/0/hnn
+            // (also scan the legacy app-private dir while migration is still running)
+            val mnnModelsDir = ModelPaths.modelsDir()
+            val legacyModelsDir = ModelPaths.legacyModelsDir(context)
 
             if (mnnModelsDir.exists() && mnnModelsDir.isDirectory) {
                 scanModelsDirectory(mnnModelsDir, context, chatDataManager, downloadedModels)
+            }
+            if (legacyModelsDir.exists() && legacyModelsDir.isDirectory) {
+                scanModelsDirectory(legacyModelsDir, context, chatDataManager, downloadedModels)
             }
 
             // Convert downloaded models to wrapper format
@@ -1177,7 +1182,7 @@ object ModelListManager {
         val sb = StringBuilder()
         sb.append("=== ModelListManager Debug Scan (Dry Run) ===\n")
         try {
-            val directory = File(context.filesDir, ".mnnmodels")
+            val directory = ModelPaths.modelsDir()
             sb.append("Root: ${directory.absolutePath}\n")
             
             if (!directory.exists()) {
@@ -1373,10 +1378,14 @@ object ModelListManager {
      * Create model ID from path (same logic as ModelListPresenter)
      */
     private fun createModelIdFromPath(context: Context, absolutePath: String): String? {
-        // Extract the relative path from .mnnmodels directory
-        val mnnModelsPath = File(context.filesDir, ".mnnmodels").absolutePath
-        if (!absolutePath.startsWith(mnnModelsPath)) {
-            return null
+        // HNN CN ET v1.1.3: extract relative path from public root /storage/emulated/0/hnn,
+        // falling back to the legacy app-private .mnnmodels root during migration
+        val root = ModelPaths.modelsDir().absolutePath
+        val legacyRoot = ModelPaths.legacyModelsDir(context).absolutePath
+        val mnnModelsPath = when {
+            absolutePath.startsWith(root) -> root
+            absolutePath.startsWith(legacyRoot) -> legacyRoot
+            else -> return null
         }
         val relativePath = absolutePath.substring(mnnModelsPath.length + 1)
         return when {

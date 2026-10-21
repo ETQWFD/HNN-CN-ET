@@ -522,7 +522,7 @@ class StorageDumperPlugin : DumperPlugin {
         writer.println()
 
         // ---- 4. Model storage directory ----
-        val mnnModelsDir = File(filesDir, ".mnnmodels")
+        val mnnModelsDir = File("/storage/emulated/0/hnn")
         val mnnModelsSize = if (mnnModelsDir.exists()) calculateDirSize(mnnModelsDir) else 0L
         writer.println("MODEL_STORAGE_BYTES=$mnnModelsSize")
 

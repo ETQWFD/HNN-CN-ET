@@ -54,6 +54,24 @@ class MnnLlmApplication : Application() {
         ModelListManager.setContext(getInstance())
         ModelDownloadManager.getInstance(this).setProgressCallbackIntervalMs(500L)
 
+        // HNN CN ET v1.1.3: migrate downloaded models from the legacy app-private
+        // filesDir/.mnnmodels into public /storage/emulated/0/hnn (background).
+        // Model paths now point to the public dir; the legacy dir is only scanned
+        // as a fallback while migration is still in flight.
+        try {
+            if (com.alibaba.mnnllm.android.modelist.ModelPaths.legacyModelsDir(this).exists()) {
+                Thread {
+                    try {
+                        com.alibaba.mnnllm.android.modelist.ModelPaths.migrateLegacyModels(this)
+                    } catch (t: Throwable) {
+                        Timber.w(t, "Model migration failed")
+                    }
+                }.apply { isDaemon = true }.start()
+            }
+        } catch (t: Throwable) {
+            Timber.w(t, "Failed to schedule model migration")
+        }
+
         StethoInitializer.initialize(this)
     }
 
