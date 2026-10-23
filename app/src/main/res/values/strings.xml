@@ -129,6 +129,8 @@
     <string name="reset_api_config">Reset API Configuration</string>
     <string name="reset_api_config_summary">Reset API server settings to default values</string>
     <string name="reset_api_config_confirm_message">Are you sure you want to reset API configuration? This will restore all API settings to default values.</string>
+    <string name="direct_run_model">Direct Model Run (真实调用)</string>
+    <string name="api_endpoint_info">Show LAN API Address</string>
     <string name="api_service_not_started">API Service Not Started</string>
     <string name="no_active_session">No active session found</string>
     <string name="api_service_running">API Service Running</string>

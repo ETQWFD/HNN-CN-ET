@@ -120,6 +120,8 @@
     <string name="reset_api_config">重設 API 配置</string>
     <string name="reset_api_config_summary">將 API 伺服器設定重設為預設值</string>
     <string name="reset_api_config_confirm_message">確定要重設 API 配置嗎？這將會將所有 API 設定復原為預設值。</string>
+    <string name="direct_run_model">模型直調（真實呼叫）</string>
+    <string name="api_endpoint_info">顯示區域網路 API 位址</string>
     <string name="api_service_not_started">API 服務未啟動</string>
     <string name="no_active_session">找不到活躍對話</string>
     <string name="api_service_running">API 服務執行中</string>

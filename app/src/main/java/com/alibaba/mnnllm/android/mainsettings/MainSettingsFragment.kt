@@ -117,6 +117,7 @@ class MainSettingsFragment : Fragment() {
 
         setupCrashDiagnostics()
         setupResetApiConfig()
+        setupDirectRunAndApiInfo()
         setupUpdateAndVersion()
         setupContactAndLogs()
         setupDebugMode(sharedPreferences)
@@ -540,6 +541,94 @@ class MainSettingsFragment : Fragment() {
                 }
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
+        }
+    }
+
+    /**
+     * HNN CN ET v1.1.4: 真实调用区 —— 选择已下载模型直接启动聊天调用；
+     * 并显示局域网 API 地址，方便外部设备/网页真实调用本地模型。
+     */
+    private fun setupDirectRunAndApiInfo() {
+        binding.btnDirectRunModel.setOnClickListener {
+            val activity = activity
+            if (activity == null) return@setOnClickListener
+            val models = com.alibaba.mnnllm.android.modelist.ModelListManager.getCurrentModels()
+                ?: emptyList()
+            val downloaded = models.filter { it.modelItem.modelId != null }
+            if (downloaded.isEmpty()) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.no_models_available),
+                    Toast.LENGTH_LONG
+                ).show()
+                return@setOnClickListener
+            }
+            val names = downloaded.map { it.modelItem.modelId ?: "" }
+            val builder = com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle(getString(R.string.direct_run_model))
+                .setItems(names.toTypedArray()) { _, which ->
+                    val modelId = names[which]
+                    try {
+                        com.alibaba.mnnllm.android.chat.ChatRouter.startRun(
+                            activity, modelId, null, null
+                        )
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "Direct run failed", t)
+                        Toast.makeText(requireContext(), "启动模型失败: ${t.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            builder.show()
+        }
+
+        binding.btnApiEndpointInfo.setOnClickListener {
+            val ctx = requireContext()
+            val port = ApiServerConfig.getPort(ctx)
+            val lanIp = getLanIpAddress(ctx)
+            val base = if (lanIp == "0.0.0.0") "（未连接 Wi-Fi）" else "http://$lanIp:$port"
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
+                .setTitle(getString(R.string.api_endpoint_info))
+                .setMessage(
+                    "局域网调用地址（OpenAI 兼容）：\n\n$base/v1/chat/completions\n\n" +
+                    "浏览器直连网页：\n$base/\n\n" +
+                    "提示：请先在设置中开启「API 网络服务」，并保持与本机同一 Wi-Fi。"
+                )
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
+    }
+
+    private fun getLanIpAddress(ctx: android.content.Context): String {
+        return try {
+            val connectivityManager =
+                ctx.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val activeNetwork = connectivityManager.activeNetwork
+            val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+            if (capabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true) {
+                val wifiManager =
+                    ctx.applicationContext.getSystemService(android.content.Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                val ipInt = wifiManager.connectionInfo.ipAddress
+                if (ipInt != 0) {
+                    return String.format(
+                        java.util.Locale.getDefault(),
+                        "%d.%d.%d.%d",
+                        ipInt and 0xff, ipInt shr 8 and 0xff,
+                        ipInt shr 16 and 0xff, ipInt shr 24 and 0xff
+                    )
+                }
+            }
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
+            for (networkInterface in java.util.Collections.list(interfaces)) {
+                if (!networkInterface.isLoopback && networkInterface.isUp) {
+                    for (address in java.util.Collections.list(networkInterface.inetAddresses)) {
+                        if (!address.isLoopbackAddress && address.hostAddress?.contains(":") == false) {
+                            return address.hostAddress ?: "0.0.0.0"
+                        }
+                    }
+                }
+            }
+            "0.0.0.0"
+        } catch (e: Exception) {
+            "0.0.0.0"
         }
     }
 

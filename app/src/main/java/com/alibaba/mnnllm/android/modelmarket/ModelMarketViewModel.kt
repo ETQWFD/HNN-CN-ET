@@ -166,7 +166,11 @@ class ModelMarketViewModel(application: Application) : AndroidViewModel(applicat
                     ModelMarketItemWrapper(it, downloadInfo)
                 }
                 Log.d(TAG, "allModels: ${allModels.size} models loaded")
-                
+
+                // HNN CN ET v1.1.4: pin recommended models (image generation + small
+                // thinking models) to the top so users can find & download them easily.
+                allModels = pinRecommendedModels(allModels)
+
                 // Clear loading state
                 _isLoading.postValue(false)
                 applyCurrentFilters()
@@ -184,6 +188,39 @@ class ModelMarketViewModel(application: Application) : AndroidViewModel(applicat
     fun applyFilters(filterState: FilterState) {
         currentFilterState = filterState
         applyCurrentFilters()
+    }
+
+    /**
+     * HNN CN ET v1.1.4: pin recommended models to the top of the market list.
+     * Selection: image-generation models + small thinking models, in a fixed order.
+     * Models already present keep their wrapper; missing ones are skipped.
+     */
+    private fun pinRecommendedModels(list: List<ModelMarketItemWrapper>): List<ModelMarketItemWrapper> {
+        val order = listOf(
+            "stable-diffusion-v1-5-mnn-opencl",
+            "MNN-Sana-Edit-V2",
+            "DeepSeek-R1-1.5B-Qwen-MNN",
+            "Qwen3.5-0.8B-MNN",
+            "LFM2-350M-MNN",
+            "Qwen3-1.7B-MNN",
+            "gemma-3-1b-it-qat-q4_0-gguf-MNN"
+        )
+        val pinned = mutableListOf<ModelMarketItemWrapper>()
+        val rest = mutableListOf<ModelMarketItemWrapper>()
+        val seen = HashSet<String>()
+        for (name in order) {
+            val match = list.firstOrNull { it.modelMarketItem.modelName.equals(name, ignoreCase = true) }
+            if (match != null && seen.add(match.modelMarketItem.modelId)) {
+                pinned.add(match)
+            }
+        }
+        for (item in list) {
+            if (seen.add(item.modelMarketItem.modelId)) {
+                rest.add(item)
+            }
+        }
+        Log.d(TAG, "Pinned ${pinned.size} recommended models to top")
+        return pinned + rest
     }
 
     private fun resolveModelName(modelId: String): String? {

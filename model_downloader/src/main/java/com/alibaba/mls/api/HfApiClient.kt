@@ -41,7 +41,9 @@ class HfApiClient(val host: String) {
     }
 
     companion object {
-        const val HOST_DEFAULT = "huggingface.co"
+        // HNN CN ET v1.1.4: use hf-mirror.com so HuggingFace downloads work in China
+        // (huggingface.co is blocked/unreachable from mainland networks).
+        const val HOST_DEFAULT = "hf-mirror.com"
         const val HOST_CN = "hf-mirror.com"
 
         val bestClient: HfApiClient?

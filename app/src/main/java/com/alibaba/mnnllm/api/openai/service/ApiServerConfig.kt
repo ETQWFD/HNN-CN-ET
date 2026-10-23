@@ -21,7 +21,9 @@ object ApiServerConfig {
 
     //defaultconfigvalue
     private const val DEFAULT_PORT = 8080
-    private const val DEFAULT_IP_ADDRESS = "127.0.0.1"
+    // HNN CN ET v1.1.4: bind all interfaces so LAN devices / the website can call the API.
+    // (127.0.0.1 only allowed local access, which made the API unusable from other devices.)
+    private const val DEFAULT_IP_ADDRESS = "0.0.0.0"
     private const val DEFAULT_CORS_ENABLED = false
     private const val DEFAULT_CORS_ORIGINS = ""
     private const val DEFAULT_AUTH_ENABLED = true
@@ -57,7 +59,9 @@ object ApiServerConfig {
 
     /** * getbindIPaddress*/
     fun getIpAddress(context: Context): String {
-        return getPreferences(context).getString(KEY_IP_ADDRESS, DEFAULT_IP_ADDRESS) ?: DEFAULT_IP_ADDRESS
+        val saved = getPreferences(context).getString(KEY_IP_ADDRESS, DEFAULT_IP_ADDRESS) ?: DEFAULT_IP_ADDRESS
+        // HNN CN ET v1.1.4: migrate legacy 127.0.0.1 (local-only) to 0.0.0.0 (LAN-reachable).
+        return if (saved == "127.0.0.1") DEFAULT_IP_ADDRESS else saved
     }
 
     /** * getCORSenablestate*/

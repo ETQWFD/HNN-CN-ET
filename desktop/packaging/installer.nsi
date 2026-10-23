@@ -5,16 +5,16 @@ Unicode True
 !include "FileFunc.nsh"
 
 ; ---------- Metadata (ET) ----------
-VIProductVersion "1.0.6.0"
+VIProductVersion "1.0.7.0"
 VIAddVersionKey  "ProductName" "HNN CN ET"
 VIAddVersionKey  "CompanyName" "ET"
 VIAddVersionKey  "LegalCopyright" "Copyright (c) ET. All rights reserved."
 VIAddVersionKey  "FileDescription" "HNN CN ET Desktop Installer"
-VIAddVersionKey  "FileVersion" "1.0.6.0"
-VIAddVersionKey  "ProductVersion" "1.0.6"
+VIAddVersionKey  "FileVersion" "1.0.7.0"
+VIAddVersionKey  "ProductVersion" "1.0.7"
 
 Name "HNN CN ET"
-OutFile "..\..\HNN-CN-ET-Setup-1.0.6.exe"
+OutFile "..\..\HNN-CN-ET-Setup-1.0.7.exe"
 InstallDir "$PROGRAMFILES64\HNN CN ET"
 RequestExecutionLevel admin
 
@@ -49,7 +49,7 @@ Section "Main" SEC_MAIN
   ; uninstaller registry
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "DisplayName" "HNN CN ET"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "DisplayVersion" "1.0.6"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "DisplayVersion" "1.0.7"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "Publisher" "ET"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "DisplayIcon" "$INSTDIR\HNN-CN-ET.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "UninstallString" '"$INSTDIR\Uninstall.exe"'
