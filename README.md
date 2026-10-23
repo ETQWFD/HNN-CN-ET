@@ -39,6 +39,13 @@ HNN CN ET 是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 ## 更新日志
 
+### v1.1.5 (2026-10-24)
+- Import model: pick a folder/file via SAF; it auto-detects model basics (llm.mnn/model.mnn/gguf/safetensors/bin), imports into /storage/emulated/0/hnn, or imports nothing with a clear message when no model is found.
+- Downloads fixed: already-downloaded models are skipped (real-file check); failure reasons now pop up (permission/404…); HuggingFace source routes via hf-mirror.com mirror.
+- Migration: legacy models auto-migrate into /storage/emulated/0/hnn right after storage permission is granted; the folder is auto-created and used.
+- Deletion is thorough: sweeps all naming leftovers and partial-transfer remnants.
+- API reworked: auth disabled by default so LAN clients/website can call the local model directly (still bound 0.0.0.0).
+- Windows v1.0.8: "cannot find entry point" fixed — rebuilt with Qt-official MinGW GCC 8.1 toolchain + matching GCC 8.1 runtime; verified with a 30s clean wine run.
 ### v1.1.4 (2026-10-23)
 - Fix downloads: HuggingFace source now routes via hf-mirror.com (China mirror); download root /storage/emulated/0/hnn is created before transfers with clear errors.
 - API server binds 0.0.0.0 (was 127.0.0.1) — LAN devices and the website can really call your local model. Legacy 127.0.0.1 config auto-migrated.

@@ -39,6 +39,13 @@ HNN CN ET 是基於 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 ## 更新日誌
 
+### v1.1.5（2026-10-24）
+- 新增「匯入模型」：選擇資料夾/檔案，自動偵測模型基本檔（llm.mnn / model.mnn / gguf / safetensors / bin），有則匯入 /storage/emulated/0/hnn，無則不匯入並明確提示。
+- 修復無法下載：已下載模型不再重複下載（真實檔案偵測）；下載失敗原因明確彈出（權限/404 等）；HuggingFace 源走 hf-mirror.com 國內鏡像。
+- 模型遷移：授予儲存權限後自動把舊模型遷移到 /storage/emulated/0/hnn，目錄自動建立並使用。
+- 刪除模型徹底清理：掃描全部命名殘留與中斷下載殘留。
+- API 重構：預設免鑑權，區域網路設備與網頁可直接呼叫本地模型（仍綁定 0.0.0.0）。
+- 電腦版 v1.0.8：修復「無法找到入口」——改用 Qt 官方 MinGW GCC 8.1 工具鏈重建並配套 GCC 8.1 執行庫，wine 冒煙 30 秒無任何報錯。
 ### v1.1.4（2026-10-23）
 - 修復無法下載：HuggingFace 源切換國內鏡像 hf-mirror.com；下載前自動建立 /storage/emulated/0/hnn 目錄並給出明確錯誤。
 - API 服務綁定 0.0.0.0（原 127.0.0.1 只能本機），區域網路設備與網頁可真實呼叫本地模型；舊 127.0.0.1 配置自動遷移。
