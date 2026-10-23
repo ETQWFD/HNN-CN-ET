@@ -39,6 +39,13 @@ HNN CN ET 是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 ## 更新日志
 
+### v1.1.4 (2026-10-23)
+- Fix downloads: HuggingFace source now routes via hf-mirror.com (China mirror); download root /storage/emulated/0/hnn is created before transfers with clear errors.
+- API server binds 0.0.0.0 (was 127.0.0.1) — LAN devices and the website can really call your local model. Legacy 127.0.0.1 config auto-migrated.
+- Model market pins recommendations on top: image generation (SD1.5, Sana) + small thinking models (DeepSeek-R1-1.5B, Qwen3.5-0.8B, LFM2-350M, Qwen3-1.7B).
+- Settings add "Direct Model Run" (one-tap real inference for any downloaded model) and "Show LAN API Address".
+- Floating window drag throttled (16ms) to reduce jank on low-end devices.
+- Windows v1.0.7: market adds DeepSeek-R1-1.5B and Qwen3.5-0.8B small models (verified modelscope direct links).
 ### v1.1.3 (2026-10-21)
 - Model storage migrated to public directory /storage/emulated/0/hnn: at startup, downloaded models are auto-migrated from the app-private folder; download, scan, delete and cache all use the new directory.
 - Before downloading, the app checks the "All files access" permission and guides you to grant it in one tap — no more silent failures.
