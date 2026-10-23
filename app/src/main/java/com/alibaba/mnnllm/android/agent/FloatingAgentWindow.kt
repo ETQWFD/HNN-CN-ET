@@ -97,6 +97,9 @@ object FloatingAgentWindow {
                 private var downX = 0f
                 private var downY = 0f
                 private var moved = false
+                // HNN CN ET v1.1.4: throttle layout updates while dragging to avoid
+                // jank on low-end devices.
+                private var lastLayoutTime = 0L
                 @SuppressLint("ClickableViewAccessibility")
                 override fun onTouch(v: View, event: MotionEvent): Boolean {
                     when (event.actionMasked) {
@@ -106,9 +109,11 @@ object FloatingAgentWindow {
                             downX = event.rawX
                             downY = event.rawY
                             moved = false
+                            lastLayoutTime = 0L
                             return true
                         }
                         MotionEvent.ACTION_MOVE -> {
+                            val now = android.os.SystemClock.uptimeMillis()
                             val dx = event.rawX.toInt() - lastX
                             val dy = event.rawY.toInt() - lastY
                             wmParams.x += dx
@@ -118,7 +123,10 @@ object FloatingAgentWindow {
                             if (kotlin.math.abs(event.rawX - downX) > 8 || kotlin.math.abs(event.rawY - downY) > 8) {
                                 moved = true
                             }
-                            wm.updateViewLayout(v, wmParams)
+                            if (now - lastLayoutTime >= 16L) {
+                                lastLayoutTime = now
+                                wm.updateViewLayout(v, wmParams)
+                            }
                             return true
                         }
                         MotionEvent.ACTION_UP -> {

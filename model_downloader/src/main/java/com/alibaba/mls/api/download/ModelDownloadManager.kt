@@ -100,6 +100,21 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
             downloadListeners.forEach { it.onDownloadFailed(modelId, e) }
             return
         }
+        // HNN CN ET v1.1.4: make sure the model root directory exists before downloading.
+        try {
+            val root = java.io.File(cacheDir)
+            if (!root.exists() && !root.mkdirs()) {
+                val e = com.alibaba.mls.api.FileDownloadException(
+                    "无法创建模型目录 ${root.absolutePath}，请检查存储权限"
+                )
+                downloadListeners.forEach { it.onDownloadFailed(modelId, e) }
+                return
+            }
+        } catch (t: Throwable) {
+            val e = com.alibaba.mls.api.FileDownloadException("创建模型目录失败: ${t.message}")
+            downloadListeners.forEach { it.onDownloadFailed(modelId, e) }
+            return
+        }
         // Clear stale pause flags (e.g. after deleteModel on an idle task).
         hfDownloader.clearPause(modelId)
         msDownloader.clearPause(modelId)

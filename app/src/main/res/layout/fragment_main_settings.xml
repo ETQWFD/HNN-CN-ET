@@ -298,6 +298,26 @@
                     android:paddingEnd="16dp"
                     android:text="@string/reset_api_config" />
 
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp" />
+
+                <TextView
+                    android:id="@+id/btn_direct_run_model"
+                    style="@style/SettingsRowClickable"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="@string/direct_run_model" />
+
+                <TextView
+                    android:id="@+id/btn_api_endpoint_info"
+                    style="@style/SettingsRowClickable"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="@string/api_endpoint_info" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
