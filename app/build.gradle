@@ -69,8 +69,8 @@ android {
         applicationId "com.alibaba.mnnllm.android"
         minSdk 26
         targetSdk 35
-        versionCode 10014
-        versionName "1.1.4"
+        versionCode 10015
+        versionName "1.1.5"
         buildConfigField "boolean", "ENABLE_FIREBASE", enableFirebase ? "true" : "false"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -208,6 +208,7 @@ dependencies {
     implementation 'com.nambimobile.widgets:expandable-fab:1.2.1'
     implementation 'com.github.squti:Android-Wave-Recorder:2.0.1'
     implementation 'androidx.preference:preference-ktx:1.2.1'
+    implementation 'androidx.documentfile:documentfile:1.0.1'
     
     // MNN TTS Framework
     implementation project(':mnn_tts')

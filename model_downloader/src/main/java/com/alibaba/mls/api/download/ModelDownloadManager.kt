@@ -115,6 +115,23 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
             downloadListeners.forEach { it.onDownloadFailed(modelId, e) }
             return
         }
+        // HNN CN ET v1.1.5: model already fully downloaded under /storage/emulated/0/hnn?
+        // Mark it success and skip the network transfer entirely (fast, no re-download).
+        val alreadyInstalled = if (modelId.startsWith("HuggingFace/") || modelId.startsWith("Huggingface/")) {
+            hfDownloader.isDownloaded(modelId)
+        } else {
+            msDownloader.isDownloaded(modelId)
+        }
+        if (alreadyInstalled) {
+            val info = getOrCreateInfo(modelId)
+            info.downloadState = DownloadState.DOWNLOAD_SUCCESS
+            info.downlodaState = DownloadState.DOWNLOAD_SUCCESS
+            info.progress = 1.0
+            downloadListeners.forEach { it.onDownloadStart(modelId) }
+            downloadListeners.forEach { it.onDownloadFinished(modelId, getDownloader(modelId).getDownloadPath(modelId).absolutePath) }
+            return
+        }
+
         // Clear stale pause flags (e.g. after deleteModel on an idle task).
         hfDownloader.clearPause(modelId)
         msDownloader.clearPause(modelId)

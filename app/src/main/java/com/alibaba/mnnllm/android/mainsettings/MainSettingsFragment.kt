@@ -109,6 +109,7 @@ class MainSettingsFragment : Fragment() {
         setupDownloadProvider(sharedPreferences)
         setupVoiceModelManagement()
         setupStorageManagement()
+        setupImportModel()
 
         binding.itemEnableApi.isChecked = MainSettings.isApiServiceEnabled(requireContext())
         binding.itemEnableApi.setOnCheckedChangeListener { isChecked ->
@@ -508,6 +509,148 @@ class MainSettingsFragment : Fragment() {
         binding.btnStorageManagement.setOnClickListener {
             startActivity(Intent(requireContext(), StorageManagementActivity::class.java))
         }
+    }
+
+    // ------------------------------------------------------------------
+    // HNN CN ET v1.1.5: Import model — pick a folder (or file) via SAF,
+    // detect whether it contains a usable model (llm.mnn / model.mnn /
+    // *.gguf / *.safetensors / *.bin), and copy it into /storage/emulated/0/hnn.
+    // If nothing model-like is found, nothing is imported and the user is told.
+    // ------------------------------------------------------------------
+    private val importModelLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+    ) { treeUri ->
+        if (treeUri == null) return@registerForActivityResult
+        lifecycleScope.launch {
+            val (ok, message) = withContext(Dispatchers.IO) {
+                try {
+                    importModelFromTree(treeUri)
+                } catch (t: Throwable) {
+                    Log.e(TAG, "import model failed", t)
+                    false to (t.message ?: "导入失败")
+                }
+            }
+            if (ok) {
+                // Make the imported model appear in "My Models" right away.
+                try {
+                    com.alibaba.mnnllm.android.modelist.ModelListManager
+                        .notifyModelListMayChange(com.alibaba.mnnllm.android.modelist.ModelListManager.ChangeReason.MODEL_DOWNLOADED)
+                } catch (t: Throwable) {
+                    Log.w(TAG, "refresh after import failed", t)
+                }
+                Toast.makeText(requireContext(), getString(R.string.import_model_ok), Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun setupImportModel() {
+        binding.btnImportModel.setOnClickListener {
+            val ctx = requireContext()
+            if (!com.alibaba.mnnllm.android.modelist.ModelPaths.hasStoragePermission(ctx)) {
+                Toast.makeText(ctx, getString(R.string.import_model_need_permission), Toast.LENGTH_LONG).show()
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
+                    .setTitle(getString(R.string.import_model))
+                    .setMessage(getString(R.string.import_model_need_permission))
+                    .setPositiveButton("去授权") { _, _ ->
+                        try {
+                            startActivity(
+                                android.content.Intent(
+                                    android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                    android.net.Uri.parse("package:${ctx.packageName}")
+                                )
+                            )
+                        } catch (e: Exception) {
+                            try {
+                                startActivity(
+                                    android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                )
+                            } catch (e2: Exception) {
+                                Toast.makeText(ctx, "请在系统设置中授予“所有文件访问”权限", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                    .setNegativeButton("取消", null)
+                    .show()
+                return@setOnClickListener
+            }
+            try {
+                importModelLauncher.launch(null)
+            } catch (e: Exception) {
+                Toast.makeText(ctx, "无法打开文件夹选择器", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    /** Returns (imported, userMessage). Runs on IO thread. */
+    private fun importModelFromTree(treeUri: android.net.Uri): Pair<Boolean, String> {
+        val ctx = requireContext()
+        val rootDoc = androidx.documentfile.provider.DocumentFile.fromTreeUri(ctx, treeUri)
+            ?: return false to "无法读取所选目录"
+        val candidates = mutableListOf<androidx.documentfile.provider.DocumentFile>()
+        rootDoc.listFiles().forEach { candidates.add(it) }
+        if (candidates.isEmpty()) {
+            return false to ctx.getString(R.string.import_model_none)
+        }
+
+        // Find the primary model file: llm.mnn / model.mnn / *.gguf / *.safetensors / *.bin
+        fun isModelFile(name: String?): Boolean {
+            if (name == null) return false
+            val lower = name.lowercase()
+            return lower.endsWith(".mnn") || lower.endsWith(".gguf") ||
+                lower.endsWith(".safetensors") || lower.endsWith(".bin")
+        }
+        val modelFile = candidates.firstOrNull { it.isFile && isModelFile(it.name) }
+        if (modelFile == null) {
+            // Maybe the model is one level deeper (e.g. folder/some_model/llm.mnn)
+            for (dir in candidates) {
+                if (!dir.isDirectory) continue
+                val inner = dir.listFiles().firstOrNull { it.isFile && isModelFile(it.name) }
+                if (inner != null) return copyModelIntoHnn(dir, inner, ctx)
+            }
+            return false to ctx.getString(R.string.import_model_none)
+        }
+        return copyModelIntoHnn(rootDoc, modelFile, ctx)
+    }
+
+    private fun copyModelIntoHnn(
+        sourceDir: androidx.documentfile.provider.DocumentFile,
+        modelFile: androidx.documentfile.provider.DocumentFile,
+        ctx: android.content.Context
+    ): Pair<Boolean, String> {
+        val modelName = (sourceDir.name ?: modelFile.name!!)
+            .replace(Regex("[^A-Za-z0-9._\\-]"), "_")
+            .trim('_')
+        val targetDir = java.io.File("/storage/emulated/0/hnn", modelName)
+        if (!targetDir.exists() && !targetDir.mkdirs()) {
+            return false to "无法创建 ${targetDir.absolutePath}"
+        }
+        val alreadyHasModel = targetDir.listFiles()?.any {
+            val n = it.name.lowercase()
+            n.endsWith(".mnn") || n.endsWith(".gguf") || n.endsWith(".safetensors") || n.endsWith(".bin")
+        } == true
+        if (alreadyHasModel) {
+            // Already imported before — do not duplicate
+            return true to ""
+        }
+        // Copy the model file plus tokenizer/metadata files from the same directory.
+        val toCopy = mutableListOf<androidx.documentfile.provider.DocumentFile>()
+        toCopy.add(modelFile)
+        val siblingNames = arrayOf("tokenizer.json", "tokenizer.model", "vocab.json", "config.json", "merges.txt", "llm.mnn", "model.mnn")
+        sourceDir.listFiles().forEach { f ->
+            if (f.isFile && f.name != null && f.name!! != modelFile.name &&
+                siblingNames.any { f.name!!.equals(it, ignoreCase = true) }) {
+                toCopy.add(f)
+            }
+        }
+        for (f in toCopy) {
+            val dst = java.io.File(targetDir, f.name!!)
+            ctx.contentResolver.openInputStream(f.uri)?.use { input ->
+                dst.outputStream().use { out -> input.copyTo(out) }
+            } ?: return false to "读取 ${f.name} 失败"
+        }
+        return true to ""
     }
 
     private fun setupResetApiConfig() {

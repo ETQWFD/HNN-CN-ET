@@ -151,6 +151,12 @@
     <string name="diffusion_memory_mode">Diffusion Memory Mode</string>
     <string name="voice_model_management">Voice Model Management</string>
     <string name="storage_management">Storage management</string>
+    <string name="import_model">Import model</string>
+    <string name="import_model_pick">Choose a model file (.mnn / .gguf) or a folder containing one</string>
+    <string name="import_model_detected">Model detected: %1$s, importing…</string>
+    <string name="import_model_ok">Model imported to /storage/emulated/0/hnn</string>
+    <string name="import_model_none">No model file found (need .mnn/.gguf/.safetensors/.bin + tokenizer), nothing imported</string>
+    <string name="import_model_need_permission">Storage permission required to import models, please grant “All files access”</string>
     <string name="storage_summary_internal">Internal Storage</string>
     <string name="storage_summary_model">Model Storage</string>
     <string name="storage_total">Total</string>

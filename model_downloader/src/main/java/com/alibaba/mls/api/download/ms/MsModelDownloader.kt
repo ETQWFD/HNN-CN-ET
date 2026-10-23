@@ -127,6 +127,29 @@ class MsModelDownloader(override var callback: ModelRepoDownloadCallback?,
         val msLinkFolder = this.getDownloadPath(modelId)
         Log.d(TAG, "removeMsLinkFolder: " + msLinkFolder.absolutePath)
         msLinkFolder.delete()
+
+        // HNN CN ET v1.1.5: sweep the model root for ANY leftover folder/file whose
+        // name still contains this repo keyword (covers legacy naming variants and
+        // partial/aborted transfer leftovers) so deletion is really clean.
+        sweepLeftovers(msModelId)
+    }
+
+    /** v1.1.5: delete every entry under the model root matching the repo keyword. */
+    private fun sweepLeftovers(repoId: String) {
+        val keyword = repoId.substringAfterLast('/')
+        if (keyword.isBlank()) return
+        val root = java.io.File(this.cacheRootPath)
+        if (!root.exists() || !root.isDirectory) return
+        root.listFiles()?.forEach { entry ->
+            if (entry.name.contains(keyword, ignoreCase = true)) {
+                Log.d(TAG, "sweepLeftovers: deleting " + entry.absolutePath)
+                if (entry.isDirectory) {
+                    deleteDirectoryRecursively(entry)
+                } else {
+                    entry.delete()
+                }
+            }
+        }
     }
 
     override suspend fun getRepoSize(modelId: String): Long {

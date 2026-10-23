@@ -14,7 +14,7 @@ object ApiServerConfig {
     private const val KEY_IP_ADDRESS = "ip_address"
     private const val KEY_CORS_ENABLED = "cors_enabled"
     private const val KEY_CORS_ORIGINS = "cors_origins"
-    private const val KEY_AUTH_ENABLED = "auth_enabled"
+    private const val KEY_AUTH_ENABLED = "auth_enabled_v2" // v1.1.5: fresh key so old forced-true config does not block LAN calls
     private const val KEY_API_KEY = "api_key"
     private const val KEY_USE_HTTPS_URL = "use_https_url"
     private const val KEY_CONFIG_INITIALIZED = "config_initialized"
@@ -26,7 +26,7 @@ object ApiServerConfig {
     private const val DEFAULT_IP_ADDRESS = "0.0.0.0"
     private const val DEFAULT_CORS_ENABLED = false
     private const val DEFAULT_CORS_ORIGINS = ""
-    private const val DEFAULT_AUTH_ENABLED = true
+    private const val DEFAULT_AUTH_ENABLED = false // v1.1.5: default open so LAN clients/website can call without key
     private const val DEFAULT_USE_HTTPS_URL = false
 
     /** * generaterandomAPI Key * 8-digitdigitlettersymbolcomposite*/

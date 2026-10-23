@@ -31,7 +31,20 @@ abstract class ModelRepoDownloader {
     }
 
     fun isDownloaded(modelId: String): Boolean {
-        return getDownloadPath(modelId).exists()
+        // HNN CN ET v1.1.5: only count as downloaded when real model files exist.
+        // A stale link directory with no model files must NOT block re-download.
+        val path = getDownloadPath(modelId)
+        if (!path.exists()) return false
+        val children = path.listFiles() ?: return false
+        if (children.isEmpty()) return false
+        fun hasModelFile(f: java.io.File): Boolean = f.isFile && (
+            f.name.endsWith(".mnn") || f.name.endsWith(".gguf") ||
+            f.name.endsWith(".safetensors") || f.name.endsWith(".bin")
+        )
+        if (children.any { hasModelFile(it) }) return true
+        // Link folder may point into the storage folder (models--org--name)
+        val storage = children.firstOrNull { it.isDirectory } ?: return false
+        return (storage.listFiles() ?: emptyArray()).any { hasModelFile(it) }
     }
 
     abstract fun getDownloadPath(modelId: String): File

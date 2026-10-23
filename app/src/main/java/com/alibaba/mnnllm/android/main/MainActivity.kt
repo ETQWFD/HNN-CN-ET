@@ -541,6 +541,24 @@ class MainActivity : AppCompatActivity(), MainFragmentManager.FragmentLifecycleL
     override fun onResume() {
         super.onResume()
         ensureHistoryFragmentInitialized()
+        // HNN CN ET v1.1.5: if the user just granted storage access (returned from the
+        // system "All files access" screen), run the legacy-model migration right away
+        // so /storage/emulated/0/hnn is populated without a restart.
+        try {
+            if (com.alibaba.mnnllm.android.modelist.ModelPaths.hasStoragePermission(this) &&
+                com.alibaba.mnnllm.android.modelist.ModelPaths.legacyModelsDir(this).exists()
+            ) {
+                Thread {
+                    try {
+                        com.alibaba.mnnllm.android.modelist.ModelPaths.migrateLegacyModels(this)
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "onResume migration failed", t)
+                    }
+                }.apply { isDaemon = true }.start()
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "onResume migration check failed", t)
+        }
     }
 
     override fun onDestroy() {

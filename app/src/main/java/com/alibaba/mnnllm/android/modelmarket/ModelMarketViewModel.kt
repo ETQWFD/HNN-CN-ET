@@ -328,7 +328,20 @@ class ModelMarketViewModel(application: Application) : AndroidViewModel(applicat
 
     override fun onDownloadFailed(modelId: String, e: Exception) {
         Log.d(TAG, "[onDownloadFailed] Received for modelId: $modelId, error: ${e.message}")
+        // HNN CN ET v1.1.5: surface the real failure reason to the user instead of
+        // silently flipping the button state (e.g. "需要所有文件访问权限", "404 文件不存在").
+        val app = getApplication<Application>()
+        val msg = e.message ?: "下载失败"
         mainHandler.post {
+            try {
+                android.widget.Toast.makeText(
+                    app,
+                    "下载失败：$msg",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            } catch (t: Throwable) {
+                Log.w(TAG, "toast failed", t)
+            }
             val wrapper = allModels.find { it.modelMarketItem.modelId == modelId }
             if (wrapper != null) {
                 Log.d(TAG, "[onDownloadFailed] Found wrapper for $modelId. Updating info.")

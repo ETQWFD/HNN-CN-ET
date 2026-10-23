@@ -142,6 +142,12 @@
     <string name="diffusion_memory_mode">Diffusion 記憶體模式</string>
     <string name="voice_model_management">語音模型管理</string>
     <string name="storage_management">儲存空間管理</string>
+    <string name="import_model">匯入模型</string>
+    <string name="import_model_pick">選擇模型檔（.mnn / .gguf）或包含模型檔的資料夾</string>
+    <string name="import_model_detected">偵測到模型：%1$s，正在匯入…</string>
+    <string name="import_model_ok">模型已匯入到 /storage/emulated/0/hnn</string>
+    <string name="import_model_none">未偵測到模型檔（需要 .mnn/.gguf/.safetensors/.bin 及 tokenizer），未匯入</string>
+    <string name="import_model_need_permission">匯入模型需要儲存權限，請先授予「所有檔案存取」權限</string>
     <string name="storage_summary_internal">內部儲存</string>
     <string name="storage_summary_model">模型儲存</string>
     <string name="storage_total">總計</string>

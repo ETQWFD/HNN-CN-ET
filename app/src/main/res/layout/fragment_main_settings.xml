@@ -203,6 +203,19 @@
                     android:paddingEnd="16dp"
                     android:text="@string/storage_management" />
 
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp" />
+
+                <TextView
+                    android:id="@+id/btn_import_model"
+                    style="@style/SettingsRowClickable"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="@string/import_model" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
