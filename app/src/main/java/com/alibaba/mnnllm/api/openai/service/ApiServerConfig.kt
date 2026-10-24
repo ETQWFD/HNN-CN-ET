@@ -24,7 +24,7 @@ object ApiServerConfig {
     // HNN CN ET v1.1.4: bind all interfaces so LAN devices / the website can call the API.
     // (127.0.0.1 only allowed local access, which made the API unusable from other devices.)
     private const val DEFAULT_IP_ADDRESS = "0.0.0.0"
-    private const val DEFAULT_CORS_ENABLED = false
+    private const val DEFAULT_CORS_ENABLED = true // v1.1.6: CORS on by default so the website/LAN clients can call the API
     private const val DEFAULT_CORS_ORIGINS = ""
     private const val DEFAULT_AUTH_ENABLED = false // v1.1.5: default open so LAN clients/website can call without key
     private const val DEFAULT_USE_HTTPS_URL = false

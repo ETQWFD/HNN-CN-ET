@@ -147,7 +147,10 @@ class HfModelDownloader(override var callback: ModelRepoDownloadCallback?,
                 callback?.onDownloadPending(modelId)
                 val repoInfo = fetchRepoInfo(modelId)
                 downloadHfRepo(repoInfo)
-            } catch (e: FileDownloadException) {
+            } catch (t: Throwable) {
+                // v1.1.6: catch EVERYTHING so a failed click/download always shows a
+                // failure toast instead of silently stalling in PREPARING.
+                val e = if (t is FileDownloadException) t else FileDownloadException("下载失败: ${t.message}")
                 callback?.onDownloadFailed(modelId, e)
             }
         }
@@ -165,8 +168,20 @@ class HfModelDownloader(override var callback: ModelRepoDownloadCallback?,
         Log.d(TAG, "DownloadStart " + hfRepoInfo.modelId + " host: " + getHfApiClient().host)
         executor!!.submit {
             callback?.onDownloadTaskAdded()
-            downloadHfRepoInner(hfRepoInfo)
-            callback?.onDownloadTaskRemoved()
+            try {
+                downloadHfRepoInner(hfRepoInfo)
+            } catch (t: Throwable) {
+                // v1.1.6: never swallow transfer errors silently
+                Log.e(TAG, "Repo download failed for " + hfRepoInfo.modelId, t)
+                try {
+                    val e = if (t is FileDownloadException) t else FileDownloadException("下载失败: ${t.message}")
+                    callback?.onDownloadFailed(hfRepoInfo.modelId!!, e)
+                } catch (t2: Throwable) {
+                    Log.e(TAG, "Failed to dispatch download failure", t2)
+                }
+            } finally {
+                callback?.onDownloadTaskRemoved()
+            }
         }
     }
 

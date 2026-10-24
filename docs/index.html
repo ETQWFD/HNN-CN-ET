@@ -50,7 +50,7 @@
       <span>架构 armeabi-v7a + arm64-v8a</span>
       <span>推理引擎 MNN</span>
       <span>协议 MIT</span>
-      <span>版本 <b id="heroVer">v1.1.5</b></span>
+      <span>版本 <b id="heroVer">v1.1.6</b></span>
     </div>
   </div>
 </header>
@@ -74,9 +74,9 @@
     <h2 class="section-title">下载</h2>
     <div class="download-card">
       <div class="download-info">
-        <h3>最新版本 <span id="dlVer">v1.1.5</span></h3>
-        <p id="downloadNote">最新版本 v1.1.5 · 修复电脑版无法找到入口 + 导入模型 + 下载/迁移/删除全面修复</p>
-        <p class="download-meta"><span id="dlName">HNN-CN-ET-1.1.5.apk</span><span id="dlSize"></span></p>
+        <h3>最新版本 <span id="dlVer">v1.1.6</span></h3>
+        <p id="downloadNote">最新版本 v1.1.6 · API 跨域已开 + 下载不再没反应 + 电脑版安装包完整修复</p>
+        <p class="download-meta"><span id="dlName">HNN-CN-ET-1.1.6.apk</span><span id="dlSize"></span></p>
         <p class="download-meta"><span id="dlTime"></span><span>累计下载 <b id="dlTotal">—</b> 次</span></p>
       </div>
       <a class="btn btn-primary" id="btnApk" href="https://github.com/ETQWFD/HNN-CN-ET/releases/latest">下载 APK</a>
@@ -108,6 +108,13 @@
   <div class="container">
     <h2 class="section-title">更新日志</h2>
     <div class="changelog">
+      <div class="change">
+        <h3>v1.1.6 <small>（2026-10-24）</small></h3>
+        <ul>
+          <li>API 调用修复：CORS 默认开启（允许任意来源），官网/网页/局域网设备直接调用不再被浏览器跨域拦截；下载异常全部兜底上报，点击下载不会再无反应</li>
+          <li>电脑版安装包彻底修复：NSIS 打包改为显式完整文件清单，GCC 8.1 运行库 + Qt DLL + 插件 14 项全部进包，解决安装后缺 libgcc_s_seh-1.dll 无法启动</li>
+          <li>保留：导入模型、已下载自动跳过、失败原因弹窗、授权后自动迁移 /storage/emulated/0/hnn、删除彻底清理、API 默认免鉴权</li>
+        </ul>
       <div class="change">
         <h3>v1.1.5 <small>（2026-10-24）</small></h3>
         <ul>

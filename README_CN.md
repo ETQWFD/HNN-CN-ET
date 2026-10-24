@@ -39,6 +39,9 @@ HNN CN ET 是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 ## 更新日志
 
+### v1.1.6（2026-10-24）
+- API 调用修复：CORS 默认开启（允许任意来源），官网/网页/局域网设备直接调用不再被浏览器跨域拦截；下载异常全部兜底上报，点击下载不会再无反应。
+- 电脑版安装包彻底修复：NSIS 打包改为显式完整文件清单（GCC 8.1 运行库 + Qt DLL + 插件共 14 项全部进包），安装后不再缺 libgcc_s_seh-1.dll。
 ### v1.1.5（2026-10-24）
 - 新增「导入模型」：选择文件夹/文件，自动检测模型基本文件（llm.mnn / model.mnn / gguf / safetensors / bin），有则导入 /storage/emulated/0/hnn，无则不导入并明确提示。
 - 修复无法下载：已下载模型不再重复下载（真实文件检测）；下载失败原因明确弹出（权限/404 等）；HuggingFace 源走 hf-mirror.com 国内镜像。

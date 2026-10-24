@@ -39,6 +39,9 @@ HNN CN ET 是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 ## 更新日志
 
+### v1.1.6 (2026-10-24)
+- API: CORS enabled by default (any origin) — website/网页/LAN clients can call the local API without browser CORS blocks; every download failure is now surfaced (no more silent clicks).
+- Windows installer fully fixed: NSIS now packs the complete runtime explicitly (GCC 8.1 runtime + Qt DLLs + plugins, 14 items) — no more missing libgcc_s_seh-1.dll after install.
 ### v1.1.5 (2026-10-24)
 - Import model: pick a folder/file via SAF; it auto-detects model basics (llm.mnn/model.mnn/gguf/safetensors/bin), imports into /storage/emulated/0/hnn, or imports nothing with a clear message when no model is found.
 - Downloads fixed: already-downloaded models are skipped (real-file check); failure reasons now pop up (permission/404…); HuggingFace source routes via hf-mirror.com mirror.
