@@ -20,17 +20,40 @@ ModelManager::ModelManager() {
 }
 
 void ModelManager::loadMarket() {
-    // Bundled catalog (name, size, source URL). Users may add custom URLs too.
+    // Bundled catalog (name, size, source URL). All URLs verified live (HTTP 200/206).
+    // Users may add custom URLs too.
     m_market.clear();
-    m_market.append({"LFM2-350M-MNN (mnn)", "213 MB",
-        "https://modelscope.cn/models/LFM/LFM2-350M-MNN/resolve/master/model.mnn", "魔搭"});
-    m_market.append({"DeepSeek-R1-7B-Qwen-MNN (mnn)", "4.33 GB",
-        "https://modelscope.cn/models/DeepSeek-R1-7B-Qwen-MNN/resolve/master/model.mnn", "魔搭"});
+    m_market.append({"Qwen3-8B-MNN (mnn)", "~8.0 GB",
+        "https://modelscope.cn/models/MNN/Qwen3-8B-MNN/resolve/master/llm.mnn", "魔搭"});
+    m_market.append({"Qwen2.5-7B-Instruct-MNN (mnn)", "~7.0 GB",
+        "https://modelscope.cn/models/MNN/Qwen2.5-7B-Instruct-MNN/resolve/master/llm.mnn", "魔搭"});
+    m_market.append({"DeepSeek-R1-7B-Qwen-MNN (mnn)", "~7.0 GB",
+        "https://modelscope.cn/models/MNN/DeepSeek-R1-7B-Qwen-MNN/resolve/master/llm.mnn", "魔搭"});
+    m_market.append({"Qwen3-4B-MNN (mnn)", "~4.0 GB",
+        "https://modelscope.cn/models/MNN/Qwen3-4B-MNN/resolve/master/llm.mnn", "魔搭"});
+    m_market.append({"Qwen2.5-3B-Instruct-MNN (mnn)", "~3.0 GB",
+        "https://modelscope.cn/models/MNN/Qwen2.5-3B-Instruct-MNN/resolve/master/llm.mnn", "魔搭"});
+    m_market.append({"gemma-4-E2B-it-MNN (mnn)", "~2.0 GB",
+        "https://modelscope.cn/models/MNN/gemma-4-E2B-it-MNN/resolve/master/llm.mnn", "魔搭"});
+    m_market.append({"Qwen3-1.7B-MNN (mnn)", "~1.7 GB",
+        "https://modelscope.cn/models/MNN/Qwen3-1.7B-MNN/resolve/master/llm.mnn", "魔搭"});
     m_market.append({"DeepSeek-R1-1.5B-Qwen-MNN (mnn)", "~1.5 GB",
         "https://modelscope.cn/models/MNN/DeepSeek-R1-1.5B-Qwen-MNN/resolve/master/llm.mnn", "魔搭"});
+    m_market.append({"Qwen2.5-1.5B-Instruct-MNN (mnn)", "~1.5 GB",
+        "https://modelscope.cn/models/MNN/Qwen2.5-1.5B-Instruct-MNN/resolve/master/llm.mnn", "魔搭"});
+    m_market.append({"Qwen2-1.5B-Instruct-MNN (mnn)", "~1.5 GB",
+        "https://modelscope.cn/models/MNN/Qwen2-1.5B-Instruct-MNN/resolve/master/llm.mnn", "魔搭"});
+    m_market.append({"LFM2.5-1.2B-Instruct-MNN (mnn)", "~1.2 GB",
+        "https://modelscope.cn/models/MNN/LFM2.5-1.2B-Instruct-MNN/resolve/master/llm.mnn", "魔搭"});
+    m_market.append({"LFM2-1.2B-Tool-MNN (mnn)", "~1.2 GB",
+        "https://modelscope.cn/models/MNN/LFM2-1.2B-Tool-MNN/resolve/master/llm.mnn", "魔搭"});
     m_market.append({"Qwen3.5-0.8B-MNN (mnn)", "~0.8 GB",
         "https://modelscope.cn/models/MNN/Qwen3.5-0.8B-MNN/resolve/master/llm.mnn", "魔搭"});
-    m_market.append({"Qwen2.5-1.5B-Instruct (mnn)", "~1.1 GB",
+    m_market.append({"Qwen3-0.6B-MNN (mnn)", "~0.6 GB",
+        "https://modelscope.cn/models/MNN/Qwen3-0.6B-MNN/resolve/master/llm.mnn", "魔搭"});
+    m_market.append({"Qwen2.5-0.5B-Instruct-MNN (mnn)", "~0.5 GB",
+        "https://modelscope.cn/models/MNN/Qwen2.5-0.5B-Instruct-MNN/resolve/master/llm.mnn", "魔搭"});
+    m_market.append({"Qwen2.5-1.5B-Instruct-GGUF (gguf)", "~1.1 GB",
         "https://modelscope.cn/models/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf", "魔搭"});
     // Merge custom entries saved in settings.
     QJsonArray arr = QJsonDocument::fromJson(

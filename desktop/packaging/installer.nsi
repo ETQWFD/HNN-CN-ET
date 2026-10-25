@@ -50,6 +50,10 @@ Section "Main" SEC_MAIN
   File "${PAYLOAD}/libgcc_s_seh-1.dll"
   File "${PAYLOAD}/libstdc++-6.dll"
   File "${PAYLOAD}/libwinpthread-1.dll"
+  ; v1.0.8 hotfix: Qt5Network HTTPS/TLS needs OpenSSL 1.1 DLLs next to the exe,
+  ; otherwise downloads fail with "TLS initialization failed".
+  File "${PAYLOAD}/libssl-1_1-x64.dll"
+  File "${PAYLOAD}/libcrypto-1_1-x64.dll"
   ; v1.0.8 hotfix: Qt platform plugins MUST live in their own subdirectories
   ; (platforms\ / imageformats\ / styles\). Without SetOutPath per folder NSIS
   ; flattens them into $INSTDIR and real Windows Qt cannot find the platform
