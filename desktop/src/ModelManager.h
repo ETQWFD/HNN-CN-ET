@@ -19,7 +19,8 @@ public:
 
     static ModelManager& instance();
 
-    QStringList localModels() const;              // file names in models dir
+    QStringList localModels() const;              // relative paths in models dir (recursive)
+    int importFromDirectory(const QString& dir);  // copy model files from folder, returns count
     QList<ModelEntry> marketModels() const { return m_market; }
     QString activeModel() const;
     void setActiveModel(const QString& name);

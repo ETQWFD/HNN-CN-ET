@@ -212,14 +212,57 @@ void ApiService::handleRequest(QTcpSocket* socket, const QByteArray& requestHead
         if (!backendKey.isEmpty()) upstream.setRawHeader("Authorization", ("Bearer " + backendKey).toUtf8());
         QNetworkReply* reply = m_nam.post(upstream, QJsonDocument(req).toJson());
         reply->setProperty("socket", QVariant::fromValue(socket));
-        connect(reply, &QNetworkReply::readyRead, this, [this, reply, socket]() {
+        reply->setProperty("hdrSent", QVariant::fromValue(false));
+        connect(reply, &QNetworkReply::readyRead, this, [this, reply, socket, cors]() {
+            if (!socket) return;
+            if (!reply->property("hdrSent").toBool()) {
+                // First upstream byte: open the SSE stream, then forward payload.
+                socket->write("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n" + cors.toUtf8() +
+                              "Connection: keep-alive\r\nCache-Control: no-cache\r\n\r\n");
+                reply->setProperty("hdrSent", QVariant::fromValue(true));
+            }
             QByteArray chunk = reply->readAll();
-            if (socket && socket->isWritable()) socket->write(chunk);
+            if (socket->isWritable()) socket->write(chunk);
+            socket->flush();
         });
-        // Stream the response back as SSE
-        socket->write("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n" + cors.toUtf8() +
-                      "Connection: keep-alive\r\nCache-Control: no-cache\r\n\r\n");
-        socket->flush();
+        connect(reply, &QNetworkReply::errorOccurred, this, [this, reply, socket, cors](QNetworkReply::NetworkError) {
+            if (!socket || !socket->isValid()) return;
+            bool sent = reply->property("hdrSent").toBool();
+            QString msg = reply->errorString();
+            if (msg.isEmpty()) msg = QStringLiteral("上游推理服务连接失败");
+            if (!sent) {
+                // Nothing sent yet: return a clean HTTP 502 JSON error.
+                QJsonObject err{{"error", QJsonObject{{"message", msg},
+                                                      {"type", "upstream_error"}}}};
+                QByteArray body = QJsonDocument(err).toJson();
+                socket->write("HTTP/1.1 502 Bad Gateway\r\nContent-Type: application/json\r\n"
+                              "Content-Length: " + QByteArray::number(body.size()) + "\r\n\r\n" + body);
+            } else {
+                socket->write("event: error\ndata: " +
+                              QJsonDocument(QJsonObject{{"error", msg}}).toJson(QJsonDocument::Compact) +
+                              "\n\n");
+            }
+            socket->flush();
+            socket->disconnectFromHost();
+        });
+        connect(reply, &QNetworkReply::finished, this, [this, reply, socket, cors]() {
+            bool sent = reply->property("hdrSent").toBool();
+            if (socket && socket->isValid() && sent) {
+                socket->write("data: [DONE]\n\n");
+                socket->flush();
+                socket->disconnectFromHost();
+            } else if (socket && socket->isValid() && !sent &&
+                       reply->error() == QNetworkReply::NoError) {
+                // Non-streamed success: forward body once.
+                QByteArray body = reply->readAll();
+                socket->write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n" +
+                              cors.toUtf8() + "Content-Length: " +
+                              QByteArray::number(body.size()) + "\r\n\r\n" + body);
+                socket->flush();
+                socket->disconnectFromHost();
+            }
+            reply->deleteLater();
+        });
         return;
     }
 

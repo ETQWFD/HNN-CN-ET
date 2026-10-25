@@ -52,6 +52,7 @@ void HistoryStore::deleteSession(const QString& id) {
     for (int i = 0; i < m_sessions.size(); ++i) {
         if (m_sessions[i].id == id) {
             m_sessions.removeAt(i);
+            save();                     // persist deletion (was missing -> sessions reappeared)
             emit sessionsChanged();
             return;
         }

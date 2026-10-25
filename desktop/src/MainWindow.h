@@ -22,6 +22,7 @@ private:
     void stopGenerating();
     void newSession();
     void selectSession(int row);
+    void removeSession(const QString& id);
     void loadSessionIntoView(const QString& id);
     void openSettings();
     bool eventFilter(QObject* obj, QEvent* ev) override;

@@ -14,6 +14,8 @@
 #include <QSpinBox>
 #include <QProgressBar>
 #include <QDir>
+#include <QFileInfo>
+#include <QApplication>
 #include <QDesktopServices>
 #include <QUrl>
 
@@ -365,7 +367,15 @@ void SettingsDialog::openModelManager() {
             list->addItem(it);
         }
         for (const auto& m : ModelManager::instance().marketModels()) {
-            if (!files.contains(m.name)) {
+            bool found = false;
+            for (const auto& f : files) {
+                if (QFileInfo(f).fileName().startsWith(m.name.split(" (").first().replace(' ', '_'), Qt::CaseInsensitive) ||
+                    QFileInfo(f).fileName() == (m.name.split(" (").first().replace(' ', '_') + ".mnn") ||
+                    QFileInfo(f).fileName() == (m.name.split(" (").first().replace(' ', '_') + ".gguf")) {
+                    found = true; break;
+                }
+            }
+            if (!found) {
                 list->addItem(QStringLiteral("%1 · %2 · %3 — 未下载").arg(m.name, m.sizeText, m.kind));
             }
         }
@@ -373,10 +383,12 @@ void SettingsDialog::openModelManager() {
     refreshList();
     QHBoxLayout* btns = new QHBoxLayout;
     QPushButton* dl = new QPushButton(QStringLiteral("下载选中模型"));
-    QPushButton* add = new QPushButton(QStringLiteral("添加自定义模型"));
+    QPushButton* imp = new QPushButton(QStringLiteral("从文件夹导入模型"));
+    QPushButton* addUrl = new QPushButton(QStringLiteral("添加URL模型"));
     QPushButton* use = new QPushButton(QStringLiteral("使用选中模型"));
     btns->addWidget(dl);
-    btns->addWidget(add);
+    btns->addWidget(imp);
+    btns->addWidget(addUrl);
     btns->addWidget(use);
     v->addLayout(btns);
     QProgressBar* prog = new QProgressBar;
@@ -417,7 +429,20 @@ void SettingsDialog::openModelManager() {
             status->setText(QStringLiteral("该模型已下载"));
         }
     });
-    connect(add, &QPushButton::clicked, &dlg, [&dlg, refreshList]() {
+    connect(imp, &QPushButton::clicked, &dlg, [&dlg, refreshList, status]() {
+        QString dir = QFileDialog::getExistingDirectory(&dlg, QStringLiteral("选择包含模型的文件夹"));
+        if (dir.isEmpty()) return;
+        status->setText(QStringLiteral("正在扫描并导入模型…"));
+        QApplication::processEvents();
+        int n = ModelManager::instance().importFromDirectory(dir);
+        if (n > 0) {
+            status->setText(QStringLiteral("导入成功：%1 个模型文件已复制到 models 目录").arg(n));
+        } else {
+            status->setText(QStringLiteral("未在该文件夹中找到模型文件（.mnn/.gguf/.bin/.safetensors/.onnx）"));
+        }
+        refreshList();
+    });
+    connect(addUrl, &QPushButton::clicked, &dlg, [&dlg, refreshList]() {
         bool ok = false;
         QString name = QInputDialog::getText(&dlg, QStringLiteral("添加自定义模型"),
                                              QStringLiteral("模型名称（保存为 models 目录下的文件名）"), QLineEdit::Normal, QString(), &ok);

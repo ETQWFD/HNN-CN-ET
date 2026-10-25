@@ -7,6 +7,7 @@
 #include <QInputDialog>
 #include <QDateTime>
 #include <QFile>
+#include <QMenu>
 #include <QKeyEvent>
 #include <QDialogButtonBox>
 
@@ -141,6 +142,20 @@ QWidget* MainWindow::buildSidebar() {
     m_sessionList = new QListWidget;
     m_sessionList->setFrameShape(QFrame::NoFrame);
     connect(m_sessionList, &QListWidget::currentRowChanged, this, &MainWindow::selectSession);
+    // Right-click / Delete key removes the session (persisted).
+    m_sessionList->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_sessionList, &QListWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
+        QListWidgetItem* item = m_sessionList->itemAt(pos);
+        if (!item) return;
+        QString id = item->data(Qt::UserRole).toString();
+        QMenu menu(this);
+        QAction* del = menu.addAction(QStringLiteral("删除会话"));
+        connect(del, &QAction::triggered, this, [this, id]() { removeSession(id); });
+        menu.exec(m_sessionList->mapToGlobal(pos));
+    });
+    connect(m_sessionList, &QListWidget::itemActivated, this, [this](QListWidgetItem* item) {
+        if (item) removeSession(item->data(Qt::UserRole).toString());
+    });
     v->addWidget(m_sessionList, 1);
 
     QPushButton* settings = new QPushButton(QStringLiteral("⚙ 设置"));
@@ -350,6 +365,14 @@ void MainWindow::newSession() {
     m_chat->clear();
     m_chat->addSystemMessage(QStringLiteral("新对话已创建。选择左侧历史记录可回到旧对话。"));
     selectSession(0);
+}
+
+void MainWindow::removeSession(const QString& id) {
+    if (id.isEmpty()) return;
+    HistoryStore::instance().deleteSession(id);
+    m_chat->clear();
+    m_currentSessionId.clear();
+    if (m_sessionList->count() > 0) selectSession(0);
 }
 
 void MainWindow::selectSession(int row) {

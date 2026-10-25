@@ -2,6 +2,8 @@
 
 #include <QFile>
 #include <QDir>
+#include <QDirIterator>
+#include <QFileInfo>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QUrl>
@@ -66,12 +68,48 @@ void ModelManager::loadMarket() {
 }
 
 QStringList ModelManager::localModels() const {
-    QDir d(hnnet::modelsDir());
+    // Recursive scan: real models may live in subfolders (e.g. models/DeepSeek-R1/llm.mnn),
+    // single files (models/xxx.mnn) or old extension-less files. Show relative paths.
     QStringList list;
-    for (const auto& fi : d.entryInfoList(QDir::Files | QDir::NoSymLinks, QDir::Name)) {
-        list.append(fi.fileName());
+    QDirIterator it(hnnet::modelsDir(), QDir::Files | QDir::NoSymLinks,
+                    QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        QString abs = it.next();
+        QString rel = QDir(hnnet::modelsDir()).relativeFilePath(abs);
+        bool keep = rel.endsWith(".mnn") || rel.endsWith(".gguf") ||
+                    rel.endsWith(".bin") || rel.endsWith(".safetensors") ||
+                    rel.endsWith(".onnx") || !rel.contains('.');
+        if (keep) list.append(rel.replace('\\', "/"));
     }
+    list.sort();
     return list;
+}
+
+int ModelManager::importFromDirectory(const QString& dir) {
+    // Copy every model file found under <dir> (recursive) into the models folder,
+    // preserving relative subfolders. Returns number of files copied.
+    QDir src(dir);
+    QDir dst(hnnet::modelsDir());
+    QDirIterator it(dir, QDir::Files | QDir::NoSymLinks, QDirIterator::Subdirectories);
+    int copied = 0;
+    QStringList exts = {"mnn", "gguf", "bin", "safetensors", "onnx", "ggml"};
+    while (it.hasNext()) {
+        QString abs = it.next();
+        QString lower = abs.toLower();
+        bool ok = false;
+        for (const auto& e : exts) if (lower.endsWith("." + e)) { ok = true; break; }
+        if (!ok) continue;
+        QString rel = src.relativeFilePath(abs);
+        QString target = dst.filePath(rel);
+        if (QFileInfo::exists(target)) {
+            // skip identical files, overwrite different ones
+            if (QFileInfo(target).size() == QFileInfo(abs).size()) continue;
+        }
+        dst.mkpath(QFileInfo(target).absolutePath());
+        if (QFile::copy(abs, target)) copied++;
+    }
+    emit modelsChanged();
+    return copied;
 }
 
 QString ModelManager::activeModel() const {
@@ -101,7 +139,18 @@ void ModelManager::addCustomModel(const ModelEntry& e) {
 void ModelManager::download(const ModelEntry& e) {
     if (m_downloading == e.name) return;
     m_downloading = e.name;
-    QString filename = e.name + ".download";
+    // Keep the real extension so the file is recognized as a model (was saved
+    // without extension before -> invisible to inference / recursive scan).
+    QString url = e.url;
+    QString ext = "mnn";
+    if (url.endsWith(".gguf", Qt::CaseInsensitive)) ext = "gguf";
+    else if (url.endsWith(".bin", Qt::CaseInsensitive)) ext = "bin";
+    else if (url.endsWith(".safetensors", Qt::CaseInsensitive)) ext = "safetensors";
+    QString base = e.name;
+    base.remove(QRegularExpression("\\s*\\([^)]*\\)\\s*$")); // strip "(mnn)" suffix
+    base.replace(QRegularExpression("[\\\\/:*?\"<>|\\s]+"), "_");
+    QString finalName = base + "." + ext;
+    QString filename = finalName + ".download";
     QFile* f = new QFile(QDir(hnnet::modelsDir()).filePath(filename), this);
     if (!f->open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         emit downloadFinished(e.name, QStringLiteral("无法写入模型目录"), QString());
@@ -110,8 +159,10 @@ void ModelManager::download(const ModelEntry& e) {
         return;
     }
     m_out = f;
-    QNetworkRequest req(QUrl(e.url));
+    QUrl requestUrl(e.url);
+    QNetworkRequest req(requestUrl);
     req.setTransferTimeout(0);
+    req.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
     m_reply = m_nam.get(req);
     connect(m_reply, &QNetworkReply::readyRead, this, [this]() {
         if (m_out) m_out->write(m_reply->readAll());
@@ -119,7 +170,7 @@ void ModelManager::download(const ModelEntry& e) {
     connect(m_reply, &QNetworkReply::downloadProgress, this, [this, e](qint64 done, qint64 total) {
         emit downloadProgress(e.name, done, total);
     });
-    connect(m_reply, &QNetworkReply::finished, this, [this, e]() {
+    connect(m_reply, &QNetworkReply::finished, this, [this, e, finalName]() {
         bool ok = m_reply->error() == QNetworkReply::NoError;
         QString err = ok ? QString() : m_reply->errorString();
         m_reply->deleteLater();
@@ -127,7 +178,7 @@ void ModelManager::download(const ModelEntry& e) {
         if (m_out) {
             m_out->close();
             if (ok) {
-                QString finalPath = QDir(hnnet::modelsDir()).filePath(e.name);
+                QString finalPath = QDir(hnnet::modelsDir()).filePath(finalName);
                 m_out->rename(finalPath);
                 delete m_out; m_out = nullptr;
                 emit downloadFinished(e.name, QString(), finalPath);
