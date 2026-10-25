@@ -3,6 +3,7 @@
 
 package com.alibaba.mls.api.download
 
+import android.util.Log
 import com.alibaba.mls.api.download.DownloadFileUtils.repoFolderName
 import com.alibaba.mls.api.download.ModelIdUtils
 import java.io.File
@@ -33,18 +34,24 @@ abstract class ModelRepoDownloader {
     fun isDownloaded(modelId: String): Boolean {
         // HNN CN ET v1.1.5: only count as downloaded when real model files exist.
         // A stale link directory with no model files must NOT block re-download.
-        val path = getDownloadPath(modelId)
-        if (!path.exists()) return false
-        val children = path.listFiles() ?: return false
-        if (children.isEmpty()) return false
-        fun hasModelFile(f: java.io.File): Boolean = f.isFile && (
-            f.name.endsWith(".mnn") || f.name.endsWith(".gguf") ||
-            f.name.endsWith(".safetensors") || f.name.endsWith(".bin")
-        )
-        if (children.any { hasModelFile(it) }) return true
-        // Link folder may point into the storage folder (models--org--name)
-        val storage = children.firstOrNull { it.isDirectory } ?: return false
-        return (storage.listFiles() ?: emptyArray()).any { hasModelFile(it) }
+        // v1.1.7: any path/IO failure here must never break startDownload -> return false.
+        return try {
+            val path = getDownloadPath(modelId)
+            if (!path.exists()) return false
+            val children = path.listFiles() ?: return false
+            if (children.isEmpty()) return false
+            fun hasModelFile(f: java.io.File): Boolean = f.isFile && (
+                f.name.endsWith(".mnn") || f.name.endsWith(".gguf") ||
+                f.name.endsWith(".safetensors") || f.name.endsWith(".bin")
+            )
+            if (children.any { hasModelFile(it) }) return true
+            // Link folder may point into the storage folder (models--org--name)
+            val storage = children.firstOrNull { it.isDirectory } ?: return false
+            (storage.listFiles() ?: emptyArray()).any { hasModelFile(it) }
+        } catch (t: Throwable) {
+            Log.w("ModelRepoDownloader", "isDownloaded failed for $modelId", t)
+            false
+        }
     }
 
     abstract fun getDownloadPath(modelId: String): File

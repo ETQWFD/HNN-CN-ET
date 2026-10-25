@@ -3,6 +3,7 @@
 package com.alibaba.mls.api.download
 
 import android.content.Context
+import android.util.Log
 import com.alibaba.mls.api.ApplicationProvider
 import com.alibaba.mls.api.download.hf.HfModelDownloader
 import com.alibaba.mls.api.download.ms.MsModelDownloader
@@ -91,6 +92,23 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
     fun getProgressCallbackIntervalMs(): Long = progressCallbackIntervalMs
 
     fun startDownload(modelId: String) {
+        // v1.1.7: guard the WHOLE method so a failure at any point (permission, path,
+        // pre-check, dispatch) always surfaces via the failure callback -> toast + state
+        // refresh. Previously an unexpected throw here (e.g. inside isDownloaded) silently
+        // killed the click -> "button does nothing".
+        try {
+            startDownloadInner(modelId)
+        } catch (t: Throwable) {
+            val e = com.alibaba.mls.api.FileDownloadException("启动下载失败: ${t.message}")
+            try {
+                downloadListeners.forEach { it.onDownloadFailed(modelId, e) }
+            } catch (t2: Throwable) {
+                Log.e("ModelDownloadManager", "failed to dispatch download error", t2)
+            }
+        }
+    }
+
+    private fun startDownloadInner(modelId: String) {
         // HNN CN ET v1.1.3: models download into public /storage/emulated/0/hnn —
         // require the external storage permission before starting any transfer.
         if (!hasExternalStoragePermission()) {

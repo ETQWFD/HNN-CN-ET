@@ -591,6 +591,59 @@ class ModelMarketFragment : Fragment(), ModelMarketItemListener, Searchable {
         }
     }
 
+    /**
+     * v1.1.7: before starting any download make sure the external-storage permission
+     * is really granted, otherwise guide the user to the system setting dialog.
+     * No more silent "nothing happens" when the permission is missing.
+     */
+    private fun ensureStorageAccess(action: () -> Unit) {
+        try {
+            val ready = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                android.os.Environment.isExternalStorageManager()
+            } else {
+                requireContext().checkSelfPermission(
+                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
+            if (ready) {
+                action()
+                return
+            }
+            val ctx = requireContext()
+            AlertDialog.Builder(ctx)
+                .setTitle(R.string.download)
+                .setMessage(R.string.download_need_storage_permission)
+                .setPositiveButton(R.string.download_go_settings) { _, _ ->
+                    try {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                            val i = android.content.Intent(
+                                android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                android.net.Uri.parse("package:" + ctx.packageName)
+                            )
+                            startActivity(i)
+                        } else {
+                            val i = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            i.data = android.net.Uri.parse("package:" + ctx.packageName)
+                            startActivity(i)
+                        }
+                    } catch (t: Throwable) {
+                        try {
+                            startActivity(
+                                android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                            )
+                        } catch (t2: Throwable) {
+                            Log.w(TAG, "cannot open storage settings", t2)
+                        }
+                    }
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        } catch (t: Throwable) {
+            Log.w(TAG, "storage check failed, proceeding anyway", t)
+            action()
+        }
+    }
+
     override fun onActionClicked(item: ModelMarketItemWrapper) {
         //add log
         Log.d(TAG, "onActionClicked: " + item.modelMarketItem.modelId)
@@ -653,11 +706,18 @@ class ModelMarketFragment : Fragment(), ModelMarketItemListener, Searchable {
                 }
             }
             DownloadState.NOT_START,
-            DownloadState.FAILED -> {
-                viewModel.startDownload(item.modelMarketItem)
+            DownloadState.FAILED,
+            // v1.1.7: PREPARING used to fall through to nothing -> a download that got
+            // stuck in "准备中" made the button appear dead. Clicking again now re-arms it.
+            DownloadState.PREPARING -> {
+                ensureStorageAccess {
+                    viewModel.startDownload(item.modelMarketItem)
+                }
             }
             DownloadState.PAUSED -> {
-                viewModel.startDownload(item.modelMarketItem) // resume
+                ensureStorageAccess {
+                    viewModel.startDownload(item.modelMarketItem) // resume
+                }
             }
             DownloadState.DOWNLOADING -> {
                 viewModel.pauseDownload(item.modelMarketItem)

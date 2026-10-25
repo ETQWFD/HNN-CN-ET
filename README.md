@@ -39,6 +39,11 @@ HNN CN ET 是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 ## 更新日志
 
+### v1.1.7 (2026-10-25)
+- Download button root fix: the whole download-start path is now guarded — any failure (pre-check / path / permission) pops the real reason, never silent.
+- "Preparing" deadlock fixed: tapping a model stuck in 准备中 re-arms the download.
+- Storage-permission guide: if "All files access" is not granted, tapping download opens a dialog that jumps to system settings.
+- isDownloaded hardened: filesystem exceptions can no longer break the download flow.
 ### v1.1.6 (2026-10-24)
 - API: CORS enabled by default (any origin) — website/网页/LAN clients can call the local API without browser CORS blocks; every download failure is now surfaced (no more silent clicks).
 - Windows installer fully fixed: NSIS now packs the complete runtime explicitly (GCC 8.1 runtime + Qt DLLs + plugins, 14 items) — no more missing libgcc_s_seh-1.dll after install.

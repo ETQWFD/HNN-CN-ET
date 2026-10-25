@@ -800,4 +800,7 @@
     <string name="agent_mcp_tool_done">MCP tool %1$s result:
 %2$s</string>
     <string name="agent_no_file_tool">No usable file tool on the MCP server</string>
+
+    <string name="download_need_storage_permission">下载模型到 /storage/emulated/0/hnn 需要“所有文件访问”权限，请前往系统设置授权后重试</string>
+    <string name="download_go_settings">去授权</string>
 </resources>

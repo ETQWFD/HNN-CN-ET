@@ -50,7 +50,7 @@
       <span>架构 armeabi-v7a + arm64-v8a</span>
       <span>推理引擎 MNN</span>
       <span>协议 MIT</span>
-      <span>版本 <b id="heroVer">v1.1.6</b></span>
+      <span>版本 <b id="heroVer">v1.1.7</b></span>
     </div>
   </div>
 </header>
@@ -74,9 +74,9 @@
     <h2 class="section-title">下载</h2>
     <div class="download-card">
       <div class="download-info">
-        <h3>最新版本 <span id="dlVer">v1.1.6</span></h3>
-        <p id="downloadNote">最新版本 v1.1.6 · API 跨域已开 + 下载不再没反应 + 电脑版安装包完整修复</p>
-        <p class="download-meta"><span id="dlName">HNN-CN-ET-1.1.6.apk</span><span id="dlSize"></span></p>
+        <h3>最新版本 <span id="dlVer">v1.1.7</span></h3>
+        <p id="downloadNote">最新版本 v1.1.7 · 根治点击下载没反应（全兜底+准备中恢复+权限引导）</p>
+        <p class="download-meta"><span id="dlName">HNN-CN-ET-1.1.7.apk</span><span id="dlSize"></span></p>
         <p class="download-meta"><span id="dlTime"></span><span>累计下载 <b id="dlTotal">—</b> 次</span></p>
       </div>
       <a class="btn btn-primary" id="btnApk" href="https://github.com/ETQWFD/HNN-CN-ET/releases/latest">下载 APK</a>
@@ -108,6 +108,14 @@
   <div class="container">
     <h2 class="section-title">更新日志</h2>
     <div class="changelog">
+      <div class="change">
+        <h3>v1.1.7 <small>（2026-10-25）</small></h3>
+        <ul>
+          <li>根治「点击下载没反应」：下载启动全链路兜底，任何异常（已下载判断/路径/权限）都弹出真实失败原因，绝不静默</li>
+          <li>修复「准备中」卡死：状态卡在准备中的模型再次点击即可重新拉起下载</li>
+          <li>存储权限引导：未授权「所有文件访问」时点击下载直接弹窗引导去系统设置授权</li>
+          <li>已下载判断防异常：文件系统异常不再影响下载流程</li>
+        </ul>
       <div class="change">
         <h3>v1.1.6 <small>（2026-10-24）</small></h3>
         <ul>
