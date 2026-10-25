@@ -18,14 +18,43 @@ import java.io.File
 class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDownloadCallback {
 
     private val appContext: Context = context.applicationContext
-    // HNN CN ET v1.1.3: models are stored in public external storage /storage/emulated/0/hnn
-    // (legacy app-private filesDir/.mnnmodels is migrated at app startup by ModelPaths)
-    private val cacheDir: String = "/storage/emulated/0/hnn"
+    // HNN CN ET v1.1.8:
+    // models prefer public /storage/emulated/0/hnn (needs "All files access" on Android 11+).
+    // When that grant is missing OR the check is unreliable on some ROMs, we probe real
+    // writability and fall back to the app's own external dir under /storage/emulated/0
+    // (Android/data/<pkg>/files/hnn) which needs NO permission at all — the download must
+    // never get stuck on "please grant permission" once the user already granted access.
+    private val cacheDir: String = resolveModelRoot(context)
     private val hfDownloader: HfModelDownloader
     private val msDownloader: MsModelDownloader
 
-    private var downloadListener: DownloadListener? = null
-    private val downloadListeners: MutableList<DownloadListener> = java.util.concurrent.CopyOnWriteArrayList()
+    companion object {
+        private const val PREFERRED_ROOT = "/storage/emulated/0/hnn"
+
+        @JvmStatic
+        fun resolveModelRoot(context: Context): String {
+            return try {
+                val pref = java.io.File(PREFERRED_ROOT)
+                if (!pref.exists()) pref.mkdirs()
+                if (pref.canWrite()) {
+                    // probe an actual write so "looks writable" can't hide a permission deny
+                    val probe = java.io.File(pref, ".hnn_perm_probe")
+                    probe.writeText("ok")
+                    probe.delete()
+                    PREFERRED_ROOT
+                } else {
+                    fallbackRoot(context)
+                }
+            } catch (t: Throwable) {
+                fallbackRoot(context)
+            }
+        }
+
+        private fun fallbackRoot(context: Context): String {
+            val base = context.getExternalFilesDir(null) ?: context.filesDir
+            return java.io.File(base, "hnn").absolutePath
+        }
+    }
 
     init {
         hfDownloader = HfModelDownloader(this, cacheDir)
@@ -35,27 +64,27 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
     // Cache for download info to support progress and pause states
     private val downloadInfoMap = java.util.concurrent.ConcurrentHashMap<String, DownloadInfo>()
 
-    // HNN CN ET v1.1.3: models are stored in public /storage/emulated/0/hnn which
-    // requires the "All files access" grant on Android 11+ (MANAGE_EXTERNAL_STORAGE)
-    // or the WRITE_EXTERNAL_STORAGE runtime permission on Android 8-10.
+    // HNN CN ET v1.1.8: replace the API-based permission check with a REAL writability
+    // probe. Some ROMs (and some users' grant combos) report isExternalStorageManager()
+    // false even after the user granted access -> downloads used to get stuck at
+    // "please grant permission". If the resolved root is writable we proceed no matter
+    // what the API says; the resolver already fell back to a permission-free dir if not.
     private fun hasExternalStoragePermission(): Boolean {
         return try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                android.os.Environment.isExternalStorageManager()
-            } else {
-                appContext.checkSelfPermission(
-                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-            }
+            val root = java.io.File(cacheDir)
+            if (!root.exists() && !root.mkdirs()) return false
+            if (!root.canWrite()) return false
+            val probe = java.io.File(root, ".hnn_perm_probe")
+            probe.writeText("ok")
+            val ok = probe.exists() && probe.length() == 2L
+            probe.delete()
+            ok
         } catch (t: Throwable) {
-            true // let the transfer fail with a real IO error rather than a permission bug
+            false
         }
     }
     
-    // Helper to get or create info
-    private fun getOrCreateInfo(modelId: String): DownloadInfo {
-        return downloadInfoMap.getOrPut(modelId) { DownloadInfo() }
-    }
+    fun modelRoot(): String = cacheDir
 
     fun setListener(listener: DownloadListener?) {
         if (this.downloadListener != null) {
