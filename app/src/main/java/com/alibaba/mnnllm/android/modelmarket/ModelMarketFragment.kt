@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.alibaba.mls.api.download.DownloadState
+import com.alibaba.mls.api.download.ModelDownloadManager
 import com.alibaba.mnnllm.android.R
 import com.alibaba.mnnllm.android.databinding.FragmentModelMarketBinding
 import com.alibaba.mnnllm.android.main.MainActivity
@@ -592,56 +593,50 @@ class ModelMarketFragment : Fragment(), ModelMarketItemListener, Searchable {
     }
 
     /**
-     * v1.1.7: before starting any download make sure the external-storage permission
-     * is really granted, otherwise guide the user to the system setting dialog.
-     * No more silent "nothing happens" when the permission is missing.
+     * v1.1.9: NO blocking permission gate. The old code required
+     * isExternalStorageManager() ("All files access") before downloading; on many
+     * ROMs the user's granted "storage" permission does not make that API return
+     * true, so downloads were stuck at this dialog forever even after granting.
+     * Now we probe the real model root writability (ModelDownloadManager falls
+     * back to Android/data/<pkg>/files/hnn automatically when the public dir is
+     * not writable) and proceed immediately. The dialog is only shown as a
+     * non-blocking hint and the download still starts.
      */
     private fun ensureStorageAccess(action: () -> Unit) {
         try {
-            val ready = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                android.os.Environment.isExternalStorageManager()
-            } else {
-                requireContext().checkSelfPermission(
-                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-            }
-            if (ready) {
-                action()
-                return
-            }
-            val ctx = requireContext()
-            AlertDialog.Builder(ctx)
-                .setTitle(R.string.download)
-                .setMessage(R.string.download_need_storage_permission)
-                .setPositiveButton(R.string.download_go_settings) { _, _ ->
-                    try {
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                            val i = android.content.Intent(
-                                android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                                android.net.Uri.parse("package:" + ctx.packageName)
-                            )
-                            startActivity(i)
-                        } else {
-                            val i = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                            i.data = android.net.Uri.parse("package:" + ctx.packageName)
-                            startActivity(i)
-                        }
-                    } catch (t: Throwable) {
-                        try {
-                            startActivity(
-                                android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                            )
-                        } catch (t2: Throwable) {
-                            Log.w(TAG, "cannot open storage settings", t2)
-                        }
+            val root = ModelDownloadManager.resolveModelRoot(requireContext())
+            val dir = java.io.File(root)
+            if (dir.exists() || dir.mkdirs()) {
+                val probe = java.io.File(dir, ".hnn_perm_probe")
+                try {
+                    probe.writeText("ok")
+                    val ok = probe.exists() && probe.length() == 2L
+                    probe.delete()
+                    if (ok) {
+                        action()
+                        return
                     }
+                } catch (t: Throwable) {
+                    Log.w(TAG, "probe write failed", t)
                 }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
+            }
         } catch (t: Throwable) {
-            Log.w(TAG, "storage check failed, proceeding anyway", t)
+            Log.w(TAG, "storage probe failed, proceeding anyway", t)
             action()
+            return
         }
+        // Even when the probe failed, do not block: start the download and let the
+        // download layer surface a real IO error if any. Show a hint, never a gate.
+        try {
+            android.widget.Toast.makeText(
+                requireContext(),
+                R.string.download_need_storage_permission,
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        } catch (t: Throwable) {
+            Log.w(TAG, "toast failed", t)
+        }
+        action()
     }
 
     override fun onActionClicked(item: ModelMarketItemWrapper) {

@@ -28,33 +28,9 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
     private val hfDownloader: HfModelDownloader
     private val msDownloader: MsModelDownloader
 
-    companion object {
-        private const val PREFERRED_ROOT = "/storage/emulated/0/hnn"
-
-        @JvmStatic
-        fun resolveModelRoot(context: Context): String {
-            return try {
-                val pref = java.io.File(PREFERRED_ROOT)
-                if (!pref.exists()) pref.mkdirs()
-                if (pref.canWrite()) {
-                    // probe an actual write so "looks writable" can't hide a permission deny
-                    val probe = java.io.File(pref, ".hnn_perm_probe")
-                    probe.writeText("ok")
-                    probe.delete()
-                    PREFERRED_ROOT
-                } else {
-                    fallbackRoot(context)
-                }
-            } catch (t: Throwable) {
-                fallbackRoot(context)
-            }
-        }
-
-        private fun fallbackRoot(context: Context): String {
-            val base = context.getExternalFilesDir(null) ?: context.filesDir
-            return java.io.File(base, "hnn").absolutePath
-        }
-    }
+    private var downloadListener: DownloadListener? = null
+    private val downloadListeners: MutableList<DownloadListener> = java.util.concurrent.CopyOnWriteArrayList()
+    private var progressCallbackIntervalMs = 200L
 
     init {
         hfDownloader = HfModelDownloader(this, cacheDir)
@@ -85,6 +61,11 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
     }
     
     fun modelRoot(): String = cacheDir
+
+    // Helper to get or create info
+    private fun getOrCreateInfo(modelId: String): DownloadInfo {
+        return downloadInfoMap.getOrPut(modelId) { DownloadInfo() }
+    }
 
     fun setListener(listener: DownloadListener?) {
         if (this.downloadListener != null) {
@@ -522,6 +503,7 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
     }
 
     companion object {
+        private const val PREFERRED_ROOT = "/storage/emulated/0/hnn"
         const val REQUEST_CODE_POST_NOTIFICATIONS = 1001  // Stub constant for foreground service notifications
         private const val PERSIST_INTERVAL_MS = 1000L
         private const val PERSIST_MIN_DELTA_BYTES = 1024L * 1024L
@@ -530,6 +512,35 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
 
         @Volatile
         private var instance: ModelDownloadManager? = null
+
+        // HNN CN ET v1.1.8: model root resolution with REAL writability probing.
+        // Prefers /storage/emulated/0/hnn (needs "All files access" on Android 11+);
+        // automatically falls back to Android/data/<pkg>/files/hnn which needs NO
+        // permission, so downloads never get stuck on the permission dialog even on
+        // ROMs where isExternalStorageManager() stays false after granting.
+        @JvmStatic
+        fun resolveModelRoot(context: Context): String {
+            return try {
+                val pref = java.io.File(PREFERRED_ROOT)
+                if (!pref.exists()) pref.mkdirs()
+                if (pref.canWrite()) {
+                    // probe an actual write so "looks writable" can't hide a permission deny
+                    val probe = java.io.File(pref, ".hnn_perm_probe")
+                    probe.writeText("ok")
+                    probe.delete()
+                    PREFERRED_ROOT
+                } else {
+                    fallbackRoot(context)
+                }
+            } catch (t: Throwable) {
+                fallbackRoot(context)
+            }
+        }
+
+        private fun fallbackRoot(context: Context): String {
+            val base = context.getExternalFilesDir(null) ?: context.filesDir
+            return java.io.File(base, "hnn").absolutePath
+        }
 
         @JvmStatic
         fun getInstance(context: Context): ModelDownloadManager {
