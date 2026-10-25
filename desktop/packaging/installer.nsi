@@ -22,7 +22,7 @@ RequestExecutionLevel admin
 !define MUI_ABORTWARNING
 !define MUI_ICON "resources\app.ico"
 !define MUI_UNICON "resources\app.ico"
-!define MUI_FINISHPAGE_RUN "$INSTDIR\HNN-CN-ET.exe"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\HNN_CN_ET_Desktop.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "启动 HNN CN ET"
 
 !insertmacro MUI_PAGE_WELCOME
@@ -50,11 +50,21 @@ Section "Main" SEC_MAIN
   File "${PAYLOAD}/libgcc_s_seh-1.dll"
   File "${PAYLOAD}/libstdc++-6.dll"
   File "${PAYLOAD}/libwinpthread-1.dll"
+  ; v1.0.8 hotfix: Qt platform plugins MUST live in their own subdirectories
+  ; (platforms\ / imageformats\ / styles\). Without SetOutPath per folder NSIS
+  ; flattens them into $INSTDIR and real Windows Qt cannot find the platform
+  ; plugin -> "no Qt platform plugin could be initialized".
+  SetOutPath "$INSTDIR\platforms"
   File "${PAYLOAD}/platforms/qwindows.dll"
+  SetOutPath "$INSTDIR\imageformats"
   File "${PAYLOAD}/imageformats/qgif.dll"
   File "${PAYLOAD}/imageformats/qico.dll"
   File "${PAYLOAD}/imageformats/qjpeg.dll"
+  SetOutPath "$INSTDIR\styles"
   File "${PAYLOAD}/styles/qwindowsvistastyle.dll"
+  ; qt.conf pins the plugin search path to the app dir, extra insurance.
+  SetOutPath "$INSTDIR"
+  File "${PAYLOAD}/qt.conf"
 
   ; start menu + desktop shortcuts
   CreateDirectory "$SMPROGRAMS\HNN CN ET"
