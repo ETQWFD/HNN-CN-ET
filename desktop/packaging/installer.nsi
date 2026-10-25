@@ -14,7 +14,7 @@ VIAddVersionKey  "FileVersion" "1.0.8.0"
 VIAddVersionKey  "ProductVersion" "1.0.8"
 
 Name "HNN CN ET"
-OutFile "..\..\HNN-CN-ET-Setup-1.0.8.exe"
+OutFile "/home/user/Doubao/chats/38447749949189634/work/desktop/HNN-CN-ET-Setup-1.0.8.exe"
 InstallDir "$PROGRAMFILES64\HNN CN ET"
 RequestExecutionLevel admin
 
@@ -38,20 +38,36 @@ RequestExecutionLevel admin
 ; ---------- Install ----------
 Section "Main" SEC_MAIN
   SetOutPath "$INSTDIR"
-  File /r "..\..\dist\HNN-CN-ET\*.*"
+  ; v1.0.8 fix: NSIS Linux "File /r" recursion is broken -> pack every runtime file
+  ; explicitly with absolute paths so the installer really contains the full runtime.
+  !define PAYLOAD "/home/user/Doubao/chats/38447749949189634/work/dist/HNN-CN-ET"
+  File "${PAYLOAD}/HNN_CN_ET_Desktop.exe"
+  File "${PAYLOAD}/Qt5Core.dll"
+  File "${PAYLOAD}/Qt5Gui.dll"
+  File "${PAYLOAD}/Qt5Widgets.dll"
+  File "${PAYLOAD}/Qt5Network.dll"
+  File "${PAYLOAD}/Qt5Sql.dll"
+  File "${PAYLOAD}/libgcc_s_seh-1.dll"
+  File "${PAYLOAD}/libstdc++-6.dll"
+  File "${PAYLOAD}/libwinpthread-1.dll"
+  File "${PAYLOAD}/platforms/qwindows.dll"
+  File "${PAYLOAD}/imageformats/qgif.dll"
+  File "${PAYLOAD}/imageformats/qico.dll"
+  File "${PAYLOAD}/imageformats/qjpeg.dll"
+  File "${PAYLOAD}/styles/qwindowsvistastyle.dll"
 
   ; start menu + desktop shortcuts
   CreateDirectory "$SMPROGRAMS\HNN CN ET"
-  CreateShortCut "$SMPROGRAMS\HNN CN ET\HNN CN ET.lnk" "$INSTDIR\HNN-CN-ET.exe"
+  CreateShortCut "$SMPROGRAMS\HNN CN ET\HNN CN ET.lnk" "$INSTDIR\HNN_CN_ET_Desktop.exe"
   CreateShortCut "$SMPROGRAMS\HNN CN ET\卸载 HNN CN ET.lnk" "$INSTDIR\Uninstall.exe"
-  CreateShortCut "$DESKTOP\HNN CN ET.lnk" "$INSTDIR\HNN-CN-ET.exe"
+  CreateShortCut "$DESKTOP\HNN CN ET.lnk" "$INSTDIR\HNN_CN_ET_Desktop.exe"
 
   ; uninstaller registry
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "DisplayName" "HNN CN ET"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "DisplayVersion" "1.0.8"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "Publisher" "ET"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "DisplayIcon" "$INSTDIR\HNN-CN-ET.exe"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "DisplayIcon" "$INSTDIR\HNN_CN_ET_Desktop.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "InstallLocation" "$INSTDIR"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\HNNCNET" "NoModify" 1
