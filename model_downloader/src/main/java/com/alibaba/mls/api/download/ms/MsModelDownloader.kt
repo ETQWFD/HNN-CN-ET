@@ -60,36 +60,43 @@ class MsModelDownloader(override var callback: ModelRepoDownloadCallback?,
         Log.d(TAG, "fetchRepoInfo called for modelId: $modelId, calculateSize: $calculateSize")
         
         return withContext(DownloadCoroutineManager.downloadDispatcher) {
-            runCatching {
-                val msModelId = ModelIdUtils.getRepositoryPath(modelId)
-                val split = msModelId.split("/".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                if (split.size != 2) {
-                    throw FileDownloadException("Invalid model ID format for $modelId, expected format: owner/repo")
-                }
-                
-                val response = msApiClient.apiService.getModelFiles(split[0], split[1]).execute()
-                if (response.isSuccessful && response.body() != null) {
-                    val repoInfo = response.body()!!
-                    
-                    // Call onRepoInfo callback with repo metadata
-                    // ModelScope tree API does not currently expose stable repo modified timestamp.
-                    // Use 0 to indicate "unknown" and let upper layer fallback to size/signature checks.
-                    val lastModified = 0L
-                    val repoSize = repoInfo.Data?.Files?.filter { it.Type != "tree" }?.sumOf { it.Size } ?: 0L
-                    callback?.onRepoInfo(modelId, lastModified, repoSize)
-                    repoInfo
-                } else {
-                    val errorMsg = if (!response.isSuccessful) {
-                        "API request failed with code ${response.code()}: ${response.message()}"
-                    } else {
-                        "API response was null or empty"
+            // v1.1.8: retry once on transient network failure so a flaky connection
+            // no longer aborts the whole download with "API request failed".
+            var lastException: Throwable? = null
+            for (attempt in 0..1) {
+                try {
+                    val msModelId = ModelIdUtils.getRepositoryPath(modelId)
+                    val split = msModelId.split("/".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                    if (split.size != 2) {
+                        throw FileDownloadException("Invalid model ID format for $modelId, expected format: owner/repo")
                     }
-                    throw FileDownloadException("Failed to fetch repo info for $modelId: $errorMsg")
+                    
+                    val response = msApiClient.apiService.getModelFiles(split[0], split[1]).execute()
+                    if (response.isSuccessful && response.body() != null) {
+                        val repoInfo = response.body()!!
+                        
+                        // Call onRepoInfo callback with repo metadata
+                        // ModelScope tree API does not currently expose stable repo modified timestamp.
+                        // Use 0 to indicate "unknown" and let upper layer fallback to size/signature checks.
+                        val lastModified = 0L
+                        val repoSize = repoInfo.Data?.Files?.filter { it.Type != "tree" }?.sumOf { it.Size } ?: 0L
+                        callback?.onRepoInfo(modelId, lastModified, repoSize)
+                        return@withContext repoInfo
+                    } else {
+                        val errorMsg = if (!response.isSuccessful) {
+                            "API request failed with code ${response.code()}: ${response.message()}"
+                        } else {
+                            "API response was null or empty"
+                        }
+                        throw FileDownloadException("Failed to fetch repo info for $modelId: $errorMsg")
+                    }
+                } catch (e: Throwable) {
+                    lastException = e
+                    Log.w(TAG, "fetchRepoInfo attempt ${attempt + 1} failed for $modelId", e)
                 }
-            }.getOrElse { exception ->
-                Log.e(TAG, "Failed to fetch repo info for $modelId", exception)
-                throw FileDownloadException("Failed to fetch repo info for $modelId: ${exception.message}")
             }
+            Log.e(TAG, "Failed to fetch repo info for $modelId after retries", lastException)
+            throw FileDownloadException("Failed to fetch repo info for $modelId: ${lastException?.message}")
         }
     }
 

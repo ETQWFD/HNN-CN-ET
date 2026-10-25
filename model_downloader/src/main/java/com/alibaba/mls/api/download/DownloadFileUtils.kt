@@ -104,6 +104,34 @@ object DownloadFileUtils {
                 Files.delete(linkPath)
                 Files.createSymbolicLink(linkPath, target)
             }
+        } catch (e: Throwable) {
+            // HNN CN ET v1.1.8: on Android 11+ the public storage (/storage/emulated/0)
+            // is a FUSE filesystem which REJECTS symlink creation (EPERM / EOPNOTSUPP).
+            // The MNN download flow relies on symlinks -> downloads failed right after
+            // the file transfer. Fall back to a mirror tree of hard links (then copies),
+            // so the blobs folder stays a single copy and the link folder is usable.
+            try {
+                Files.deleteIfExists(linkPath)
+                mirrorTree(target!!.toFile(), linkPath!!.toFile())
+                Log.i(TAG, "createSymlink fallback: mirrored ${target} -> ${linkPath}")
+            } catch (t: Throwable) {
+                Log.w(TAG, "createSymlink fallback mirror failed", t)
+            }
+        }
+    }
+
+    /** Mirror <src> under <dst> using hard links when possible, copying as fallback. */
+    private fun mirrorTree(src: File, dst: File) {
+        if (src.isDirectory) {
+            dst.mkdirs()
+            src.listFiles()?.forEach { child -> mirrorTree(child, File(dst, child.name)) }
+        } else if (src.exists()) {
+            try {
+                Files.createLink(dst.toPath(), src.toPath())
+            } catch (t: Throwable) {
+                dst.parentFile?.mkdirs()
+                src.copyTo(dst, overwrite = true)
+            }
         }
     }
 
