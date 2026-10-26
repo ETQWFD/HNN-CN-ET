@@ -50,9 +50,14 @@ class MLModelDownloader(override var callback: ModelRepoDownloadCallback?,
     }
 
     /**
-     * Unified method to fetch repo information from Modelers API
+     * Unified method to fetch repo information from ModelScope API.
+     * HNN CN ET v1.2.3: the old channel hit modelers.cn, which is dead (404) and
+     * made every download fail with "Failed to fetch repo info". We now call the
+     * official ModelScope repo API (same as the desktop build, verified 200):
+     *   GET https://modelscope.cn/api/v1/models/{owner}/{repo}/repo/files?Recursive=1
+     *   -> {"Code":200,"Data":{"Files":[{Path,Size,Type,Sha256,...}]}}
      * @param modelId the model ID to fetch info for
-     * @param calculateSize whether to calculate repo size (requires additional network requests)
+     * @param calculateSize whether to calculate repo size (uses the recursive list)
      * @return MlRepoInfo object
      * @throws FileDownloadException if failed to fetch repo info
      */
@@ -64,48 +69,74 @@ class MLModelDownloader(override var callback: ModelRepoDownloadCallback?,
                 if (split.size != 2) {
                     throw FileDownloadException("Invalid model ID format for $modelId, expected format: owner/repo")
                 }
-                
-                val response = mlApiClient.apiService.getModelFiles(split[0], split[1], "").execute()
-                if (response.isSuccessful && response.body() != null) {
-                    val initialInfo = response.body()!!
-                    val repoInfo = if (calculateSize) {
-                        // Get all files recursively for size calculation
-                        val allFiles = mutableListOf<FileInfo>()
-                        getAllFiles(split[0], split[1], "", allFiles)
-                        MlRepoInfo(
-                            initialInfo.code,
-                            initialInfo.msg,
-                            MlRepoData(
-                                tree = allFiles,
-                                last_commit = initialInfo.data.last_commit,
-                                commit_count = initialInfo.data.commit_count
-                            )
-                        )
-                    } else {
-                        initialInfo
-                    }
-                    
-                    // Call onRepoInfo callback with repo metadata
-                    val lastModified = TimeUtils.convertIsoToTimestamp(repoInfo.data.last_commit?.commit?.created) ?: 0L
-                    val repoSize = if (calculateSize && repoInfo.data.tree.isNotEmpty()) {
-                        repoInfo.data.tree.filter { it.type != "dir" }.sumOf { it.size }
-                    } else {
-                        0L
-                    }
-                    callback?.onRepoInfo(modelId, lastModified, repoSize)
-                    repoInfo
-                } else {
-                    val errorMsg = if (!response.isSuccessful) {
-                        "API request failed with code ${response.code()}: ${response.message()}"
-                    } else {
-                        "API response was null or empty"
-                    }
-                    throw FileDownloadException("Failed to fetch repo info for $modelId: $errorMsg")
-                }
+
+                val files = fetchModelScopeFiles(split[0], split[1])
+                val tree = files.filter { it.type != "dir" && it.type != "tree" }
+                val repoInfo = MlRepoInfo(
+                    code = "200",
+                    msg = "ok",
+                    data = MlRepoData(
+                        tree = tree,
+                        last_commit = null,
+                        commit_count = 0
+                    )
+                )
+
+                // Call onRepoInfo callback with repo metadata
+                val repoSize = if (calculateSize) tree.sumOf { it.size } else 0L
+                callback?.onRepoInfo(modelId, 0L, repoSize)
+                repoInfo
             }.getOrElse { exception ->
                 Log.e(TAG, "Failed to fetch repo info for $modelId", exception)
                 throw FileDownloadException("Failed to fetch repo info for $modelId: ${exception.message}")
             }
+        }
+    }
+
+    /** HNN CN ET v1.2.3: raw GET against the official ModelScope repo-files API and
+     *  parse into our FileInfo list (etag = Sha256, used as blob key). */
+    private fun fetchModelScopeFiles(owner: String, repo: String): List<FileInfo> {
+        val url = "https://modelscope.cn/api/v1/models/$owner/$repo/repo/files?Recursive=1"
+        val client = okhttp3.OkHttpClient.Builder()
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        val request = okhttp3.Request.Builder().url(url).header("User-Agent", "HNN-CN-ET").build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw FileDownloadException(
+                    "ModelScope API request failed with code ${response.code}: ${response.message}"
+                )
+            }
+            val body = response.body?.string() ?: throw FileDownloadException("ModelScope API response was empty")
+            val json = org.json.JSONObject(body)
+            val code = json.optString("Code", "")
+            if (code != "200") {
+                throw FileDownloadException("ModelScope API returned Code=$code, body=$body")
+            }
+            val data = json.optJSONObject("Data")
+                ?: throw FileDownloadException("ModelScope API response missing Data")
+            val filesArr = data.optJSONArray("Files") ?: org.json.JSONArray()
+            val result = mutableListOf<FileInfo>()
+            for (i in 0 until filesArr.length()) {
+                val f = filesArr.optJSONObject(i) ?: continue
+                val path = f.optString("Path", "")
+                if (path.isBlank()) continue
+                result.add(
+                    FileInfo(
+                        name = path.substringAfterLast('/'),
+                        path = path,
+                        type = f.optString("Type", "blob"),
+                        size = f.optLong("Size", 0L),
+                        is_lfs = f.optBoolean("IsLFS", false),
+                        etag = f.optString("Sha256", "").ifBlank { path },
+                        url = "",
+                        commit = null,
+                        file_scan = null
+                    )
+                )
+            }
+            return result
         }
     }
 
@@ -286,8 +317,10 @@ class MLModelDownloader(override var callback: ModelRepoDownloadCallback?,
             val fileDownloadTask = FileDownloadTask()
             fileDownloadTask.relativePath = subFile.path
             fileDownloadTask.fileMetadata = HfFileMetadata()
+            // HNN CN ET v1.2.3: download via the official ModelScope file API
+            // (same as the desktop build): GET .../repo?FilePath=<path> -> 200/206.
             fileDownloadTask.fileMetadata!!.location = String.format(
-                "https://modelers.cn/coderepo/web/v1/file/%s/main/media/%s",
+                "https://modelscope.cn/api/v1/models/%s/repo?FilePath=%s",
                 modelScopeId,
                 subFile.path
             )
