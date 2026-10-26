@@ -29,6 +29,11 @@ import com.alibaba.mnnllm.android.widgets.ModelSwitcherView
 import android.widget.Toast
 import com.alibaba.mnnllm.android.utils.LargeModelConfirmationDialog
 import androidx.appcompat.app.AlertDialog
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ModelMarketFragment : Fragment(), ModelMarketItemListener, Searchable {
 
@@ -56,6 +61,119 @@ class ModelMarketFragment : Fragment(), ModelMarketItemListener, Searchable {
     
     // Save current search query state
     private var currentSearchQuery: String = ""
+
+    // HNN CN ET v1.1.9: import-model on the market page. SAF folder picking
+    // needs NO "All files access" permission — models are copied into the same
+    // resolved root used by downloads (public hnn dir, or permission-free app dir).
+    private val importModelLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+        { uri -> onImportTreeResult(uri) }
+    )
+
+    private fun onImportTreeResult(treeUri: android.net.Uri?) {
+        if (treeUri == null) return
+        lifecycleScope.launch {
+            val (ok, message) = withContext(Dispatchers.IO) {
+                try {
+                    importModelFromTree(treeUri)
+                } catch (t: Throwable) {
+                    Log.e(TAG, "import model failed", t)
+                    false to (t.message ?: "导入失败")
+                }
+            }
+            val ctx = requireContext()
+            if (ok) {
+                try {
+                    com.alibaba.mnnllm.android.modelist.ModelListManager
+                        .notifyModelListMayChange(com.alibaba.mnnllm.android.modelist.ModelListManager.ChangeReason.MODEL_DOWNLOADED)
+                } catch (t: Throwable) {
+                    Log.w(TAG, "refresh after import failed", t)
+                }
+                android.widget.Toast.makeText(ctx, R.string.import_model_ok, android.widget.Toast.LENGTH_LONG).show()
+            } else {
+                android.widget.Toast.makeText(ctx, message, android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun setupImportModelButton() {
+        binding.btnImportModelMarket.setOnClickListener {
+            try {
+                importModelLauncher.launch(null)
+            } catch (e: Exception) {
+                Log.w(TAG, "cannot open folder picker", e)
+                android.widget.Toast.makeText(
+                    requireContext(), "无法打开文件夹选择器", android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun importModelFromTree(treeUri: android.net.Uri): Pair<Boolean, String> {
+        val ctx = requireContext()
+        val rootDoc = androidx.documentfile.provider.DocumentFile.fromTreeUri(ctx, treeUri)
+            ?: return false to "无法读取所选目录"
+        val candidates = mutableListOf<androidx.documentfile.provider.DocumentFile>()
+        rootDoc.listFiles().forEach { candidates.add(it) }
+        if (candidates.isEmpty()) {
+            return false to ctx.getString(R.string.import_model_none)
+        }
+        fun isModelFile(name: String?): Boolean {
+            if (name == null) return false
+            val lower = name.lowercase()
+            return lower.endsWith(".mnn") || lower.endsWith(".gguf") ||
+                lower.endsWith(".safetensors") || lower.endsWith(".bin")
+        }
+        val modelFile = candidates.firstOrNull { it.isFile && isModelFile(it.name) }
+        if (modelFile == null) {
+            for (dir in candidates) {
+                if (!dir.isDirectory) continue
+                val inner = dir.listFiles().firstOrNull { it.isFile && isModelFile(it.name) }
+                if (inner != null) return copyModelIntoRoot(rootDoc, dir, inner, ctx)
+            }
+            return false to ctx.getString(R.string.import_model_none)
+        }
+        return copyModelIntoRoot(rootDoc, rootDoc, modelFile, ctx)
+    }
+
+    private fun copyModelIntoRoot(
+        rootDoc: androidx.documentfile.provider.DocumentFile,
+        sourceDir: androidx.documentfile.provider.DocumentFile,
+        modelFile: androidx.documentfile.provider.DocumentFile,
+        ctx: android.content.Context
+    ): Pair<Boolean, String> {
+        val modelName = (sourceDir.name ?: modelFile.name!!)
+            .replace(Regex("[^A-Za-z0-9._\\-]"), "_")
+            .trim('_')
+        val modelRoot = ModelDownloadManager.resolveModelRoot(ctx)
+        val targetDir = java.io.File(modelRoot, modelName)
+        if (!targetDir.exists() && !targetDir.mkdirs()) {
+            return false to "无法创建 ${targetDir.absolutePath}"
+        }
+        val alreadyHasModel = targetDir.listFiles()?.any {
+            val n = it.name.lowercase()
+            n.endsWith(".mnn") || n.endsWith(".gguf") || n.endsWith(".safetensors") || n.endsWith(".bin")
+        } == true
+        if (alreadyHasModel) {
+            return true to ""
+        }
+        val toCopy = mutableListOf<androidx.documentfile.provider.DocumentFile>()
+        toCopy.add(modelFile)
+        val siblingNames = arrayOf("tokenizer.json", "tokenizer.model", "vocab.json", "config.json", "merges.txt", "llm.mnn", "model.mnn")
+        sourceDir.listFiles().forEach { f ->
+            if (f.isFile && f.name != null && f.name!! != modelFile.name &&
+                siblingNames.any { f.name!!.equals(it, ignoreCase = true) }) {
+                toCopy.add(f)
+            }
+        }
+        for (f in toCopy) {
+            val dst = java.io.File(targetDir, f.name!!)
+            ctx.contentResolver.openInputStream(f.uri)?.use { input ->
+                dst.outputStream().use { out -> input.copyTo(out) }
+            } ?: return false to "读取 ${f.name} 失败"
+        }
+        return true to ""
+    }
 
     // Implement Searchable interface
     override fun onSearchQuery(query: String) {

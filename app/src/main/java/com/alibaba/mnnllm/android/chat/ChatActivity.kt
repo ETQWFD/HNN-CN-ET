@@ -247,6 +247,14 @@ class ChatActivity : AppCompatActivity() {
                             return@launch
                         }
                     }
+                    // HNN CN ET v1.1.9: ordinary chat also masters MCP — inject the
+                    // available tool list into the system prompt so the model can
+                    // request tool calls on its own.
+                    try {
+                        injectMcpToolsIfAvailable()
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "injectMcpToolsIfAvailable failed", t)
+                    }
                     this@ChatActivity.handleSendMessage(it)
                 }
             }
@@ -708,6 +716,49 @@ class ChatActivity : AppCompatActivity() {
         return chatPresenter.sendMessage(userData)
     }
 
+    // HNN CN ET v1.1.9: inject the configured MCP tool list into the session system
+    // prompt so the model can request tool calls during ordinary chat (not only in
+    // Agent / explicit "mcp" commands).
+    @Volatile
+    private var mcpToolsInjected = false
+
+    @Volatile
+    private var mcpToolRunInFlight = false
+
+    private suspend fun injectMcpToolsIfAvailable() {
+        try {
+            if (mcpToolsInjected) return
+            if (!com.alibaba.mnnllm.android.mainsettings.MainSettings.isMcpEnabled(this)) return
+            val servers = com.alibaba.mnnllm.android.agent.McpConfigStore.loadServers(this)
+            if (servers.isEmpty()) return
+            val toolNames = mutableListOf<String>()
+            for (s in servers) {
+                try {
+                    val (tools, _) = com.alibaba.mnnllm.android.agent.McpClient.listToolsWithError(s)
+                    toolNames.addAll(tools)
+                } catch (t: Throwable) {
+                    Log.w(TAG, "list tools failed for ${s.name}", t)
+                }
+            }
+            if (toolNames.isEmpty()) return
+            val llm = chatSession as? com.alibaba.mnnllm.android.llm.LlmSession ?: return
+            val cur = llm.getSystemPrompt() ?: ""
+            if (cur.contains("MCP 工具")) {
+                mcpToolsInjected = true
+                return
+            }
+            val toolList = toolNames.distinct().take(30).joinToString("、")
+            val hint = "\n\n【MCP 工具】你可以使用以下工具：$toolList。" +
+                "当用户的请求需要这些工具时，请单独输出一行：调用工具 工具名 参数（例如：调用工具 get_weather 城市=北京）。" +
+                "系统会自动执行该工具并把结果给你，你再根据结果给出最终回答。"
+            llm.updateSystemPrompt(cur + hint)
+            mcpToolsInjected = true
+            Log.d(TAG, "MCP tools injected: $toolList")
+        } catch (t: Throwable) {
+            Log.w(TAG, "inject MCP tools failed", t)
+        }
+    }
+
     /**
      * HNN CN ET v1.0.3: 显示 Agent 执行结果（不经过大模型）。
      * HNN CN ET v1.0.6: 记录待继续任务，授权无障碍后自动重试。
@@ -1037,6 +1088,37 @@ class ChatActivity : AppCompatActivity() {
         chatListComponent.updateAssistantResponse(recentItem)
 
         if (isMockStreamSession) {
+            return
+        }
+
+        // HNN CN ET v1.1.9: chat auto-masters MCP — if the model's reply contains a
+        // "调用工具 <name> args" line (it knows the tools from the injected system
+        // prompt), execute the tool and feed the result back so the model answers.
+        val reply = recentItem.text ?: ""
+        if (!mcpToolRunInFlight && reply.contains("调用工具")) {
+            mcpToolRunInFlight = true
+            lifecycleScope.launch {
+                try {
+                    val result = withContext(Dispatchers.IO) {
+                        try {
+                            com.alibaba.mnnllm.android.agent.AgentEngine.tryHandle(
+                                this@ChatActivity, reply
+                            )
+                        } catch (e: Exception) {
+                            Log.e(TAG, "auto MCP run error", e)
+                            com.alibaba.mnnllm.android.agent.AgentResult("工具执行失败：${e.message ?: "未知错误"}")
+                        }
+                    }
+                    val toolResult = if (result?.reply.isNullOrBlank()) "（工具已执行，无返回结果）" else result!!.reply
+                    val follow = "（上一条消息中你请求了工具调用，以下是执行结果，请基于结果直接、完整地回答用户，不要再输出调用指令）\n" + toolResult
+                    val userData = createUserMessage(follow)
+                    handleSendMessage(userData)
+                } catch (t: Throwable) {
+                    Log.w(TAG, "auto MCP follow-up failed", t)
+                } finally {
+                    mcpToolRunInFlight = false
+                }
+            }
             return
         }
         

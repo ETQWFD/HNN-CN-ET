@@ -102,4 +102,19 @@
             
     </RelativeLayout>
 
+    <!-- HNN CN ET v1.1.9: import-model entry right on the model market page.
+         Uses SAF folder picking (needs NO "All files access" permission). -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_import_model_market"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:text="@string/import_model"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:layout_margin="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

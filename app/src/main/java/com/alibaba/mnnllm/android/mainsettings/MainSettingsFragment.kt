@@ -547,38 +547,12 @@ class MainSettingsFragment : Fragment() {
 
     private fun setupImportModel() {
         binding.btnImportModel.setOnClickListener {
-            val ctx = requireContext()
-            if (!com.alibaba.mnnllm.android.modelist.ModelPaths.hasStoragePermission(ctx)) {
-                Toast.makeText(ctx, getString(R.string.import_model_need_permission), Toast.LENGTH_LONG).show()
-                com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
-                    .setTitle(getString(R.string.import_model))
-                    .setMessage(getString(R.string.import_model_need_permission))
-                    .setPositiveButton("去授权") { _, _ ->
-                        try {
-                            startActivity(
-                                android.content.Intent(
-                                    android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                                    android.net.Uri.parse("package:${ctx.packageName}")
-                                )
-                            )
-                        } catch (e: Exception) {
-                            try {
-                                startActivity(
-                                    android.content.Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                                )
-                            } catch (e2: Exception) {
-                                Toast.makeText(ctx, "请在系统设置中授予“所有文件访问”权限", Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    }
-                    .setNegativeButton("取消", null)
-                    .show()
-                return@setOnClickListener
-            }
+            // v1.1.9: SAF folder picking needs NO "All files access" permission.
+            // The old gate blocked import for users without MANAGE_EXTERNAL_STORAGE.
             try {
                 importModelLauncher.launch(null)
             } catch (e: Exception) {
-                Toast.makeText(ctx, "无法打开文件夹选择器", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "无法打开文件夹选择器", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -622,7 +596,12 @@ class MainSettingsFragment : Fragment() {
         val modelName = (sourceDir.name ?: modelFile.name!!)
             .replace(Regex("[^A-Za-z0-9._\\-]"), "_")
             .trim('_')
-        val targetDir = java.io.File("/storage/emulated/0/hnn", modelName)
+        // v1.1.9: import into the SAME resolved model root used by downloads
+        // (prefers /storage/emulated/0/hnn, falls back to the permission-free
+        // app dir Android/data/<pkg>/files/hnn) so imported models are always
+        // visible in "My Models" even without "All files access".
+        val modelRoot = com.alibaba.mls.api.download.ModelDownloadManager.resolveModelRoot(ctx)
+        val targetDir = java.io.File(modelRoot, modelName)
         if (!targetDir.exists() && !targetDir.mkdirs()) {
             return false to "无法创建 ${targetDir.absolutePath}"
         }
