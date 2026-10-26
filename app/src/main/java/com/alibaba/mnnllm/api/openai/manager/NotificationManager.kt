@@ -40,6 +40,9 @@ class ApiNotificationManager(private val context: Context) {
      * Create high priority notification channel for displaying API service status
      */
     private fun initializeNotificationChannel() {
+        // HNN CN ET v1.2.2: NotificationChannel is API 26+. On Android 5-7 skip it
+        // (the compat builder below already ignores the channel id there).
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return
         val channelName = context.getString(com.alibaba.mnnllm.android.R.string.api_service_channel_name)
         val channel = NotificationChannel(
             CHANNEL_ID, 

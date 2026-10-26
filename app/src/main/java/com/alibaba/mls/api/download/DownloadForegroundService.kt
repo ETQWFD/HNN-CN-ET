@@ -20,13 +20,20 @@ class DownloadForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        notificationManager = getSystemService(NotificationManager::class.java)
+        // HNN CN ET v1.2.2: getSystemService(Class) is API 23+. Use the string
+        // form so Android 5 (API 21/22) does not crash here.
+        @Suppress("DEPRECATION")
+        notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannel()
         instance = this
         Log.d(TAG, "onCreate")
     }
 
     private fun createNotificationChannel() {
+        // HNN CN ET v1.2.2: NotificationChannel is API 26+. On Android 5-7
+        // instantiating it throws NoClassDefFoundError -> the download service
+        // crashed immediately on Android 6 when tapping "下载".
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val channel = NotificationChannel(
             CHANNEL_ID,
             getString(AppR.string.download_service_title),
@@ -97,7 +104,15 @@ class DownloadForegroundService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val builder = Notification.Builder(this, CHANNEL_ID)
+        // HNN CN ET v1.2.2: two-arg Notification.Builder(context, channelId) is
+        // API 26+; on Android 5-7 use the single-arg builder (channels don't exist).
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, CHANNEL_ID)
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this)
+        }
+        builder
             .setContentTitle(contentTitle)
             .setContentText(contentText)
             // Use android system download icon if available, or a fallback
@@ -106,7 +121,7 @@ class DownloadForegroundService : Service() {
             .setAutoCancel(false)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            
+
         return builder.build()
     }
 

@@ -205,6 +205,9 @@ class ModelMarketFragment : Fragment(), ModelMarketItemListener, Searchable {
         setupEmptyView()
         setupLoadingView()
         setupErrorView()
+        // HNN CN ET v1.2.2: wire the market-page import button. Previously this was
+        // never called -> tapping "导入模型" did nothing.
+        setupImportModelButton()
 
         // Observe loading state
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
