@@ -58,7 +58,7 @@ if (project.hasProperty('ADD_BUILTIN') && project.property('ADD_BUILTIN') == 'tr
 
 android {
     namespace 'com.alibaba.mnnllm.android'
-    compileSdk 35
+    compileSdk 36
     ndkVersion "27.2.12479018"
     
     flavorDimensions "store"
@@ -67,10 +67,11 @@ android {
     }
     defaultConfig {
         applicationId "com.alibaba.mnnllm.android"
-        minSdk 26
-        targetSdk 35
-        versionCode 10020
-        versionName "1.2.0"
+        // HNN CN ET v1.2.1: support Android 5 (API 21) up to Android 16 (API 36).
+        minSdk 21
+        targetSdk 36
+        versionCode 10021
+        versionName "1.2.1"
         buildConfigField "boolean", "ENABLE_FIREBASE", enableFirebase ? "true" : "false"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -86,15 +87,6 @@ android {
                 minifyEnabled false
                 proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             }
-        }
-
-        compileOptions {
-            sourceCompatibility JavaVersion.VERSION_1_8
-            targetCompatibility JavaVersion.VERSION_1_8
-        }
-
-        kotlinOptions {
-            jvmTarget = "1.8"
         }
 
         lintOptions {
@@ -143,8 +135,15 @@ android {
 
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        // HNN CN ET v1.2.1: minSdk 21 (Android 5) + java.time / java.util.stream
+        // need core library desugaring.
+        coreLibraryDesugaringEnabled true
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
     externalNativeBuild {
@@ -189,6 +188,9 @@ android {
 }
 
 dependencies {
+
+    // HNN CN ET v1.2.1: desugar java.time / java.util.stream for minSdk 21 (Android 5).
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
 //    https://developer.android.com/jetpack/androidx/releases/compose
     def jetpack_compose_verion = '1.7.8'
@@ -270,10 +272,10 @@ dependencies {
 
     // 日志相关依赖
     implementation "com.jakewharton.timber:timber:5.0.1"
-    implementation platform('com.google.firebase:firebase-bom:34.4.0')
-    implementation 'com.google.firebase:firebase-analytics'
-    implementation 'com.google.firebase:firebase-crashlytics'
-    implementation 'com.google.firebase:firebase-crashlytics-ndk'
+    // HNN CN ET v1.2.1: Firebase BOM 34.x pulls crashlytics 20.x which requires
+    // minSdk 23 and would break Android 5. Pin versions that support minSdk 21.
+    implementation 'com.google.firebase:firebase-analytics:21.6.2'
+    implementation 'com.google.firebase:firebase-crashlytics:18.6.4'
 //    implementation(name: 'android_device_names', ext: 'aar')
     implementation 'com.github.Juude:AndroidDeviceNames:0.0.1'
     testImplementation 'androidx.test:core:1.5.0'

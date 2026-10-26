@@ -65,7 +65,12 @@ class OpenAIService : Service() {
             modelId?.let { serviceIntent.putExtra("modelId", it) }
             isServiceRunning = true
             try {
-                context.startForegroundService(serviceIntent)
+                // HNN CN ET v1.2.1: Android 5-7 (API < 26) has no startForegroundService.
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    context.startForegroundService(serviceIntent)
+                } else {
+                    context.startService(serviceIntent)
+                }
                 Timber.tag("ServiceStartCondition").i("Foreground service started successfully")
             } catch (e: Exception) {
                 Timber.tag("ServiceStartCondition").e(e, "Failed to start foreground service")

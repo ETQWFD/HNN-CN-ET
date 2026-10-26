@@ -79,10 +79,18 @@ object FloatingAgentWindow {
                 layoutParams = android.view.ViewGroup.LayoutParams(dp(52), dp(52))
                 contentDescription = "HNN CN ET Agent 运行中"
             }
+            // HNN CN ET v1.2.1: TYPE_APPLICATION_OVERLAY is API 26+; on Android 5-7
+            // fall back to TYPE_PHONE so the floating agent still works there.
+            val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_PHONE
+            }
             val wmParams = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                overlayType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT
             ).apply {

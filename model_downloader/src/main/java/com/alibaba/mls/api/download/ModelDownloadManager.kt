@@ -62,6 +62,15 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
     
     fun modelRoot(): String = cacheDir
 
+    private fun formatSize(bytes: Long): String {
+        val mb = bytes / (1024.0 * 1024.0)
+        return if (mb >= 1024) {
+            String.format(java.util.Locale.US, "%.1f GB", mb / 1024.0)
+        } else {
+            String.format(java.util.Locale.US, "%.0f MB", mb)
+        }
+    }
+
     // Helper to get or create info
     private fun getOrCreateInfo(modelId: String): DownloadInfo {
         return downloadInfoMap.getOrPut(modelId) { DownloadInfo() }
@@ -137,6 +146,27 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
                 )
                 downloadListeners.forEach { it.onDownloadFailed(modelId, e) }
                 return
+            }
+            // HNN CN ET v1.2.1: check free space before downloading so low-storage
+            // devices (e.g. 10 GB phones) get a clear error instead of a silent
+            // mid-download failure. Only enforce when we know the model size.
+            try {
+                val need = getOrCreateInfo(modelId).totalSize
+                if (need > 0) {
+                    val stat = android.os.StatFs(root.absolutePath)
+                    val freeBytes = stat.availableBytes
+                    val reserve = 200L * 1024 * 1024
+                    if (freeBytes < need + reserve) {
+                        val e = com.alibaba.mls.api.FileDownloadException(
+                            "存储空间不足：模型需要约 ${formatSize(need + reserve)}，当前可用 ${formatSize(freeBytes)}，请清理存储后再下载"
+                        )
+                        downloadListeners.forEach { it.onDownloadFailed(modelId, e) }
+                        return
+                    }
+                }
+            } catch (t: Throwable) {
+                // StatFs can fail on some ROMs — do not block the download for it.
+                Log.w("ModelDownloadManager", "space check skipped: ${t.message}")
             }
         } catch (t: Throwable) {
             val e = com.alibaba.mls.api.FileDownloadException("创建模型目录失败: ${t.message}")

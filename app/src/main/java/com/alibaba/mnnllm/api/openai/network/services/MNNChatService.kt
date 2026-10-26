@@ -15,6 +15,7 @@ import io.ktor.server.application.ApplicationCall
 import io.ktor.server.response.respond
 import kotlinx.coroutines.runBlocking
 import java.util.UUID
+import timber.log.Timber
 
 /** * chat service * responsible for coordinatingvarious components,processchatrequestcorebusinesslogic * nowallrequests throughqueuemanagerperformqueueprocess,ensuresame timeonlyoneLLM generationtaskrunning*/
 class MNNChatService {
@@ -29,10 +30,26 @@ class MNNChatService {
     private val chatSessionProvider = ServiceLocator.getChatSessionProvider()
     private val imageProcessor = MnnImageProcessor.getInstance(MnnLlmApplication.getAppContext())
     
-    /** * getLLMsessioninstance * @return LlmSessioninstance，if not availablethenthrowexception*/
+    /** * getLLMsessioninstance * @return LlmSessioninstance，if not availablethenthrowexception * HNN CN ET v1.2.1: when no session is active yet (user never loaded a model in * the app), auto-activate the first downloaded model so third-party AI clients * can call the API without any manual step. */
     private fun getLlmSession(): LlmSession {
-        return chatSessionProvider.getLlmSession() 
-            ?: throw IllegalStateException("No active LLM session available")
+        val active = chatSessionProvider.getLlmSession()
+        if (active != null) return active
+
+        // HNN CN ET v1.2.1: auto-init — pick the first downloaded model and load it.
+        try {
+            val models = com.alibaba.mnnllm.android.modelist.ModelListManager.getCurrentModels()
+            val firstId = models?.firstOrNull { !it.modelItem.modelId.isNullOrBlank() }?.modelItem?.modelId
+            if (!firstId.isNullOrBlank()) {
+                val result = ServiceLocator.getLlmRuntimeController().ensureSession(firstId)
+                if (result.success && result.session != null) {
+                    Timber.tag("MNNChatService").i("API auto-activated model: $firstId")
+                    return result.session
+                }
+            }
+        } catch (t: Throwable) {
+            Timber.tag("MNNChatService").w(t, "auto session init failed")
+        }
+        throw IllegalStateException("请先在 HNN CN ET 中加载模型：打开「我的模型」选择一个已下载模型后再调用 API")
     }
 
     /** * processchatcompleterequest * nowallrequests willbeen added toqueue,ensureaccording to orderprocess * @param call Ktorapplicationcallcontext * @param chatRequest chat request object * @param traceId traceID*/
@@ -122,11 +139,15 @@ class MNNChatService {
             }
         } catch (e: Exception) {
             logger.logError(traceId, e, "LLM生成失败")
+            // HNN CN ET v1.2.1: surface the real reason (e.g. "no model loaded") so
+            // third-party clients can show a meaningful message instead of a generic
+            // "Internal server error".
             call.respond(
                 HttpStatusCode.InternalServerError,
                 mapOf(
                     "error" to mapOf(
-                        "message" to "Internal server error",
+                        "message" to (e.message ?: "模型生成失败，请检查模型是否已下载并加载"),
+                        "type" to "generation_error",
                         "trace_id" to traceId
                     )
                 )

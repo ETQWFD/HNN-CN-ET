@@ -5,14 +5,9 @@ import com.alibaba.mnnllm.api.openai.network.models.ModelData
 import com.alibaba.mnnllm.api.openai.network.models.ModelPermission
 import com.alibaba.mnnllm.api.openai.network.models.ModelsResponse
 import com.alibaba.mnnllm.android.modelist.ModelListManager
-import com.alibaba.mnnllm.android.MnnLlmApplication
-import com.alibaba.mnnllm.api.openai.manager.CurrentModelManager
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.response.respond
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.first
 import timber.log.Timber
 
 /** * MNN modelservice * responsible forprocessmodelrelatedbusinesslogic*/
@@ -22,55 +17,81 @@ class MNNModelsService {
     suspend fun getAvailableModels(call: io.ktor.server.application.ApplicationCall, traceId: String) {
         try {
             logger.logRequestStart(traceId, call)
-            
-            val currentModelId = CurrentModelManager.getCurrentModelId()
-            if (currentModelId == null) {
-                Timber.tag("MNNModelsService").w("No current model ID available")
-                logger.logError(traceId, Exception("No current model ID available"), "No current model ID available")
-                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "No current model available"))
-                return
-            }
-            
+
+            // HNN CN ET v1.2.1: /v1/models must NEVER return 500. Third-party AI
+            // clients (Chatbox / NextChat / LobeChat ...) probe this endpoint first and
+            // abort with "API error" if it fails. Return every downloaded model; if none
+            // is installed yet, return a placeholder so the client can still proceed.
             val availableModels = ModelListManager.getCurrentModels()
-            //onlyreturncurrentcurrentlyusemodel
-            val currentModelWrapper = availableModels?.find { 
-                it.modelItem.modelId == currentModelId 
-            }
-            
-            val modelDataList = if (currentModelWrapper != null) {
-                listOf(ModelData(
-                    id = currentModelWrapper.modelItem.modelId ?: "unknown",
-                    created = System.currentTimeMillis() / 1000, // Unix timestamp
-                    permission = listOf(
-                        ModelPermission(
-                            id = "modelperm-${currentModelWrapper.modelItem.modelId}",
-                            created = System.currentTimeMillis() / 1000
+            val modelDataList = if (!availableModels.isNullOrEmpty()) {
+                availableModels
+                    .mapNotNull { it.modelItem.modelId }
+                    .filter { it.isNotBlank() }
+                    .distinct()
+                    .map { id ->
+                        ModelData(
+                            id = id,
+                            created = System.currentTimeMillis() / 1000,
+                            permission = listOf(
+                                ModelPermission(
+                                    id = "modelperm-$id",
+                                    created = System.currentTimeMillis() / 1000
+                                )
+                            )
                         )
-                    )
-                ))
+                    }
+                    .ifEmpty {
+                        listOf(ModelData(
+                            id = "default",
+                            created = System.currentTimeMillis() / 1000,
+                            permission = listOf(
+                                ModelPermission(
+                                    id = "modelperm-default",
+                                    created = System.currentTimeMillis() / 1000
+                                )
+                            )
+                        ))
+                    }
             } else {
-                //ifcannot findcurrentmodel，returnonedefaultmodeldata
                 listOf(ModelData(
-                    id = currentModelId,
+                    id = "default",
                     created = System.currentTimeMillis() / 1000,
                     permission = listOf(
                         ModelPermission(
-                            id = "modelperm-$currentModelId",
+                            id = "modelperm-default",
                             created = System.currentTimeMillis() / 1000
                         )
                     )
                 ))
             }
-            
+
             val response = ModelsResponse(data = modelDataList)
-            
+
             call.respond(response)
-            logger.logInfo(traceId, "Current model returned successfully: $currentModelId")
-            
+            logger.logInfo(traceId, "Models returned: ${modelDataList.map { it.id }}")
+
         } catch (e: Exception) {
             Timber.tag("MNNModelsService").e(e, "Error getting current model")
             logger.logError(traceId, e, "Failed to get current model")
-            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Failed to get current model"))
+            // HNN CN ET v1.2.1: even on unexpected errors return a placeholder (200),
+            // never a 500 that makes third-party clients show a generic failure.
+            try {
+                call.respond(
+                    HttpStatusCode.OK,
+                    ModelsResponse(data = listOf(ModelData(
+                        id = "default",
+                        created = System.currentTimeMillis() / 1000,
+                        permission = listOf(
+                            ModelPermission(
+                                id = "modelperm-default",
+                                created = System.currentTimeMillis() / 1000
+                            )
+                        )
+                    )))
+                )
+            } catch (t: Throwable) {
+                Timber.tag("MNNModelsService").e(t, "Fallback models response also failed")
+            }
         }
     }
 }

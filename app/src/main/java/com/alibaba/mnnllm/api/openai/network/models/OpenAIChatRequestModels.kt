@@ -27,7 +27,7 @@ val json = Json {
 @Serializable
 data class OpenAIChatRequest(
     val model: String? = null,
-    val messages: List<OpenAIGenericMessage>,
+    val messages: List<OpenAIGenericMessage> = emptyList(),
     val temperature: Double? = null,
     val top_p: Double? = null,
     val stream: Boolean? = null,
