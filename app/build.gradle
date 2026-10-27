@@ -70,8 +70,8 @@ android {
         // HNN CN ET v1.2.1: support Android 5 (API 21) up to Android 16 (API 36).
         minSdk 21
         targetSdk 36
-        versionCode 10023
-        versionName "1.2.3"
+        versionCode 10024
+        versionName "1.2.4"
         buildConfigField "boolean", "ENABLE_FIREBASE", enableFirebase ? "true" : "false"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {

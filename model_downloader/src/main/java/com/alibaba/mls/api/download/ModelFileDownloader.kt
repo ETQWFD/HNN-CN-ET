@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 
 class ModelFileDownloader {
     private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .followRedirects(true)
@@ -98,30 +98,14 @@ class ModelFileDownloader {
             .url(theUrlToDownload)
             .get()
         val request: Request = requestBuilder.build()
-        try {
-            client.newCall(request).execute().use { response ->
-                Log.d(TAG, "response code: " + response.code)
-                for (header in response.headers.names()) {
-                    Log.d(
-                        TAG,
-                        "downloadToTmpAndMove response header: $header: " + response.header(
-                            header
-                        )
-                    )
-                }
-                // Handle all redirect status codes (301, 302, 303, 307, 308)
-                if (response.code in 301..308) {
-                    theUrlToDownload = response.header("Location")!!
-                }
-            }
-        } catch (e: IOException) {
-            throw FileDownloadException("get header error" + e.message)
-        }
+        // HNN CN ET v1.2.4: removed the extra pre-request that re-fetched headers just
+        // to read the 302 Location. OkHttp already follows redirects on the real call,
+        // so this doubled every file's network round-trip (big speed-up on phones).
         Log.d(
             TAG,
             "downloadToTmpAndMove urlToDownload: $theUrlToDownload to file: $incompletePath to destination: $destinationPath"
         )
-        val maxRetry = 10
+        val maxRetry = 5
         if (fileDownloadTask.downloadedSize < expectedSize) {
             for (i in 0 until maxRetry) {
                 try {
@@ -154,7 +138,7 @@ class ModelFileDownloader {
                     } else {
                         Log.e(TAG, "downloadChunk failed sleep and retrying: " + e.message)
                         try {
-                            Thread.sleep(1000)
+                            Thread.sleep(700)
                         } catch (ex: InterruptedException) {
                             throw RuntimeException(ex)
                         }

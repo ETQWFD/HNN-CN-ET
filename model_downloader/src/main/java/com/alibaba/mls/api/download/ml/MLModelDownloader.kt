@@ -278,8 +278,43 @@ class MLModelDownloader(override var callback: ModelRepoDownloadCallback?,
                 }
             }
         try {
-            for (fileDownloadTask in downloadTaskList) {
-                modelDownloader.downloadFile(fileDownloadTask, fileDownloadListener)
+            // HNN CN ET v1.2.4: parallel downloads with the main model file first.
+            // Before this, files downloaded strictly serially — on a phone with a
+            // slow connection a repo with several files took ages and often stalled.
+            // Now up to 4 files download concurrently and llm.mnn/model.mnn/*.gguf
+            // (the actual usable model) are queued before tokenizer/config sidecars.
+            val ordered = downloadTaskList.sortedWith(
+                compareByDescending<FileDownloadTask> { task ->
+                    val p = task.relativePath.orEmpty().lowercase()
+                    when {
+                        p.endsWith(".gguf") || p.endsWith(".mnn") ||
+                            p.endsWith(".safetensors") || p.endsWith(".bin") -> 2
+                        p.contains("tokenizer") || p.contains("config") || p.contains("vocab") -> 1
+                        else -> 0
+                    }
+                }.thenByDescending { it.fileMetadata?.size ?: 0L }
+            )
+            val executor = java.util.concurrent.Executors.newFixedThreadPool(4)
+            try {
+                val futures = ordered.map { task ->
+                    executor.submit {
+                        try {
+                            // Fresh downloader per file: ModelFileDownloader is
+                            // internally synchronized, so sharing one instance would
+                            // serialize the parallel downloads again.
+                            ModelFileDownloader().downloadFile(task, fileDownloadListener)
+                            null as Throwable?
+                        } catch (t: Throwable) {
+                            t
+                        }
+                    }
+                }
+                for (f in futures) {
+                    val err: Throwable? = f.get() as Throwable?
+                    if (err != null) throw err
+                }
+            } finally {
+                executor.shutdown()
             }
         } catch (e: DownloadPausedException) {
             pausedSet.remove(modelId)
