@@ -43,12 +43,19 @@ object LocalModelsProvider {
         dir.listFiles()?.forEach { modelDir ->
             if (!modelDir.isDirectory) return@forEach
             if (modelDir.name.startsWith("blobs")) return@forEach
-            val hasModelFile = modelDir.listFiles()?.any { f ->
+            val children = modelDir.listFiles() ?: return@forEach
+            // HNN CN ET v1.2.6: downloaded MNN repos keep weights as unnamed blobs
+            // under <repo>/blobs/ (plus pointer files) — a plain *.mnn scan missed
+            // every downloaded model. Also accept a non-empty blobs/ subfolder.
+            val hasBlobs = children.any { f ->
+                f.isDirectory && f.name == "blobs" && (f.listFiles()?.isNotEmpty() == true)
+            }
+            val hasModelFile = children.any { f ->
                 val n = f.name.lowercase()
                 !f.isDirectory && (n.endsWith(".mnn") || n.endsWith(".gguf") ||
                     n.endsWith(".safetensors") || n == "config.json")
-            } ?: false
-            if (hasModelFile) {
+            }
+            if (hasBlobs || hasModelFile) {
                 val modelPath = modelDir.absolutePath
                 val modelId = "local/${modelPath}"
                 out.add(ModelItem.fromLocalModel(modelId, modelPath))

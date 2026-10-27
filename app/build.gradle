@@ -70,8 +70,8 @@ android {
         // HNN CN ET v1.2.1: support Android 5 (API 21) up to Android 16 (API 36).
         minSdk 21
         targetSdk 36
-        versionCode 10025
-        versionName "1.2.5"
+        versionCode 10026
+        versionName "1.2.6"
         buildConfigField "boolean", "ENABLE_FIREBASE", enableFirebase ? "true" : "false"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -122,10 +122,17 @@ android {
     }
 
     productFlavors {
+        // HNN CN ET v1.2.6 edition matrix (phone):
+        //   standard   = 新手机·聊天版（全功能）
+        //   fullserver = 新手机·服务版（点模型→加载→自动启用调用服务）
+        //   lite       = 老手机·聊天版（去 MCP/API 设置 + 内存预检防闪退）
+        //   liteserver = 老手机·服务版（精简 + 内存预检 + 自动调用服务）
+        // Each non-standard flavor uses its own applicationId so all editions can
+        // be installed side by side on one device.
         standard {
             dimension "store"
+            applicationIdSuffix ""
             buildConfigField "boolean", "IS_GOOGLE_PLAY_BUILD", "false"
-            // HNN CN ET v1.2.5: edition flags. full (standard) keeps everything.
             buildConfigField "boolean", "ENABLE_API_SETTINGS", "true"
             buildConfigField "boolean", "SERVER_MODE", "false"
             buildConfigField "boolean", "LITE_MODE", "false"
@@ -138,28 +145,35 @@ android {
             buildConfigField "boolean", "LITE_MODE", "false"
             versionNameSuffix ".gp"
         }
-        // HNN CN ET v1.2.5: lite edition for old 2 GB RAM phones — no MCP / no API
-        // settings entry; clicking a downloaded model loads it and starts the API
-        // service directly (server panel, keep-screen-on), with a memory guard.
-        lite {
+        fullserver {
             dimension "store"
-            buildConfigField "boolean", "IS_GOOGLE_PLAY_BUILD", "false"
-            buildConfigField "boolean", "ENABLE_API_SETTINGS", "false"
-            buildConfigField "boolean", "SERVER_MODE", "true"
-            buildConfigField "boolean", "LITE_MODE", "true"
-            versionNameSuffix ".lite"
-            versionCode 100251
-        }
-        // HNN CN ET v1.2.5: server edition — dedicated always-on API server build.
-        // No MCP / API settings entry, model loads straight into the service panel.
-        server {
-            dimension "store"
+            applicationIdSuffix ".fullserver"
             buildConfigField "boolean", "IS_GOOGLE_PLAY_BUILD", "false"
             buildConfigField "boolean", "ENABLE_API_SETTINGS", "false"
             buildConfigField "boolean", "SERVER_MODE", "true"
             buildConfigField "boolean", "LITE_MODE", "false"
-            versionNameSuffix ".server"
-            versionCode 100252
+            versionNameSuffix ".fullserver"
+            versionCode 100260
+        }
+        lite {
+            dimension "store"
+            applicationIdSuffix ".lite"
+            buildConfigField "boolean", "IS_GOOGLE_PLAY_BUILD", "false"
+            buildConfigField "boolean", "ENABLE_API_SETTINGS", "false"
+            buildConfigField "boolean", "SERVER_MODE", "false"
+            buildConfigField "boolean", "LITE_MODE", "true"
+            versionNameSuffix ".lite"
+            versionCode 100261
+        }
+        liteserver {
+            dimension "store"
+            applicationIdSuffix ".liteserver"
+            buildConfigField "boolean", "IS_GOOGLE_PLAY_BUILD", "false"
+            buildConfigField "boolean", "ENABLE_API_SETTINGS", "false"
+            buildConfigField "boolean", "SERVER_MODE", "true"
+            buildConfigField "boolean", "LITE_MODE", "true"
+            versionNameSuffix ".liteserver"
+            versionCode 100262
         }
     }
 

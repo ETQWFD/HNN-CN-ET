@@ -45,13 +45,20 @@ class MainFragmentManager(
         if (savedInstanceState == null) {
             modelListFragment = ModelListFragment()
             modelMarketFragment = ModelMarketFragment()
-            benchmarkFragment = BenchmarkFragment()
+            // HNN CN ET v1.2.6: server/lite editions never create the benchmark
+            // fragment at all — saves RAM and startup time on old devices.
+            val withBenchmark = !com.alibaba.mnnllm.android.BuildConfig.SERVER_MODE
+            if (withBenchmark) {
+                benchmarkFragment = BenchmarkFragment()
+            }
 
-            activity.supportFragmentManager.beginTransaction()
-                .add(containerId, benchmarkFragment!!, TAG_BENCHMARK).hide(benchmarkFragment!!)
+            val tx = activity.supportFragmentManager.beginTransaction()
                 .add(containerId, modelMarketFragment!!, TAG_MARKET).hide(modelMarketFragment!!)
                 .add(containerId, modelListFragment!!, TAG_LIST) //Default display
-                .commit()
+            if (withBenchmark) {
+                tx.add(containerId, benchmarkFragment!!, TAG_BENCHMARK).hide(benchmarkFragment!!)
+            }
+            tx.commit()
 
             activeFragment = modelListFragment
         } else {

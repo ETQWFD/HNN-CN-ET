@@ -75,6 +75,12 @@ class MainSettingsFragment : Fragment() {
             view.findViewById<View>(R.id.header_api_settings)?.visibility = View.GONE
             view.findViewById<View>(R.id.api_settings_card)?.visibility = View.GONE
             view.findViewById<View>(R.id.item_agent_mode)?.visibility = View.GONE
+            // HNN CN ET v1.2.6: server/lite editions strip cosmetic settings too
+            // (theme mode / theme color / wallpaper) — less clutter, less RAM.
+            view.findViewById<View>(R.id.row_theme_mode)?.visibility = View.GONE
+            view.findViewById<View>(R.id.row_theme_color)?.visibility = View.GONE
+            view.findViewById<View>(R.id.row_wallpaper)?.visibility = View.GONE
+            view.findViewById<View>(R.id.btn_debug_mode)?.visibility = View.GONE
         }
         setupSettings()
     }

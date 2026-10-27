@@ -45,6 +45,15 @@ class BottomTabBar @JvmOverloads constructor(
         select(Tab.LOCAL_MODELS)
     }
 
+    // HNN CN ET v1.2.6: server/lite editions hide the benchmark tab — fewer
+    // flashy features, less RAM pressure, no leftover "benchmark running" state.
+    fun setBenchmarkVisible(visible: Boolean) {
+        tabBenchmark.visibility = if (visible) View.VISIBLE else View.GONE
+        if (!visible && getSelectedTab() == Tab.BENCHMARK) {
+            select(Tab.LOCAL_MODELS)
+        }
+    }
+
     fun setOnTabSelectedListener(block: (Tab) -> Unit) {
         listener = block
     }

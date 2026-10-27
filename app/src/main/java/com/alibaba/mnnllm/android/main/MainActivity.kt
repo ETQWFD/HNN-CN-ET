@@ -422,6 +422,11 @@ class MainActivity : AppCompatActivity(), MainFragmentManager.FragmentLifecycleL
         // HNN CN ET v1.0.2: show each new announcement once at startup
         AnnouncementManager.checkAndShow(this)
         mainFragmentManager = MainFragmentManager(this, R.id.main_fragment_container, bottomNav, this, this)
+        // HNN CN ET v1.2.6: server/lite editions drop the benchmark tab entirely
+        // (fewer flashy features, less RAM, no leftover benchmark state).
+        if (com.alibaba.mnnllm.android.BuildConfig.SERVER_MODE) {
+            bottomNav.setBenchmarkVisible(false)
+        }
         mainFragmentManager.initialize(savedInstanceState)
         bottomNav.post { setDrawerEnabled(bottomNav.getSelectedTab() != BottomTabBar.Tab.BENCHMARK) }
         // History fragment is lazy-loaded when drawer is opened via DrawerListener

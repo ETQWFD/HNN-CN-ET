@@ -127,6 +127,26 @@ object ChatRouter {
 
     fun startRun(context: Context, modelIdParam: String, destModelDir:String?, sessionId: String?) {
         Log.d(TAG, "startRun modelIdParam: $modelIdParam destModelDir: $destModelDir sessionId: $sessionId")
+        // HNN CN ET v1.2.6: lite edition memory guard — refuse to load a model
+        // when free RAM is too low instead of crashing mid-load on 2 GB phones.
+        if (com.alibaba.mnnllm.android.BuildConfig.LITE_MODE) {
+            try {
+                val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                val mi = android.app.ActivityManager.MemoryInfo()
+                am.getMemoryInfo(mi)
+                val availMB = mi.availMem / (1024 * 1024)
+                if (availMB < 350) {
+                    Toast.makeText(
+                        context,
+                        "内存不足（可用 ${availMB}MB < 350MB），已停止加载。请关闭后台应用后重试，或换用更小的模型。",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "memory guard failed, proceeding", t)
+            }
+        }
         val isDiffusion = ModelTypeUtils.isDiffusionModel(modelIdParam)
         var modelId:String? = modelIdParam
         val downloadManager = ModelDownloadManager.getInstance(context)

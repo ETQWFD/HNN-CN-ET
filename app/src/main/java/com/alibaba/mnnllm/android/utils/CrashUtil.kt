@@ -58,7 +58,35 @@ object CrashUtil : Thread.UncaughtExceptionHandler {
     }
 
     override fun uncaughtException(thread: Thread, ex: Throwable) {
-        saveJavaCrash(thread, ex)
+        try {
+            saveJavaCrash(thread, ex)
+        } catch (t: Throwable) {
+            Log.w(TAG, "failed to save crash log", t)
+        }
+        // HNN CN ET v1.2.6: on old 2 GB devices an instant kill looks like "闪退".
+        // Instead, restart the app gently so it never just disappears.
+        try {
+            val intent = context.packageManager
+                .getLaunchIntentForPackage(context.packageName)
+            if (intent != null) {
+                intent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+                )
+                val handler = android.os.Handler(android.os.Looper.getMainLooper())
+                handler.postDelayed({
+                    try {
+                        context.startActivity(intent)
+                    } catch (t: Throwable) {
+                        defaultHandler?.uncaughtException(thread, ex)
+                    }
+                }, 400)
+                return
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "gentle restart failed", t)
+        }
         defaultHandler?.uncaughtException(thread, ex) ?: run {
             Process.killProcess(Process.myPid())
             exitProcess(10)
