@@ -183,7 +183,7 @@ object ModelListManager {
 
         fun toWrapper(context: Context): ModelItemWrapper? {
             val modelItem = if (isLocal) {
-                val localItem = LocalModelsProvider.getLocalModels().find { it.modelId == modelId }
+                val localItem = LocalModelsProvider.getLocalModels(context).find { it.modelId == modelId }
                 if (localItem != null) {
                     if (!tags.isNullOrEmpty()) {
                         localItem.tags = tags
@@ -733,7 +733,7 @@ object ModelListManager {
             val pinnedModels = PreferenceUtils.getPinnedModels(context)
 
              // Add local models from LocalModelsProvider
-             val localModels = LocalModelsProvider.getLocalModels()
+             val localModels = LocalModelsProvider.getLocalModels(context)
              localModels.forEach { localModel ->
                  if (localModel.modelId != null && localModel.localPath != null) {
                      try {

@@ -66,6 +66,16 @@ class MainSettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        // HNN CN ET v1.2.5: lite/server editions hide the MCP and API-settings
+        // entries (and the agent entry) — their models serve through the built-in
+        // service panel instead, saving RAM and avoiding confusion on 2 GB phones.
+        if (!com.alibaba.mnnllm.android.BuildConfig.ENABLE_API_SETTINGS) {
+            view.findViewById<View>(R.id.row_mcp_header)?.visibility = View.GONE
+            view.findViewById<View>(R.id.panel_mcp_servers)?.visibility = View.GONE
+            view.findViewById<View>(R.id.header_api_settings)?.visibility = View.GONE
+            view.findViewById<View>(R.id.api_settings_card)?.visibility = View.GONE
+            view.findViewById<View>(R.id.item_agent_mode)?.visibility = View.GONE
+        }
         setupSettings()
     }
 

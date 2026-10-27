@@ -70,8 +70,8 @@ android {
         // HNN CN ET v1.2.1: support Android 5 (API 21) up to Android 16 (API 36).
         minSdk 21
         targetSdk 36
-        versionCode 10024
-        versionName "1.2.4"
+        versionCode 10025
+        versionName "1.2.5"
         buildConfigField "boolean", "ENABLE_FIREBASE", enableFirebase ? "true" : "false"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -125,11 +125,41 @@ android {
         standard {
             dimension "store"
             buildConfigField "boolean", "IS_GOOGLE_PLAY_BUILD", "false"
+            // HNN CN ET v1.2.5: edition flags. full (standard) keeps everything.
+            buildConfigField "boolean", "ENABLE_API_SETTINGS", "true"
+            buildConfigField "boolean", "SERVER_MODE", "false"
+            buildConfigField "boolean", "LITE_MODE", "false"
         }
         googleplay {
             dimension "store"
             buildConfigField "boolean", "IS_GOOGLE_PLAY_BUILD", "true"
+            buildConfigField "boolean", "ENABLE_API_SETTINGS", "true"
+            buildConfigField "boolean", "SERVER_MODE", "false"
+            buildConfigField "boolean", "LITE_MODE", "false"
             versionNameSuffix ".gp"
+        }
+        // HNN CN ET v1.2.5: lite edition for old 2 GB RAM phones — no MCP / no API
+        // settings entry; clicking a downloaded model loads it and starts the API
+        // service directly (server panel, keep-screen-on), with a memory guard.
+        lite {
+            dimension "store"
+            buildConfigField "boolean", "IS_GOOGLE_PLAY_BUILD", "false"
+            buildConfigField "boolean", "ENABLE_API_SETTINGS", "false"
+            buildConfigField "boolean", "SERVER_MODE", "true"
+            buildConfigField "boolean", "LITE_MODE", "true"
+            versionNameSuffix ".lite"
+            versionCode 100251
+        }
+        // HNN CN ET v1.2.5: server edition — dedicated always-on API server build.
+        // No MCP / API settings entry, model loads straight into the service panel.
+        server {
+            dimension "store"
+            buildConfigField "boolean", "IS_GOOGLE_PLAY_BUILD", "false"
+            buildConfigField "boolean", "ENABLE_API_SETTINGS", "false"
+            buildConfigField "boolean", "SERVER_MODE", "true"
+            buildConfigField "boolean", "LITE_MODE", "false"
+            versionNameSuffix ".server"
+            versionCode 100252
         }
     }
 

@@ -87,6 +87,10 @@
         </activity>
 
         <activity
+            android:name=".mainsettings.ModelServerActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".mainsettings.MainSettingsActivity"
             android:configChanges="orientation|screenSize"
             android:exported="true"

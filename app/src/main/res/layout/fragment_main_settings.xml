@@ -274,10 +274,12 @@
 
         <!-- API Settings Section -->
         <TextView
+            android:id="@+id/header_api_settings"
             style="@style/SettingsSectionHeader"
             android:text="@string/api_settings" />
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/api_settings_card"
             style="@style/SettingsSectionGroup"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

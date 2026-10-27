@@ -662,6 +662,18 @@ class BenchmarkFragment : Fragment(), BenchmarkContract.View {
 
     override fun onDestroy() {
         super.onDestroy()
+        // HNN CN ET v1.2.5: make sure leaving the benchmark page stops the benchmark
+        // service. A lingering run used to keep "基准测试期间无法更改模型" popping up
+        // and blocked switching to downloaded models afterwards.
+        try {
+            val svc = com.alibaba.mnnllm.android.benchmark.BenchmarkService.getInstance()
+            if (svc.isBenchmarkRunning()) {
+                svc.stopBenchmark()
+                com.alibaba.mnnllm.android.benchmark.MemoryMonitor.stop()
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "failed to stop benchmark on destroy", t)
+        }
         presenter?.onDestroy()
     }
 

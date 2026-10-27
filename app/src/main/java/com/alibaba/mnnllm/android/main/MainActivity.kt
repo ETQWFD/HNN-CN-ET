@@ -610,6 +610,15 @@ class MainActivity : AppCompatActivity(), MainFragmentManager.FragmentLifecycleL
     }
 
     fun runModel(destModelDir: String?, modelIdParam: String?, sessionId: String?) {
+        // HNN CN ET v1.2.5: lite/server editions open the server panel instead of
+        // the chat screen — the model loads and the API service starts directly.
+        if (com.alibaba.mnnllm.android.BuildConfig.SERVER_MODE) {
+            val intent = android.content.Intent(this, com.alibaba.mnnllm.android.mainsettings.ModelServerActivity::class.java)
+            intent.putExtra("model_id", modelIdParam)
+            startActivity(intent)
+            drawerLayout.closeDrawer(GravityCompat.START)
+            return
+        }
         ChatRouter.startRun(this, modelIdParam!!, destModelDir, sessionId)
         drawerLayout.closeDrawer(GravityCompat.START)
     }
