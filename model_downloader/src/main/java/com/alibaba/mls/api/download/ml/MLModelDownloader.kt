@@ -34,6 +34,12 @@ class MLModelDownloader(override var callback: ModelRepoDownloadCallback?,
     companion object  {
         private const val TAG = "MLModelDownloader"
 
+        // HNN CN ET v1.2.7: set by ModelDownloadManager at startup; the lite
+        // editions run a smaller download pool (2 threads) to stay calm on
+        // 2 GB devices.
+        @JvmStatic
+        var liteMode: Boolean = false
+
         fun getCachePathRoot(modelDownloadPathRoot:String): String {
             return "$modelDownloadPathRoot/modelers"
         }
@@ -96,6 +102,22 @@ class MLModelDownloader(override var callback: ModelRepoDownloadCallback?,
     /** HNN CN ET v1.2.3: raw GET against the official ModelScope repo-files API and
      *  parse into our FileInfo list (etag = Sha256, used as blob key). */
     private fun fetchModelScopeFiles(owner: String, repo: String): List<FileInfo> {
+        // HNN CN ET v1.2.7: retry 3x with a short backoff — flaky mobile networks
+        // used to fail the repo-info fetch immediately ("下载失败").
+        var lastError: Throwable? = null
+        for (attempt in 0 until 3) {
+            try {
+                return fetchModelScopeFilesOnce(owner, repo)
+            } catch (t: Throwable) {
+                lastError = t
+                Log.w(TAG, "fetchModelScopeFiles attempt $attempt failed: ${t.message}")
+                try { Thread.sleep(attempt * 1000L) } catch (e: InterruptedException) { break }
+            }
+        }
+        throw lastError ?: FileDownloadException("ModelScope API fetch failed")
+    }
+
+    private fun fetchModelScopeFilesOnce(owner: String, repo: String): List<FileInfo> {
         val url = "https://modelscope.cn/api/v1/models/$owner/$repo/repo/files?Recursive=1"
         val client = okhttp3.OkHttpClient.Builder()
             .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
@@ -294,7 +316,8 @@ class MLModelDownloader(override var callback: ModelRepoDownloadCallback?,
                     }
                 }.thenByDescending { it.fileMetadata?.size ?: 0L }
             )
-            val executor = java.util.concurrent.Executors.newFixedThreadPool(4)
+            val threads = if (liteMode) 2 else 4
+            val executor = java.util.concurrent.Executors.newFixedThreadPool(threads)
             try {
                 val futures = ordered.map { task ->
                     executor.submit {

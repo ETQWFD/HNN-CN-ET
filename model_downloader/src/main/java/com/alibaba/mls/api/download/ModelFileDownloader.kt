@@ -106,6 +106,26 @@ class ModelFileDownloader {
             "downloadToTmpAndMove urlToDownload: $theUrlToDownload to file: $incompletePath to destination: $destinationPath"
         )
         val maxRetry = 5
+        // HNN CN ET v1.2.7: on repeated failures fall back to the ModelScope
+        // web direct-link (…/resolve/master/…) — the repo API is a 302 to the CDN,
+        // and on some networks the redirect chain breaks while the direct link works.
+        val fallbackUrl: String? = runCatching {
+            val apiKey = "modelscope.cn/api/v1/models/"
+            val fi = urlToDownload.indexOf(apiKey)
+            if (fi < 0) return@runCatching null
+            val rest = urlToDownload.substring(fi + apiKey.length)
+            val qm = rest.indexOf('?')
+            if (qm < 0) return@runCatching null
+            val segs = rest.substring(0, qm).split("/")
+            if (segs.size < 2) return@runCatching null
+            val modelId = if (segs.last() == "repo") segs.subList(0, segs.size - 1).joinToString("/") else segs.joinToString("/")
+            val fpKey = "FilePath="
+            val fpi = rest.indexOf(fpKey, qm)
+            if (fpi < 0) return@runCatching null
+            val pathEnc = rest.substring(fpi + fpKey.length)
+            val path = java.net.URLDecoder.decode(pathEnc, "UTF-8")
+            "https://modelscope.cn/models/${modelId}/resolve/master/${path}"
+        }.getOrNull()
         if (fileDownloadTask.downloadedSize < expectedSize) {
             for (i in 0 until maxRetry) {
                 try {
@@ -133,6 +153,14 @@ class ModelFileDownloader {
                 } catch (e: DownloadPausedException) {
                     throw e
                 } catch (e: Exception) {
+                    // HNN CN ET v1.2.7: switch to the direct CDN link once the
+                    // repo API has failed a couple of times.
+                    if (i >= 2 && fallbackUrl != null && theUrlToDownload != fallbackUrl) {
+                        Log.w(TAG, "switching to direct CDN fallback link")
+                        theUrlToDownload = fallbackUrl
+                        fileDownloadTask.downloadedSize = 0
+                        incompletePath.delete()
+                    }
                     if (i == maxRetry - 1) {
                         throw e
                     } else {

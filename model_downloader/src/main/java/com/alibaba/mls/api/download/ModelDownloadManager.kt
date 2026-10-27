@@ -35,6 +35,12 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
     init {
         hfDownloader = HfModelDownloader(this, cacheDir)
         msDownloader = MsModelDownloader(this, cacheDir)
+        // HNN CN ET v1.2.7: lite editions download with a smaller pool.
+        try {
+            com.alibaba.mls.api.download.ml.MLModelDownloader.liteMode = isLiteMode()
+        } catch (t: Throwable) {
+            Log.w("ModelDownloadManager", "liteMode init failed: ${t.message}")
+        }
     }
     
     // Cache for download info to support progress and pause states
@@ -61,6 +67,15 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
     }
     
     fun modelRoot(): String = cacheDir
+
+    /** HNN CN ET v1.2.7: model_downloader is a standalone module without the app
+     *  BuildConfig — read the lite flag from the host app's BuildConfig via reflection. */
+    fun isLiteMode(): Boolean {
+        return runCatching {
+            val cls = Class.forName(appContext.packageName + ".BuildConfig")
+            cls.getField("LITE_MODE").getBoolean(null)
+        }.getOrDefault(false)
+    }
 
     private fun formatSize(bytes: Long): String {
         val mb = bytes / (1024.0 * 1024.0)
@@ -128,6 +143,26 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
     }
 
     private fun startDownloadInner(modelId: String) {
+        // HNN CN ET v1.2.7: on 2 GB devices the system often kills the process
+        // right after tapping download (low-memory killer, looks like an instant
+        // crash). Refuse politely when free RAM is very low instead of dying.
+        try {
+            if (isLiteMode()) {
+                val am = appContext.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                val mi = android.app.ActivityManager.MemoryInfo()
+                am.getMemoryInfo(mi)
+                val availMB = mi.availMem / (1024 * 1024)
+                if (availMB < 200) {
+                    val e = com.alibaba.mls.api.FileDownloadException(
+                        "内存不足（可用 ${availMB}MB < 200MB），系统可能自动关闭应用。请关闭后台应用后重试下载。"
+                    )
+                    downloadListeners.forEach { it.onDownloadFailed(modelId, e) }
+                    return
+                }
+            }
+        } catch (t: Throwable) {
+            Log.w("ModelDownloadManager", "low-memory guard skipped: ${t.message}")
+        }
         // HNN CN ET v1.1.3: models download into public /storage/emulated/0/hnn —
         // require the external storage permission before starting any transfer.
         if (!hasExternalStoragePermission()) {
