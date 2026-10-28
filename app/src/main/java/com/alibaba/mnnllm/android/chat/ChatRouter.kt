@@ -135,13 +135,12 @@ object ChatRouter {
                 val mi = android.app.ActivityManager.MemoryInfo()
                 am.getMemoryInfo(mi)
                 val availMB = mi.availMem / (1024 * 1024)
-                if (availMB < 350) {
+                if (availMB < 150) {
                     Toast.makeText(
                         context,
-                        "内存不足（可用 ${availMB}MB < 350MB），已停止加载。请关闭后台应用后重试，或换用更小的模型。",
+                        "内存很低（可用 ${availMB}MB），请关闭后台应用，正在尝试加载…",
                         Toast.LENGTH_LONG
                     ).show()
-                    return
                 }
             } catch (t: Throwable) {
                 Log.w(TAG, "memory guard failed, proceeding", t)

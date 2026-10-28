@@ -6,6 +6,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Looper
 import android.os.Process
 import android.util.Log
 import androidx.core.content.FileProvider
@@ -62,6 +63,13 @@ object CrashUtil : Thread.UncaughtExceptionHandler {
             saveJavaCrash(thread, ex)
         } catch (t: Throwable) {
             Log.w(TAG, "failed to save crash log", t)
+        }
+        // HNN CN ET v1.2.8: only restart when the MAIN thread crashed. Background
+        // (IO/download) exceptions must NOT restart the app — that looked like
+        // "tap download -> app resets". Let the download callback surface the error.
+        if (thread.name != "main" && Looper.getMainLooper().thread !== thread) {
+            Log.w(TAG, "background thread crash, keeping app alive: " + ex.message)
+            return
         }
         // HNN CN ET v1.2.6: on old 2 GB devices an instant kill looks like "闪退".
         // Instead, restart the app gently so it never just disappears.

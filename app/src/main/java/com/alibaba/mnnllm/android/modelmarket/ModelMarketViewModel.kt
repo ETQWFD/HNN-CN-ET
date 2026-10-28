@@ -397,6 +397,18 @@ class ModelMarketViewModel(application: Application) : AndroidViewModel(applicat
 
     override fun onDownloadFinished(modelId: String, path: String) {
         recordDiffusionModelTypeIfNeeded(modelId, path)
+        // HNN CN ET v1.2.8: the "我的模型" tab never learned about finished
+        // downloads, so freshly downloaded models never appeared there.
+        // Notify the model-list manager to refresh.
+        Log.d(TAG, "[onDownloadFinished] modelId=$modelId path=$path")
+        try {
+            viewModelScope.launch {
+                com.alibaba.mnnllm.android.modelist.ModelListManager
+                    .notifyModelListMayChange(com.alibaba.mnnllm.android.modelist.ModelListManager.ChangeReason.MODEL_DOWNLOADED)
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "notify after download failed", t)
+        }
         mainHandler.post {
             allModels.find { it.modelMarketItem.modelId == modelId }?.let {
                 updateDownloadInfo(modelId, downloadManager.getDownloadInfo(it.modelMarketItem.modelId))

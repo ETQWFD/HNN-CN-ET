@@ -70,8 +70,8 @@ android {
         // HNN CN ET v1.2.1: support Android 5 (API 21) up to Android 16 (API 36).
         minSdk 21
         targetSdk 36
-        versionCode 10027
-        versionName "1.2.7"
+        versionCode 10028
+        versionName "1.2.8"
         buildConfigField "boolean", "ENABLE_FIREBASE", enableFirebase ? "true" : "false"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
@@ -153,7 +153,7 @@ android {
             buildConfigField "boolean", "SERVER_MODE", "true"
             buildConfigField "boolean", "LITE_MODE", "false"
             versionNameSuffix ".fullserver"
-            versionCode 100270
+            versionCode 100280
         }
         lite {
             dimension "store"
@@ -163,7 +163,7 @@ android {
             buildConfigField "boolean", "SERVER_MODE", "false"
             buildConfigField "boolean", "LITE_MODE", "true"
             versionNameSuffix ".lite"
-            versionCode 100271
+            versionCode 100281
         }
         liteserver {
             dimension "store"
@@ -173,7 +173,7 @@ android {
             buildConfigField "boolean", "SERVER_MODE", "true"
             buildConfigField "boolean", "LITE_MODE", "true"
             versionNameSuffix ".liteserver"
-            versionCode 100272
+            versionCode 100282
         }
     }
 

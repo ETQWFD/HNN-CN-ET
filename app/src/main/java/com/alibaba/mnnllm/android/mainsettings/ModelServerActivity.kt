@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.WindowManager
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.alibaba.mnnllm.android.BuildConfig
@@ -87,8 +88,9 @@ class ModelServerActivity : AppCompatActivity() {
             val mi = ActivityManager.MemoryInfo()
             am.getMemoryInfo(mi)
             val availMB = mi.availMem / (1024 * 1024)
-            // Require at least ~350 MB free before loading a model on lite devices.
-            availMB >= 350
+            // HNN CN ET v1.2.8: 350 MB was blocking 2 GB phones (they often have
+            // 200-400 MB free) so the server never started. 150 MB is safe.
+            availMB >= 150
         }.getOrDefault(true)
     }
 
@@ -102,6 +104,7 @@ class ModelServerActivity : AppCompatActivity() {
 
     private fun showServerInfo(modelId: String?) {
         binding.panelServerInfo.visibility = View.VISIBLE
+        wireCopyButtons()
         binding.tvModelName.text = modelId ?: "unknown"
         val port = ApiServerConfig.getPort(this)
         val ip = getLocalIpAddress()
@@ -129,6 +132,31 @@ class ModelServerActivity : AppCompatActivity() {
             }
             ""
         }.getOrDefault("")
+    }
+
+    private fun copyToClipboard(label: String, value: String) {
+        runCatching {
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText(label, value))
+            Toast.makeText(this, "已复制$label：$value", Toast.LENGTH_SHORT).show()
+        }.onFailure { t ->
+            Log.w("ModelServerActivity", "copy failed", t)
+        }
+    }
+
+    private fun wireCopyButtons() {
+        binding.tvModelName.setOnClickListener {
+            copyToClipboard("模型名称", binding.tvModelName.text?.toString().orEmpty())
+        }
+        binding.tvEndpoint.setOnClickListener {
+            copyToClipboard("调用地址", binding.tvEndpoint.text?.toString().orEmpty())
+        }
+        binding.tvApiKey.setOnClickListener {
+            copyToClipboard("API密钥", binding.tvApiKey.text?.toString().orEmpty())
+        }
+        binding.tvHint.setOnClickListener {
+            copyToClipboard("完整调用地址", binding.tvHint.text?.toString().orEmpty())
+        }
     }
 
     private fun stopServer() {

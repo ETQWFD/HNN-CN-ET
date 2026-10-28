@@ -152,9 +152,9 @@ class ModelDownloadManager(context: Context) : ModelRepoDownloader.ModelRepoDown
                 val mi = android.app.ActivityManager.MemoryInfo()
                 am.getMemoryInfo(mi)
                 val availMB = mi.availMem / (1024 * 1024)
-                if (availMB < 200) {
+                if (availMB < 120) {
                     val e = com.alibaba.mls.api.FileDownloadException(
-                        "内存不足（可用 ${availMB}MB < 200MB），系统可能自动关闭应用。请关闭后台应用后重试下载。"
+                        "内存不足（可用 ${availMB}MB < 120MB），系统可能自动关闭应用。请关闭后台应用后重试下载。"
                     )
                     downloadListeners.forEach { it.onDownloadFailed(modelId, e) }
                     return

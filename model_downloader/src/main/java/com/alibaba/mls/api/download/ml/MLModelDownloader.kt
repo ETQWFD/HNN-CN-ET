@@ -237,6 +237,13 @@ class MLModelDownloader(override var callback: ModelRepoDownloadCallback?,
         } catch (e: FileDownloadException) {
             callback?.onDownloadFailed(modelId, e)
             return null
+        } catch (t: Throwable) {
+            // HNN CN ET v1.2.8: flaky mobile networks throw IOException /
+            // JSON exceptions here that are NOT FileDownloadException — they used
+            // to escape the coroutine and crash the app ("tap download -> restart").
+            Log.e(TAG, "downloadRepo failed: " + t.message, t)
+            callback?.onDownloadFailed(modelId, com.alibaba.mls.api.FileDownloadException("下载失败: " + (t.message ?: t.javaClass.simpleName)))
+            return null
         }
     }
 
