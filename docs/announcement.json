@@ -1,7 +1,7 @@
 {
   "id": "2026-10-25-v117",
   "tag": "公告",
-  "title": "v1.3.1 服务端更新：Windows exe（版权ET）+ Linux 专用可执行 + 纯 MNN 手机同款",
-  "content": "服务端去 GGUF：ModelScope 官方 API 下载全部 MNN 模型（与手机版完全一致），MNN 本机推理实测正常。Windows 为 C 语言启动器绿色版（右键属性版权 ET），Linux 为专用可执行文件。菜单 1首页/2市场/3远程模式/0退出，支持 frpc 穿透。",
+  "title": "v1.3.2 服务端：模型真名显示 + etc 密钥 + 预热加速 + frpc 自动接入",
+  "content": "服务端升级：模型显示真实名称（不再 llm.mnn）；密钥自动生成 etc- 开头且鉴权默认开启；启动自动预热响应更快；自动检测 frpc.toml 并自动接入穿透。",
   "publishedAt": "2026-10-25T09:20:00+08:00"
 }
