@@ -83,6 +83,15 @@ object ApiServerConfig {
         return getPreferences(context).getBoolean(KEY_USE_HTTPS_URL, DEFAULT_USE_HTTPS_URL)
     }
 
+    // HNN CN ET v1.3.0: user-toggleable auth from the server panel.
+    fun setAuthEnabled(context: Context, on: Boolean) {
+        getPreferences(context).edit().putBoolean(KEY_AUTH_ENABLED, on).apply()
+    }
+
+    fun setApiKey(context: Context, key: String) {
+        getPreferences(context).edit().putString(KEY_API_KEY, key).apply()
+    }
+
     /**
      * getAPIkey*/
     fun getApiKey(context: Context): String {

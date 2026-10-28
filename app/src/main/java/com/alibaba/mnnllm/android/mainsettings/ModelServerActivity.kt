@@ -41,6 +41,12 @@ class ModelServerActivity : AppCompatActivity() {
 
         modelId = intent.getStringExtra("model_id")
         binding.btnStopServer.setOnClickListener { stopServer() }
+        if (intent.getStringExtra("action") == "stop") {
+            ApiServiceManager.stopApiService(this)
+            binding.tvStatus.text = getString(R.string.server_stopped)
+            finish()
+            return
+        }
 
         if (modelId.isNullOrBlank()) {
             binding.tvStatus.text = getString(R.string.model_not_found, "")
@@ -50,6 +56,9 @@ class ModelServerActivity : AppCompatActivity() {
 
         startLoading()
     }
+
+    // HNN CN ET v1.3.0: draggable floating ball while the service runs.
+    private val floatingBall by lazy { com.alibaba.mnnllm.android.utils.FloatingServiceBall(this) }
 
     private fun startLoading() {
         binding.progressLoading.visibility = View.VISIBLE
@@ -75,6 +84,7 @@ class ModelServerActivity : AppCompatActivity() {
                     binding.tvStatus.text = getString(R.string.server_running)
                     showServerInfo(resolved)
                     Toast.makeText(this, R.string.server_running_toast, Toast.LENGTH_LONG).show()
+                    runCatching { floatingBall.show() }
                 } else {
                     binding.tvStatus.text = getString(R.string.server_start_failed)
                 }
@@ -113,6 +123,17 @@ class ModelServerActivity : AppCompatActivity() {
         binding.tvAuth.text = getString(R.string.server_auth,
             if (ApiServerConfig.isAuthEnabled(this)) getString(R.string.server_auth_on)
             else getString(R.string.server_auth_off))
+        binding.switchAuth.isChecked = ApiServerConfig.isAuthEnabled(this)
+        binding.switchAuth.setOnCheckedChangeListener { _, isChecked ->
+            ApiServerConfig.setAuthEnabled(this, isChecked)
+            binding.tvAuth.text = getString(
+                if (isChecked) R.string.server_auth_on else R.string.server_auth_off
+            )
+            Toast.makeText(this,
+                if (isChecked) "密钥鉴权已开启，调用需带密钥"
+                else "密钥鉴权已关闭，其他AI可直接调用",
+                Toast.LENGTH_SHORT).show()
+        }
         binding.tvHint.text = getString(R.string.server_hint, "http://$ip:$port/v1/chat/completions")
     }
 
@@ -164,6 +185,7 @@ class ModelServerActivity : AppCompatActivity() {
         serverRunning = false
         binding.tvStatus.text = getString(R.string.server_stopped)
         binding.panelServerInfo.visibility = View.GONE
+        runCatching { floatingBall.hide() }
         Toast.makeText(this, R.string.server_stopped_toast, Toast.LENGTH_SHORT).show()
     }
 

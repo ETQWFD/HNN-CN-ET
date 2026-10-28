@@ -328,6 +328,18 @@ class ModelListFragment : Fragment(), ModelListContract.View, Searchable {
         super.onResume()
 
         restoreSearchStateIfNeeded()
+        // HNN CN ET v1.3.0: refresh whenever this tab becomes visible again —
+        // freshly downloaded models must always show up here.
+        refreshLocalModelsWhenVisible()
+    }
+
+    private fun refreshLocalModelsWhenVisible() {
+        if (!isAdded) return
+        try {
+            modelListPresenter?.refreshList()
+        } catch (t: Throwable) {
+            Log.w(TAG, "refresh on resume failed", t)
+        }
     }
     
     /**

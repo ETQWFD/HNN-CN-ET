@@ -143,6 +143,15 @@
                         android:layout_marginTop="2dp"
                         android:textColor="?android:attr/textColorPrimary"
                         android:textSize="15sp" />
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switch_auth"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/server_auth_toggle"
+                        android:textColor="?android:attr/textColorPrimary"
+                        android:textSize="14sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

@@ -822,6 +822,7 @@
     <string name="server_auth">%1$s</string>
     <string name="server_auth_on">已开启（调用需带密钥）</string>
     <string name="server_auth_off">未开启（局域网可直接调用）</string>
+    <string name="server_auth_toggle">密钥鉴权开关（关闭时其他AI可直接调用，无需密钥）</string>
     <string name="server_hint">OpenAI 兼容接口：%1$s 。其他 AI 工具 / 电脑 / 局域网设备可用上面的地址和密钥真实调用本机模型，服务在后台持续运行。</string>
     <string name="server_stop">停止服务</string>
 </resources>
