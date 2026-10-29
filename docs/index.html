@@ -109,6 +109,18 @@
     <h2 class="section-title">更新日志</h2>
     <div class="changelog">
       <div class="change">
+        <h3>v1.3.4-server <small>（2026-10-29）</small></h3>
+        <ul>
+          <li>模型名全面兼容：支持完整模型 ID、市场名、目录名、大小写变体、归一化名以及 llm.mnn 权重文件名，第三方客户端选哪个名都能命中同一模型；嵌套目录（modelscope / modelers / builtin）下载的模型在首页与 <code>GET /v1/models</code> 全部显示</li>
+          <li>新增菜单 6「鉴权模式」开关：开/关即时生效并持久化到 ~/.hnn/ai.conf；关闭后 API 无需密钥即可调用；服务横幅实时显示鉴权状态</li>
+          <li>密钥升级：etc- 前缀 + 16 位大写字母与数字混合随机密钥，不再是纯数字小写 hex</li>
+          <li>局域网默认直连：绑定 0.0.0.0 并在启动横幅同时显示 127.0.0.1 与本机局域网 IP；CORS 预检（OPTIONS）与跨域响应头齐全，其他设备/网页/第三方 OpenAI 客户端可直接拉取模型列表并对话；外网穿透为可选 frpc 方案，菜单 3 说明</li>
+          <li>菜单 4 更改端口持久化；补齐 OpenAI 兼容 <code>GET /v1/models</code>（兼容 /models），响应 model 字段回显实际加载模型名</li>
+          <li>三端提速：模型目录缓存、动态输出缓冲、会话复用，重复请求不再重复扫描与冷加载；安装包附带全部 C 源码（source/ 目录，MIT）</li>
+          <li>Termux 安装策略：32 位 arm 优先探测、跑不起来自动回退 64 位 aarch64；Windows DLL/EXE 版权署名统一为 ETC；覆盖 Termux arm64/armv7、Linux amd64、Windows 便携包与手机 APK 四版本</li>
+        </ul>
+      </div>
+      <div class="change">
         <h3>v1.2.1 <small>（2026-10-26）</small></h3>
         <ul>
           <li>根治「点击下载没反应」：下载启动全链路兜底，任何异常（已下载判断/路径/权限）都弹出真实失败原因，绝不静默</li>
@@ -301,7 +313,7 @@
 
 <footer class="footer">
   <div class="container">
-    <p>HNN CN ET · 基于 MNN · MIT License · © ET</p>
+    <p>HNN CN ET · 基于 MNN · MIT License · © ETC 2026</p>
     <p><a href="https://github.com/ETQWFD/HNN-CN-ET" target="_blank" rel="noopener">GitHub 仓库</a></p>
   </div>
 </footer>
@@ -310,15 +322,15 @@
 <h2 id="server">🖥️ 电脑 / 服务器 版</h2>
 <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;margin:10px 0">
 <p><b>电脑版 · 聊天（Windows 安装包）</b>：Setup-HNN-CN-ET-1.1.8.exe（ModelScope 直链下载 + 聊天 + 内置 API 服务，<a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/desktop-v1.1.8/Setup-HNN-CN-ET-1.1.8.exe" target="_blank">下载</a>）</p>
-<p><b>服务端 · Linux / Windows 便携包（终端版）</b>：<a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.3-server/HNN-CN-ET-Server-Linux.zip" target="_blank">Linux 下载</a> ｜ <a href="https://etqwfd.github.io/HNN-CN-ET/releases/download/v1.3.3-server/HNN-CN-ET-Server-Windows.zip" target="_blank">Windows 下载</a>（若上方打不开，改用 GitHub Release 页）<br>
-菜单：1=首页（已下载模型→输入名称回车→加载→给出 API 地址/密钥/模型名称→常驻运行）｜2=市场（与手机版完全一致的全部模型+大小→输入编号下载）｜3=远程模式（连手机服务版/穿透）｜4=更改端口｜0=退出。<br>
-ModelScope 官方 API 下载全部 MNN 模型（与手机版完全相同），MNN 本机推理（实测正常出中文无乱码）。支持 frpc 内网穿透后调用。</p>
+<p><b>服务端 · Linux / Windows 便携包（终端版）</b>：<a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/HNN-CN-ET-Server-Linux.zip" target="_blank">Linux 下载</a> ｜ <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/HNN-CN-ET-Server-Windows.zip" target="_blank">Windows 下载</a>（若上方打不开，改用 GitHub Release 页）<br>
+菜单：1=首页（递归列出全部已下载模型→输入名称/编号/llm.mnn 均可加载）｜2=市场（与手机版完全一致的全部模型+大小→输入编号下载）｜3=远程模式（连手机服务版/可选 frpc 内网穿透）｜4=更改端口（持久化）｜6=鉴权模式开关（开/关持久化，关闭后免密钥）｜0=退出。<br>
+OpenAI 兼容接口 <code>GET /v1/models</code> 拉取模型列表、<code>POST /v1/chat/completions</code> 对话；默认绑定 0.0.0.0 局域网直连，启动横幅显示本机局域网 IP，CORS 已开放；ModelScope 官方 API 下载全部 MNN 模型，本机推理实测中文无乱码；压缩包内置全部 C 源码。</p>
 </div>
 
 <h2 id="termux">📱 Termux 一键安装（pkg install ai，32/64 位，纯 C 编译非 Python）</h2>
 <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;margin:10px 0">
-<p>首次先添加 ET 软件源，之后直接 <code>pkg install ai</code> 按包名安装（64 位与 32 位自动匹配，无需手动下载 deb）：</p>
-<pre style="background:#161b22;padding:10px;border-radius:6px;overflow:auto"># 1. 添加 ET 自建软件源（只需执行一次）
+<p>首次先添加 ETC 软件源，之后直接 <code>pkg install ai</code> 按包名安装（64 位与 32 位自动匹配，无需手动下载 deb）：</p>
+<pre style="background:#161b22;padding:10px;border-radius:6px;overflow:auto"># 1. 添加 ETC 自建软件源（只需执行一次）
 echo "deb https://etqwfd.github.io/HNN-CN-ET/termux stable main" >> $PREFIX/etc/apt/sources.list.d/hnn.list
 pkg update
 
@@ -328,13 +340,13 @@ pkg install ai          # 等价 apt install ai
 # 3. 启动服务端
 ai</pre>
 <p>更新版本：<code>pkg update && pkg upgrade ai</code>；卸载：<code>pkg remove ai</code>。<br>
-菜单：1 首页（已下载模型→起服务）｜2 市场（ModelScope 官方 API 下载，与手机版一致）｜3 远程模式｜4 更改端口｜0 退出。<br>纯 C 编译（二进制 ~25KB），内存占用极小，模型存 <code>~/.hnn/models</code>。</p>
-<p style="color:#8b949e;font-size:13px">兜底方式（源不可用时手动安装）：64 位 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.3-server/ai-termux-arm64.deb" target="_blank">ai-termux-arm64.deb</a>，32 位 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.3-server/ai-termux-arm.deb" target="_blank">ai-termux-arm.deb</a>，下载后 <code>pkg install ./文件名.deb</code>。</p>
+菜单：1 首页（递归列出已下载模型，名称/编号/llm.mnn 均可加载）｜2 市场（ModelScope 官方 API 下载，与手机版一致）｜3 远程模式｜4 更改端口｜6 鉴权模式开关｜0 退出。<br>纯 C 编译（二进制 ~30KB），内存占用极小，模型存 <code>~/.hnn/models</code>；安装包内含全部源码。离线兜底脚本先尝试 32 位 arm，无法启动再回退 64 位 aarch64。</p>
+<p style="color:#8b949e;font-size:13px">兜底方式（源不可用时手动安装）：64 位 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/ai-termux-arm64.deb" target="_blank">ai-termux-arm64.deb</a>，32 位 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/ai-termux-arm.deb" target="_blank">ai-termux-arm.deb</a>，下载后 <code>pkg install ./文件名.deb</code>；也可使用 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/install-termux.sh" target="_blank">install-termux.sh</a> 自动先 32 位探测、失败回退 64 位。</p>
 </div>
 
 <h2 id="linuxrepo">🐧 Linux（Debian / Ubuntu / Kali 等）一键安装（apt install ai）</h2>
 <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;margin:10px 0">
-<pre style="background:#161b22;padding:10px;border-radius:6px;overflow:auto"># 1. 添加 ET 软件源（只需执行一次，需 root）
+<pre style="background:#161b22;padding:10px;border-radius:6px;overflow:auto"># 1. 添加 ETC 软件源（只需执行一次，需 root）
 echo "deb [trusted=yes] https://etqwfd.github.io/HNN-CN-ET/linux-repo stable main" | sudo tee /etc/apt/sources.list.d/hnn.list
 sudo apt update
 

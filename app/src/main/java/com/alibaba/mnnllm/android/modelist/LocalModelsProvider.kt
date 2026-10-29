@@ -39,14 +39,26 @@ object LocalModelsProvider {
     }
 
     private fun scanDir(dir: File, out: MutableList<ModelItem>) {
-        if (!dir.exists() || !dir.isDirectory) return
-        dir.listFiles()?.forEach { modelDir ->
-            if (!modelDir.isDirectory) return@forEach
-            if (modelDir.name.startsWith("blobs")) return@forEach
-            val children = modelDir.listFiles() ?: return@forEach
+        scanDirRecursive(dir, out, 0)
+    }
+
+    /**
+     * HNN CN ET v1.3.4: recursive descent. The old one-level scan only saw
+     * <root>/<model> and <root>/modelers/<model>; downloads that land nested
+     * (<root>/modelscope/<org>/<model>, <root>/builtin/<model>, or any container
+     * with an extra intermediary directory) were never listed in "我的模型".
+     * We keep descending into plain directories until a model marker appears.
+     */
+    private fun scanDirRecursive(dir: File, out: MutableList<ModelItem>, depth: Int) {
+        if (!dir.exists() || !dir.isDirectory || depth > 6) return
+        dir.listFiles()?.forEach { entry ->
+            if (!entry.isDirectory) return@forEach
+            if (entry.name.startsWith("models--")) return@forEach // HF cache container
+            if (entry.name == "blobs") return@forEach
+
+            val children = entry.listFiles() ?: return@forEach
             // HNN CN ET v1.2.6: downloaded MNN repos keep weights as unnamed blobs
-            // under <repo>/blobs/ (plus pointer files) — a plain *.mnn scan missed
-            // every downloaded model. Also accept a non-empty blobs/ subfolder.
+            // under <repo>/blobs/ — accept a non-empty blobs/ subfolder as a marker.
             val hasBlobs = children.any { f ->
                 f.isDirectory && f.name == "blobs" && (f.listFiles()?.isNotEmpty() == true)
             }
@@ -56,9 +68,12 @@ object LocalModelsProvider {
                     n.endsWith(".safetensors") || n == "config.json")
             }
             if (hasBlobs || hasModelFile) {
-                val modelPath = modelDir.absolutePath
+                val modelPath = entry.absolutePath
                 val modelId = "local/${modelPath}"
                 out.add(ModelItem.fromLocalModel(modelId, modelPath))
+            } else if (depth < 6) {
+                // Container / intermediary directory (modelscope/<org>, builtin, ...)
+                scanDirRecursive(entry, out, depth + 1)
             }
         }
     }

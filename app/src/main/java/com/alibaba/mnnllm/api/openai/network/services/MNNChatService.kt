@@ -52,6 +52,44 @@ class MNNChatService {
         throw IllegalStateException("请先在 HNN CN ET 中加载模型：打开「我的模型」选择一个已下载模型后再调用 API")
     }
 
+    /**
+     * HNN CN ET v1.3.4: if the third-party client explicitly selected a model,
+     * resolve that name against the downloaded model list and switch the runtime
+     * session when it differs from the active one. Blank / "default" / unresolved
+     * names are ignored so the existing fallback path stays intact.
+     */
+    private fun switchSessionForRequestedModel(rawModelName: String?, traceId: String) {
+        val query = rawModelName?.trim()
+        if (query.isNullOrBlank() || query.equals("default", ignoreCase = true)) return
+
+        val resolved = com.alibaba.mnnllm.android.modelist.ModelListManager
+            .resolveModelByAnyName(query)
+        if (resolved == null) {
+            Timber.tag("MNNChatService").i(
+                "Requested model '$query' not found in local list, keeping current session"
+            )
+            return
+        }
+
+        val runtime = ServiceLocator.getLlmRuntimeController()
+        if (runtime.getActiveModelId() == resolved.modelId) return
+
+        runCatching {
+            val result = runtime.ensureSession(resolved.modelId)
+            if (result.success) {
+                Timber.tag("MNNChatService").i(
+                    "API switched model for client request: '$query' -> ${resolved.modelId}"
+                )
+            } else {
+                Timber.tag("MNNChatService").w(
+                    "Model switch to ${resolved.modelId} failed (${result.reason}), keeping current session"
+                )
+            }
+        }.onFailure { t ->
+            Timber.tag("MNNChatService").w(t, "Model switch threw, keeping current session")
+        }
+    }
+
     /** * processchatcompleterequest * nowallrequests willbeen added toqueue,ensureaccording to orderprocess * @param call Ktorapplicationcallcontext * @param chatRequest chat request object * @param traceId traceID*/
     suspend fun processChatCompletion(
         call: ApplicationCall,
@@ -111,6 +149,13 @@ class MNNChatService {
         traceId: String
     ) {
         try {
+            // HNN CN ET v1.3.4: honor the model name the third-party client actually
+            // selected (previously chatRequest.model was ignored and the active session
+            // was always used). Switch the runtime session when the requested name
+            // resolves to a different downloaded model; on any miss, fall through to
+            // the existing active-session / first-downloaded-model path — never 500.
+            switchSessionForRequestedModel(chatRequest.model, traceId)
+
             //willas MNNformatunifiedhistory message (containingsystem prompt)
             val unifiedHistory = messageTransformer.convertToUnifiedMnnHistory(
                 chatRequest.messages,

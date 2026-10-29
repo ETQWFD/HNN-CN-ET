@@ -189,6 +189,22 @@ data class ModelConfig(
                     return configFilePath.absolutePath
                 }
             }
+            // HNN CN ET v1.3.4: SDK download DB miss — the model exists on disk
+            // (local/ manually copied, or a nested container download not registered
+            // in the DB). Resolve it from the live model list by modelId / display
+            // name / directory name and use <localPath>/config.json directly, instead
+            // of returning null which surfaced as MODEL_CONFIG_NOT_FOUND.
+            com.alibaba.mnnllm.android.modelist.ModelListManager
+                .resolveModelByAnyName(modelId)
+                ?.localPath
+                ?.takeIf { it.isNotBlank() }
+                ?.let { localDir ->
+                    val configFile = File(localDir, configFileName)
+                    if (configFile.exists()) {
+                        Log.d(TAG, "getDefaultConfigFile fallback: modelId=$modelId -> $localDir/config.json")
+                        return configFile.absolutePath
+                    }
+                }
             return null
         }
 

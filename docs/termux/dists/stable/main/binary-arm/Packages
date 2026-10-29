@@ -1,14 +1,13 @@
 Package: ai
-Version: 1.3.3
+Version: 1.3.4
 Architecture: arm
-Maintainer: ET
+Maintainer: ETC
 Depends: curl
-Filename: pool/main/a/ai/ai_1.3.3_arm.deb
-Size: 98864
-MD5sum: cce9ecbe70b866fe42bd00dd3570b8fc
-SHA1: 81b22ce810ad36554e36381dacd6c37cb5ce6c37
-SHA256: a058f643c203847f9f0227c558c54c2ca3f54d50336013036275709aba35a047
+Filename: pool/main/a/ai/ai_1.3.4_arm.deb
+Size: 111862
+MD5sum: d8ad6a2c93a2857fed759eeb5d69d9d3
+SHA1: 7efc7420c0370a0d51fe089b102bee56e993f31b
+SHA256: 590fe1e9a6d738596210295ce3488b50f24b7ed60734b2332ce35996e276241c
 Section: net
 Priority: optional
-Description: HNN CN ET model server (MNN local inference, OpenAI-compatible API). Copyright (c) 2026 ET. MIT License.
-
+Description: HNN CN ETC model server (MNN local inference, OpenAI-compatible API). Copyright (c) 2026 ETC. MIT License.

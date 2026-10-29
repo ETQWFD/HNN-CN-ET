@@ -22,3 +22,14 @@ compileTestKotlin {
         jvmTarget = "1.8"
     }
 }
+
+// HNN CN ET v1.3.4: AGP 8.7.3 lint cannot parse build-tools 37.0.x version string
+// ("For input string: \"37.0\"") in lintVital on release builds. Disable lintVital
+// task graph (local packaging only; lint still run separately when needed).
+allprojects {
+    tasks.whenTaskAdded { t ->
+        if (t.name.startsWith('lintVital')) {
+            t.enabled = false
+        }
+    }
+}

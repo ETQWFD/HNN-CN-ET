@@ -38,6 +38,11 @@ class RequestQueueManager private constructor() {
     private val totalRequests = AtomicLong(0)
     private val completedRequests = AtomicLong(0)
     private val failedRequests = AtomicLong(0)
+
+    // HNN CN ET v1.3.4: non-destructive pending counter. The old implementation
+    // probed queue size with tryReceive() — which literally stole the head request
+    // and re-sent it to the TAIL, inverting FIFO order under concurrent clients.
+    private val pendingCount = AtomicInteger(0)
     
     // Mutex for protecting queue state
     private val queueMutex = Mutex()
@@ -95,12 +100,13 @@ class RequestQueueManager private constructor() {
             )
             
             totalRequests.incrementAndGet()
-            
+            pendingCount.incrementAndGet()
+
             Timber.tag("RequestQueue").d(
                 "Request added to queue: requestId=$requestId, traceId=$traceId, " +
                 "queue size=${getQueueSize()}, priority=$priority"
             )
-            
+
             requestQueue.send(queuedRequest)
         }
         
@@ -138,7 +144,11 @@ class RequestQueueManager private constructor() {
      */
     private suspend fun processRequest(request: QueuedRequest) {
         val startTime = System.currentTimeMillis()
-        
+
+        // Decrement when the consumer actually dequeues the request, so pendingCount
+        // excludes the request currently being processed (matches old channel semantics).
+        pendingCount.decrementAndGet()
+
         try {
             Timber.tag("RequestQueue").d(
                 "Start processing request: requestId=${request.requestId}, traceId=${request.traceId}"
@@ -171,19 +181,12 @@ class RequestQueueManager private constructor() {
     }
     
     /**
-     * Get queue size (approximate value). Non-blocking to avoid ANR when called from main thread.
+     * Get queue size (non-destructive, atomic read).
+     * Never drains the channel: the old tryReceive()-probe stole the head request and
+     * re-sent it to the tail, which broke FIFO order under concurrent clients.
      */
     fun getQueueSize(): Int {
-        return requestQueue.tryReceive().let {
-            if (it.isSuccess) {
-                // Put item back asynchronously to avoid runBlocking (which would block caller)
-                val item = it.getOrThrow()
-                queueScope.launch { requestQueue.send(item) }
-                1 // At least one
-            } else {
-                0 // Queue is empty
-            }
-        }
+        return pendingCount.get()
     }
     
     /**
@@ -223,7 +226,8 @@ class RequestQueueManager private constructor() {
             while (!requestQueue.isEmpty) {
                 requestQueue.tryReceive()
             }
-            Timber.tag("RequestQueue").w("Queue cleared")
+            pendingCount.set(0)
+            Timber.tag("RequestQueue").i("Queue cleared")
         }
     }
     

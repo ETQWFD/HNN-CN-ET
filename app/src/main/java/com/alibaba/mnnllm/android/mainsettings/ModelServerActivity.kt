@@ -108,7 +108,11 @@ class ModelServerActivity : AppCompatActivity() {
         return runCatching {
             val raw = modelId ?: return null
             if (raw.startsWith("local") || raw.startsWith("Builtin") || raw.contains("/")) raw
-            else ModelUtils.getValidModelIdFromName(ModelDownloadManager.getInstance(this), raw) ?: raw
+            // HNN CN ET v1.3.4: resolve by display / directory / weight-file name first
+            // against the live downloaded list, before falling back to the SDK DB probe.
+            else com.alibaba.mnnllm.android.modelist.ModelListManager.resolveModelByAnyName(raw)?.modelId
+                ?: ModelUtils.getValidModelIdFromName(ModelDownloadManager.getInstance(this), raw)
+                ?: raw
         }.getOrDefault(modelId)
     }
 

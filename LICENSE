@@ -1,7 +1,7 @@
 MIT License
 
 Copyright (c) 2025 Frank Luo (original upstream: longluo/MnnLlmChat)
-Modifications Copyright (c) 2026 ET (HNN CN ET, https://github.com/ETQWFD/HNN-CN-ET)
+Modifications Copyright (c) 2026 ETC (HNN CN ET, https://github.com/ETQWFD/HNN-CN-ET)
 
 HNN CN ET is a derivative work of longluo/MnnLlmChat (MIT, Copyright (c) 2025 Frank Luo)
 and uses alibaba/MNN (MIT) as its inference engine (MNN 3.6.0).

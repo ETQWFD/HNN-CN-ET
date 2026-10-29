@@ -1,14 +1,14 @@
-Origin: ET
-Label: HNN CN ET
+Origin: ETC
+Label: HNN CN ETC
 Suite: stable
 Codename: stable
 Components: main
 Architectures: amd64
-Date: Thu, 29 Oct 2026 10:08:37 UTC
+Date: Thu, 29 Oct 2026 11:07:26 +0000
 
 MD5Sum:
-  e6c85e8ca4861fddd5c8091a657a0111 446 main/binary-amd64/Packages
-  45b35569d04af209bc482f70cb13da1d 360 main/binary-amd64/Packages.gz
+  70673caaeafc6cf362729e139e75d1d6 448 main/binary-amd64/Packages
+  618ff9103a7631279efa56d69fa9e133 363 main/binary-amd64/Packages.gz
 SHA256:
-  305f1157e01dbac8fed0e3a6540d0645cf96169ec5a3b3170cdf58dec9ab285c 446 main/binary-amd64/Packages
-  1269f389c9448af37d3c81d20b6e6b0195ae626ddc56a7d7213a81f152201b4c 360 main/binary-amd64/Packages.gz
+  6be05ca377bfaefd5e909980117f69f09814383d9fd9090df8c8e1c23a5d1fff 448 main/binary-amd64/Packages
+  51013c18360a844ffce6919a5bd67ade4bb7d7687fce03c97b42fe3bba293ff7 363 main/binary-amd64/Packages.gz

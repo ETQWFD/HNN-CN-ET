@@ -420,6 +420,69 @@ object ModelListManager {
     }
 
     /**
+     * HNN CN ET v1.3.4: unified resolved model, shared by chat router, server panel
+     * and the OpenAI-compatible API layer.
+     */
+    data class ResolvedModel(
+        val modelId: String,
+        val modelName: String?,
+        val localPath: String?
+    )
+
+    /**
+     * HNN CN ET v1.3.4: resolve ANY model-name-ish string against the live downloaded
+     * model list. Accepts (in priority order):
+     *  a. full modelId exact match (e.g. "ModelScope/MNN/Qwen-1.8B");
+     *  b. last '/' segment of modelId, normalized (lowercase, strip -_ space);
+     *  c. market display name (modelName) normalized;
+     *  d. localPath exact or last directory segment normalized;
+     *  e. bare weight/config file name (llm.mnn / model.mnn / *.mnn / config.json)
+     *     matched against the files contained in each model directory.
+     * Returns null when nothing matches — callers must keep their existing fallback
+     * behavior and never crash on a miss.
+     */
+    fun resolveModelByAnyName(raw: String?): ResolvedModel? {
+        val query = raw?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        val items = getCurrentModels()?.map { it.modelItem } ?: return null
+
+        fun ModelItem.toResolved() = modelId?.let { ResolvedModel(it, modelName, localPath) }
+
+        // a. exact modelId
+        items.firstOrNull { it.modelId == query }?.toResolved()?.let { return it }
+
+        val normQuery = normalizeKey(query)
+        if (normQuery.isEmpty()) return null
+
+        // b. last '/' segment of modelId
+        items.firstOrNull { normalizeKey(it.modelId?.substringAfterLast('/')) == normQuery }
+            ?.toResolved()?.let { return it }
+
+        // c. display name
+        items.firstOrNull { normalizeKey(it.modelName) == normQuery }?.toResolved()?.let { return it }
+
+        // d. localPath exact path or last directory segment
+        items.firstOrNull { item ->
+            val lp = item.localPath ?: return@firstOrNull false
+            normalizeKey(lp) == normQuery || normalizeKey(lp.substringAfterLast('/')) == normQuery
+        }?.toResolved()?.let { return it }
+
+        // e. weight / config file name inside a model directory
+        val fileName = query.substringAfterLast('/').substringAfterLast(File.separatorChar)
+        if (fileName.isNotBlank()) {
+            items.firstOrNull { item ->
+                val dir = File(item.localPath ?: return@firstOrNull false)
+                if (!dir.isDirectory) return@firstOrNull false
+                dir.listFiles()?.any { f ->
+                    !f.isDirectory && normalizeKey(f.name) == normQuery
+                } == true
+            }?.toResolved()?.let { return it }
+        }
+
+        Timber.d("resolveModelByAnyName: no match for query='$query' among ${items.size} models")
+        return null
+    }
+
+    /**
      * Ensure context is set for automatic initialization
      * Call this early in Application.onCreate() before any other access
      */

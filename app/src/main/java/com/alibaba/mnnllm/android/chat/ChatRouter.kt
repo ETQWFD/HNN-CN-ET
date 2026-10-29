@@ -150,7 +150,11 @@ object ChatRouter {
         var modelId:String? = modelIdParam
         val downloadManager = ModelDownloadManager.getInstance(context)
         if (!modelIdParam.startsWith("local") && !modelIdParam.startsWith("Builtin") && !modelIdParam.contains("/") && !isDiffusion) {
-            modelId = ModelUtils.getValidModelIdFromName(downloadManager, modelIdParam)
+            // HNN CN ET v1.3.4: resolve display/directory/weight names against the live
+            // downloaded list first; keep the SDK DB probe as second fallback.
+            modelId = com.alibaba.mnnllm.android.modelist.ModelListManager
+                .resolveModelByAnyName(modelIdParam)?.modelId
+                ?: ModelUtils.getValidModelIdFromName(downloadManager, modelIdParam)
         }
         Log.d(TAG, "modelId: $modelId")
         if (modelId == null) {

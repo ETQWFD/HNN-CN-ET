@@ -142,6 +142,6 @@ HNN CN ET 是基于 [longluo/MnnLlmChat](https://github.com/longluo/MnnLlmChat)�
 
 - 上游：longluo/MnnLlmChat，MIT，Copyright © 2025 Frank Luo
 - 推理引擎：alibaba/MNN，版权归原作者
-- 本次修改：Copyright © 2026 ET，详见 [NOTICE](NOTICE) 与 [LICENSE](LICENSE)
+- 本次修改：Copyright © 2026 ETC，详见 [NOTICE](NOTICE) 与 [LICENSE](LICENSE)
 
 English [README.md](README.md) · 繁體中文 [README_TW.md](README_TW.md)
