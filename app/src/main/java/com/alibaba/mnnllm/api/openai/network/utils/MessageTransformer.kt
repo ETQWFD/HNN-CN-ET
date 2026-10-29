@@ -226,12 +226,27 @@ internal fun buildApiSystemPrompt(
     rawSystemPrompt: String,
     isR1Model: Boolean
 ): String {
-    if (isR1Model) {
+    // HNN CN ET v1.3.4: user-defined system.ini is the HIGHEST priority system
+    // prompt. Priority order:
+    //   a) system.ini file content (public model root, filesDir fallback)
+    //   b) client request messages[0] system role message (rawSystemPrompt)
+    //   c) session built-in default — the runtime session already owns this at
+    //      load time, so it is never re-injected here (re-injection duplicated
+    //      the instruction and could yield an empty final answer).
+    // When the file is missing/empty the merge below is byte-for-byte the old
+    // behavior, including the R1 branch.
+    val filePrompt = SystemIniPromptReader.read().trim()
+
+    if (filePrompt.isEmpty()) {
+        // No system.ini: behave exactly as before.
         return rawSystemPrompt
     }
 
-    // The runtime session already owns its configured default system prompt.
-    // Re-injecting it into the request history duplicates the instruction and can
-    // cause ResponseWithHistory() to return an empty final answer for simple API calls.
-    return rawSystemPrompt
+    // File content leads; client-provided system message is appended after it.
+    // R1 keeps the file injection too (rawSystemPrompt already carries the
+    // <|begin_of_sentence|> wrapper from extractSystemPrompt).
+    return buildList {
+        add(filePrompt)
+        if (rawSystemPrompt.isNotEmpty()) add(rawSystemPrompt)
+    }.joinToString("\n\n")
 }

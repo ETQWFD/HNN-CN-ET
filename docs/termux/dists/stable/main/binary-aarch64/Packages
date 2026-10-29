@@ -4,10 +4,10 @@ Architecture: aarch64
 Maintainer: ETC
 Depends: curl
 Filename: pool/main/a/ai/ai_1.3.4_aarch64.deb
-Size: 114158
-MD5sum: 338d43b0f8be91168505cc3a5326ce7c
-SHA1: 82f91d638550ea71f0f33a243ce7629237449fcd
-SHA256: 19b5993517bb11572a6ce0067178a0da50dc645e1cb88d82f3f7a993932b19a5
+Size: 116460
+MD5sum: 55c07556c179e4468d19995745630897
+SHA1: 7b27ac88a84f0a76d53cea066dec0cdcce89a3ce
+SHA256: 3c397ea3ce4a296f925cc468a0315384c1a85e9c053115e1769f74506d43b5f0
 Section: net
 Priority: optional
 Description: HNN CN ETC model server (MNN local inference, OpenAI-compatible API). Copyright (c) 2026 ETC. MIT License.

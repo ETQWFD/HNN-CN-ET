@@ -1,7 +1,7 @@
 /*
  * ai.c — HNN CN ET Server (Termux / Linux / Windows)
  * Copyright (c) 2026 ETC · MIT License
- * 纯 C 单文件：菜单(1首页/2市场/3远程/4改端口/6鉴权开关/0退出) + OpenAI 兼容 API
+ * 纯 C 单文件：菜单(1首页/2市场/3远程/4改端口/7密钥开关/8强制密钥/0退出) + OpenAI 兼容 API
  * 推理: 调用 llm_demo (MNN, 与手机版同款模型)；下载: 系统 curl 走 ModelScope 官方 API
  * 编译: gcc/clang 各平台直接编；Windows 编 DLL 核心 + exe 启动器
  */
@@ -39,6 +39,7 @@
 #include <process.h>
 #include <direct.h>
 #define strcasecmp _stricmp
+#define strncasecmp _strnicmp
 #define close closesocket
 #define usleep(us) Sleep((us) / 1000)
 #define mkdir(p, m) _mkdir(p)
@@ -59,10 +60,14 @@ static char CONF_PATH[MAXPATH];
 static char LLM_DEMO_PATH[MAXPATH];
 static char API_KEY[64];
 static int AUTH_ON = 1;
+static int FORCE_AUTH = 0;              /* 1: 无论 AUTH_ON 如何，所有请求必须带 Bearer */
 static int API_PORT = 8080;
 static char REMOTE_URL[512];
 static char ACTIVE_MODEL_DIR[MAXPATH] = ""; /* 菜单1选定模型后的绝对目录，请求直接复用 */
 static char ACTIVE_MODEL[256] = "";          /* 活动模型基目录名（横幅/状态展示） */
+static char SYSTEM_PROMPT[2048] = "";       /* system.ini 自定义系统提示词 */
+static char EXE_DIR[MAXPATH] = ".";          /* 可执行文件所在目录（用于找 system.ini） */
+static char HOME_DIR[MAXPATH] = ".";         /* 用户主目录 */
 
 static void cprint(const char *fmt, ...) {
     va_list ap; va_start(ap, fmt); vprintf(fmt, ap); va_end(ap); fflush(stdout);
@@ -103,6 +108,7 @@ static void load_conf(void) {
             trim(line);
             if (!strncmp(line, "port=", 5)) API_PORT = atoi(line + 5);
             else if (!strncmp(line, "auth=", 5)) AUTH_ON = atoi(line + 5);
+            else if (!strncmp(line, "force=", 6)) FORCE_AUTH = atoi(line + 6);
             else if (!strncmp(line, "key=", 4) && strlen(line + 4) >= 6) strncpy(API_KEY, line + 4, 63);
         }
         fclose(f);
@@ -114,7 +120,68 @@ static void save_conf(void) {
     if (f) {
         fprintf(f, "port=%d\n", API_PORT);
         fprintf(f, "auth=%d\n", AUTH_ON);
+        fprintf(f, "force=%d\n", FORCE_AUTH);
         fprintf(f, "key=%s\n", API_KEY);
+        fclose(f);
+    }
+}
+
+/* ---------- system.ini 自定义系统提示词 ---------- */
+/* 解析一行：system 后跟可选空白再 =，取成对引号内内容（支持直引号与中文引号） */
+static void parse_system_line(char *line, char *out, size_t outsz) {
+    char *p = line;
+    while (*p == ' ' || *p == '\t') p++;
+    if (strncasecmp(p, "system", 6)) return;
+    p += 6;
+    while (*p == ' ' || *p == '\t') p++;
+    if (*p != '=') return;
+    p++;
+    while (*p == ' ' || *p == '\t') p++;
+    /* 直双引号 "..." */
+    if (*p == '"') {
+        p++;
+        size_t j = 0;
+        while (*p && *p != '"' && j + 1 < outsz) out[j++] = *p++;
+        out[j] = 0;
+        return;
+    }
+    /* 中文引号 “...” (UTF-8: e2 80 9c / e2 80 9d) */
+    if ((unsigned char)p[0] == 0xe2 && (unsigned char)p[1] == 0x80 && (unsigned char)p[2] == 0x9c) {
+        p += 3;
+        size_t j = 0;
+        while (*p && j + 1 < outsz) {
+            if ((unsigned char)p[0] == 0xe2 && (unsigned char)p[1] == 0x80 && (unsigned char)p[2] == 0x9d) break;
+            out[j++] = *p++;
+        }
+        out[j] = 0;
+        return;
+    }
+}
+/* 每次本地推理前重新读取，改完下次即生效；找不到/解析不到就置空，绝不报错 */
+static void load_system_prompt(void) {
+    SYSTEM_PROMPT[0] = 0;
+    const char *cands[3]; int nc = 0;
+    cands[nc++] = "./system.ini";
+    char p2[MAXPATH]; snprintf(p2, sizeof p2, "%s/system.ini", EXE_DIR); cands[nc++] = p2;
+#ifdef _WIN32
+    char p3[MAXPATH]; snprintf(p3, sizeof p3, "%s\\.hnn\\system.ini", HOME_DIR);
+#else
+    char p3[MAXPATH]; snprintf(p3, sizeof p3, "%s/.hnn/system.ini", HOME_DIR);
+#endif
+    cands[nc++] = p3;
+    for (int i = 0; i < nc; i++) {
+        FILE *f = fopen(cands[i], "r");
+        if (!f) continue;
+        char line[4096];
+        while (fgets(line, sizeof line, f)) {
+            char val[2048];
+            parse_system_line(line, val, sizeof val);
+            if (val[0]) {
+                snprintf(SYSTEM_PROMPT, sizeof SYSTEM_PROMPT, "%s", val);
+                fclose(f);
+                return; /* 取到即返回 */
+            }
+        }
         fclose(f);
     }
 }
@@ -352,9 +419,9 @@ static void http_send(int cli, const char *status, const char *ctype, const char
     send(cli, hdr, (int)strlen(hdr), 0);
     send(cli, body, len, 0);
 }
-/* 鉴权校验：AUTH_ON=0 直接放行；失败时已发送 401，返回 0 */
+/* 鉴权校验：FORCE_AUTH 或 AUTH_ON 任一开启则必须带正确 Bearer；否则放行 */
 static int check_auth(int cli, const char *req) {
-    if (!AUTH_ON) return 1;
+    if (!AUTH_ON && !FORCE_AUTH) return 1;
     const char *auth = strstr(req, "Authorization: Bearer ");
     if (!auth) {
         http_send(cli, "401 Unauthorized", "application/json",
@@ -490,7 +557,17 @@ static void handle_client(int cli) {
             int mt = 512;
             char *mtf = extract_field(body, "max_tokens", 0);
             if (mtf) { mt = atoi(mtf); free(mtf); }
-            ans = run_llm(mdir, content, mt);
+            /* 每次本地推理前重读 system.ini，拼上系统提示段（空行分隔） */
+            load_system_prompt();
+            char *final_prompt;
+            if (SYSTEM_PROMPT[0]) {
+                final_prompt = malloc(strlen(SYSTEM_PROMPT) + strlen(content) + 8);
+                sprintf(final_prompt, "%s\n\n%s", SYSTEM_PROMPT, content);
+            } else {
+                final_prompt = strdup(content);
+            }
+            ans = run_llm(mdir, final_prompt, mt);
+            free(final_prompt);
         }
         if (model) free(model);
         if (content) free(content);
@@ -552,10 +629,15 @@ static int start_api(int port) {
     cprint("  HNN CN ET Server v%s  (Copyright 2026 ETC)\n", VERSION);
     cprint("  ✅ API 服务运行中（常驻，不会关闭）\n");
     cprint("  📛 模型名称 : %s\n", ACTIVE_MODEL[0] ? ACTIVE_MODEL : "(未指定，自动选第一个)");
-    cprint("  🔑 API 密钥 : %s%s\n", API_KEY, AUTH_ON ? "" : "（鉴权关闭）");
+    cprint("  🔑 API 密钥 : %s%s%s\n", API_KEY,
+           FORCE_AUTH ? "（强制）" : (AUTH_ON ? "" : "（未启用）"),
+           FORCE_AUTH ? "" : "");
+    cprint("  🔐 密钥开关 : %s\n", AUTH_ON ? "开" : "关");
+    cprint("  🔒 强制密钥 : %s\n", FORCE_AUTH ? "开（本机/局域网都要带密钥）" : "关");
     cprint("  🌐 本机地址 : http://127.0.0.1:%d/v1/chat/completions\n", port);
     cprint("  🌐 局域网   : http://%s:%d/v1/chat/completions\n", host, port);
-    cprint("  ⚙ 鉴权状态 : %s\n", AUTH_ON ? "已开启（调用需带 Bearer 密钥）" : "已关闭");
+    cprint("  💡 想固定人设/规则：编辑当前目录 system.ini，在 system=\"...\" 引号内写提示语，\n");
+    cprint("     下次对话自动生效，不用重启。\n");
     cprint("  按 Ctrl+C 停止服务\n");
     cprint("==========================================================\n");
     signal(SIGINT, on_sig);
@@ -586,6 +668,11 @@ static void banner(void) {
     cprint("\n==========================================================\n");
     cprint("  HNN CN ET · 模型服务端  (Copyright 2026 ETC)\n");
     cprint("  与手机版完全相同的模型市场 · MNN 本地推理 · OpenAI 兼容 API\n");
+    cprint("----------------------------------------------------------\n");
+    cprint("  新手三步：\n");
+    cprint("   1) 菜单 1 选一个已下载好的模型，启动服务；\n");
+    cprint("   2) 启动后屏幕上会显示 API 地址、密钥、模型名，复制下来；\n");
+    cprint("   3) 填到第三方 AI 客户端的 Base URL / API Key / 模型名，就能聊天。\n");
     cprint("==========================================================\n");
 }
 DLLEXPORT int ai_server_main(int argc, char **argv) {
@@ -597,6 +684,7 @@ DLLEXPORT int ai_server_main(int argc, char **argv) {
     const char *home = getenv("HNN_HOME") ? getenv("HNN_HOME") : getenv("HOME");
 #endif
     snprintf(MODEL_DIR, sizeof MODEL_DIR, "%s/.hnn/models", home ? home : ".");
+    snprintf(HOME_DIR, sizeof HOME_DIR, "%s", home ? home : ".");
 #ifdef _WIN32
     _mkdir(MODEL_DIR);
 #else
@@ -610,6 +698,16 @@ DLLEXPORT int ai_server_main(int argc, char **argv) {
     mkdir(bin, 0755);
 #endif
     snprintf(CONF_PATH, sizeof CONF_PATH, "%s/.hnn/ai.conf", home ? home : ".");
+    /* 记录可执行文件目录（用于查找 system.ini） */
+    snprintf(EXE_DIR, sizeof EXE_DIR, "%s", argv[0][0] ? argv[0] : ".");
+    {
+        char *es = strrchr(EXE_DIR, '/');
+#ifdef _WIN32
+        char *eb = strrchr(EXE_DIR, '\\');
+        if (!es || (eb && eb > es)) es = eb;
+#endif
+        if (es) *es = 0; else strcpy(EXE_DIR, ".");
+    }
     /* llm_demo 位置：按平台逐个探测候选，命中即写入 LLM_DEMO_PATH */
 #ifdef _WIN32
     /* Windows: ① %USERPROFILE%\.hnn\bin\llm_demo.exe → ② 程序同目录 llm_demo.exe → ③ 程序同目录 bin\llm_demo.exe */
@@ -641,17 +739,19 @@ DLLEXPORT int ai_server_main(int argc, char **argv) {
     banner();
     while (1) {
         cprint("\n  请选择：\n");
-        cprint("    1 = 首页（列出已下载好的模型，选择后启动 API 服务）\n");
-        cprint("    2 = 市场（与手机版一致的全部模型，输入编号下载）\n");
-        cprint("    3 = 远程模式（连接手机服务版/穿透地址，转发调用）\n");
-        cprint("    4 = 更改端口（当前 %d）\n", API_PORT);
-        cprint("    6 = 鉴权模式开关（当前：%s）\n", AUTH_ON ? "开启" : "关闭");
+        cprint("    1 = 选模型并启动服务（已下载的模型都在这）\n");
+        cprint("    2 = 模型市场（联网下载新模型）\n");
+        cprint("    3 = 远程模式（转发到别的服务地址）\n");
+        cprint("    4 = 改端口（当前 %d）\n", API_PORT);
+        cprint("    7 = 密钥开关（当前：%s；关了后调用不用带密钥）\n", AUTH_ON ? "开" : "关");
+        cprint("    8 = 强制密钥（当前：%s；开了后不管 7 怎么设都必须带密钥）\n", FORCE_AUTH ? "开" : "关");
         cprint("    0 = 退出\n");
         cprint("  请输入数字并回车: ");
         char line[64]; fflush(stdout);
         if (!fgets(line, sizeof line, stdin)) break;
         trim(line);
         if (!strcmp(line, "1")) {
+            cprint("  💡 想固定人设/规则：编辑当前目录 system.ini，在 system=\"...\" 引号内写提示语，下次对话自动生效，不用重启。\n");
             cprint("\n  ── 已下载好的模型 ──\n");
             list_models();
             cprint("  输入模型名称回车: ");
@@ -727,10 +827,16 @@ DLLEXPORT int ai_server_main(int argc, char **argv) {
             API_PORT = np;
             save_conf();
             cprint("  端口已改为 %d（已保存，下次启动服务生效）\n", API_PORT);
-        } else if (!strcmp(line, "6")) {
+        } else if (!strcmp(line, "7")) {
             AUTH_ON = !AUTH_ON;
             save_conf();
-            cprint("  鉴权模式已切换为：%s（已写入配置）\n", AUTH_ON ? "开启（API 调用需带 Bearer 密钥）" : "关闭（API 调用无需密钥）");
+            cprint("  密钥开关已切换为：%s（已写入配置）\n",
+                   AUTH_ON ? "开（API 调用需带 Bearer 密钥）" : "关（API 调用无需密钥）");
+        } else if (!strcmp(line, "8")) {
+            FORCE_AUTH = !FORCE_AUTH;
+            save_conf();
+            cprint("  强制密钥已切换为：%s（已写入配置）\n",
+                   FORCE_AUTH ? "开（无论 7 如何，所有请求都必须带正确密钥）" : "关（按 7 的设置执行）");
         } else if (!strcmp(line, "0")) {
             cprint("  再见。\n");
             break;

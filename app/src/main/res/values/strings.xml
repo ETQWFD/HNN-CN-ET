@@ -825,4 +825,7 @@
     <string name="server_auth_toggle">密钥鉴权开关（关闭时其他AI可直接调用，无需密钥）</string>
     <string name="server_hint">OpenAI 兼容接口：%1$s 。其他 AI 工具 / 电脑 / 局域网设备可用上面的地址和密钥真实调用本机模型，服务在后台持续运行。</string>
     <string name="server_stop">停止服务</string>
+    <!-- HNN CN ET v1.3.4: plain-language onboarding & auth note -->
+    <string name="server_guide">怎么用（三步）：① 在本页选择已下载模型，服务会自动启动并保持运行；② 点下面的地址、模型名、API 密钥即可一键复制；③ 打开第三方 AI 客户端，Base URL 填上面这串地址（http://手机局域网IP:端口/v1），API Key 填上面这串密钥，模型名填上面显示的名称，就能开始对话。</string>
+    <string name="server_auth_note">开关说明：关闭时本机和局域网设备都能直接调用、不用填密钥；开启（强制密钥）后，本机与局域网所有调用都必须携带上面这串 API 密钥。</string>
 </resources>

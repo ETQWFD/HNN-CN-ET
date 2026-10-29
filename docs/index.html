@@ -94,12 +94,114 @@
 
 <section class="section" id="guide">
   <div class="container">
-    <h2 class="section-title">使用说明</h2>
-    <div class="steps">
-      <div class="step"><b>1</b><p>下载 APK 并安装到安卓手机。</p></div>
-      <div class="step"><b>2</b><p>首次打开，按提示下载一个模型。</p></div>
-      <div class="step"><b>3</b><p>选好模型进入聊天，等待初始化完成后即可对话。</p></div>
-      <div class="step"><b>4</b><p>需要联网功能时，在设置里开启 API 服务或 Agent 模式。</p></div>
+    <h2 class="section-title">使用说明（一步步教到能用）</h2>
+
+    <div class="guide-block">
+      <h3>通用三步</h3>
+      <ol>
+        <li>在菜单「1 首页」选择一个已经下载好的模型，启动 API 服务；</li>
+        <li>复制屏幕（或手机服务面板）上的 <b>API 地址</b>、<b>密钥</b>、<b>模型名称</b>；</li>
+        <li>填到第三方 AI 客户端（Chatbox / NextChat / LobeChat 等）即可对话。</li>
+      </ol>
+      <div class="guide-note">服务端默认绑定 0.0.0.0，同一 Wi-Fi 下其他设备用屏幕显示的「局域网 IP」访问，不要用 127.0.0.1。菜单编号：1 首页 ｜ 2 市场 ｜ 3 远程模式 ｜ 4 更改端口 ｜ 7 密钥开关 ｜ 8 强制密钥 ｜ 0 退出。</div>
+    </div>
+
+    <div class="guide-block">
+      <h3>📱 一、Termux 手机安装（pkg / apt 双链路）</h3>
+      <h4>1. 添加 ETC 软件源（只需一次）</h4>
+      <pre>echo "deb https://etqwfd.github.io/HNN-CN-ET/termux stable main" >> $PREFIX/etc/apt/sources.list.d/hnn.list
+pkg update</pre>
+      <h4>2. 安装（pkg 与 apt 等价，底层同一个源）</h4>
+      <pre>pkg install ai        # 等价：apt update && apt install ai</pre>
+      <p>64 位与 32 位包由源自动匹配；若 32 位老手机自动识别失败，可下载 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/install-termux.sh" target="_blank">install-termux.sh</a>，脚本先装 32 位 arm，跑不起来再自动回退 64 位 aarch64。</p>
+      <h4>3. 启动并选模型</h4>
+      <pre>ai
+# 进入后输入 1 回车 → 选择模型编号/名称 → 服务常驻运行</pre>
+      <p>更新：<code>pkg update && pkg upgrade ai</code>；卸载：<code>pkg remove ai</code>。模型目录 <code>~/.hnn/models</code>。</p>
+    </div>
+
+    <div class="guide-block">
+      <h3>🐧 二、Linux（Debian / Ubuntu / Kali 等）安装</h3>
+      <pre># 1. 添加源（需 root）
+echo "deb [trusted=yes] https://etqwfd.github.io/HNN-CN-ET/linux-repo stable main" | sudo tee /etc/apt/sources.list.d/hnn.list
+sudo apt update
+
+# 2. 安装
+sudo apt install ai
+
+# 3. 启动
+ai</pre>
+      <p>更新：<code>sudo apt update && sudo apt upgrade ai</code>；卸载：<code>sudo apt remove ai</code>。也可直接下载 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/HNN-CN-ET-Server-Linux.zip" target="_blank">Linux 便携包</a>，解压后 <code>chmod +x ai llm_demo && ./ai</code>。</p>
+    </div>
+
+    <div class="guide-block">
+      <h3>🪟 三、Windows 电脑便携包</h3>
+      <ol>
+        <li>下载 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/HNN-CN-ET-Server-Windows.zip" target="_blank">Windows 便携包</a> 并解压；</li>
+        <li>确保 <code>ai.exe</code>、<code>hnn_core.dll</code>、<code>llm_demo.exe</code> 在同一个文件夹（不要分开移动）；</li>
+        <li>双击 <code>run.bat</code>（或运行 <code>ai.exe</code>），按菜单 1 选模型启动服务；</li>
+        <li>屏幕会显示本机地址、局域网地址、密钥与模型名，复制到客户端即可。</li>
+      </ol>
+      <p>本版为纯 C 命令行服务端，不再依赖 Qt；程序与 DLL 版权署名均为 ETC，压缩包 <code>source/</code> 目录内含全部 C 源码（MIT）。</p>
+    </div>
+
+    <div class="guide-block">
+      <h3>📲 四、Android 手机服务版（APK 内服务面板）</h3>
+      <ol>
+        <li>打开已下载模型，进入 API 服务面板；</li>
+        <li>面板顶部三步引导：选模型 → 复制地址/密钥/模型名 → 填到第三方客户端；</li>
+        <li>地址、模型名、密钥三项均有一键复制按钮，复制后弹出提示；</li>
+        <li>密钥开关说明：关闭密钥时本机与局域网可直接调用；开启强制密钥后，本机和局域网都必须携带正确密钥。</li>
+      </ol>
+      <p>局域网其他设备用手机 Wi-Fi 的局域网 IP 访问；外网访问请自行使用 frpc 等内网穿透工具，服务端不内置穿透。</p>
+    </div>
+
+    <div class="guide-block">
+      <h3>🔌 五、第三方 AI 客户端接入（Chatbox / NextChat / LobeChat）</h3>
+      <table class="guide-table">
+        <tr><th>客户端设置项</th><th>填写内容</th></tr>
+        <tr><td>API 类型 / Provider</td><td>OpenAI 兼容（OpenAI Compatible）</td></tr>
+        <tr><td>Base URL / API 地址</td><td><code>http://手机或电脑局域网IP:端口/v1</code>（注意结尾 <code>/v1</code>）</td></tr>
+        <tr><td>API Key / 密钥</td><td>屏幕显示的完整 <code>etc-...</code> 密钥（Android 面板按面板显示的密钥填写）</td></tr>
+        <tr><td>模型名称</td><td>面板或 <code>GET /v1/models</code> 返回的名称；填完整 ID、目录名、小写变体、归一化名、<code>llm.mnn</code> 均可命中同一模型</td></tr>
+      </table>
+      <h4>最简成功示例（命令行）</h4>
+      <pre>curl http://192.168.1.23:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer etc-你的密钥" \
+  -d '{"model":"MNN__Qwen2.5-0.5B-Instruct-MNN","messages":[{"role":"user","content":"你好，介绍一下你自己"}]}'</pre>
+      <p>先访问 <code>http://IP:端口/v1/models</code> 可确认当前可用模型列表；浏览器跨域调用已开放 CORS（<code>Access-Control-Allow-Origin: *</code>）。</p>
+    </div>
+
+    <div class="guide-block">
+      <h3>✍️ 六、自定义系统提示词 system.ini</h3>
+      <p>需要固定人设、回答规则或语气时，在服务端程序当前工作目录新建 <code>system.ini</code>（Android 服务版读取公共模型根目录 <code>/storage/emulated/0/hnn/system.ini</code>，缺失时回退应用私有目录）：</p>
+      <pre>system="你是一个简洁的中文助手，每次回答先给结论，再补充说明。"</pre>
+      <ul>
+        <li>支持 <code>system = "..."</code> 空格写法，兼容中文引号 <code>“...”</code>；</li>
+        <li>文件修改后下一次对话自动生效，无需重启服务；</li>
+        <li>文件不存在或为空时，保持原有默认行为，不影响正常请求；</li>
+        <li>远程转发模式（菜单 3）不本地注入，避免与上游系统提示重复。</li>
+      </ul>
+    </div>
+
+    <div class="guide-block">
+      <h3>🛠️ 七、常见错误现象 → 原因 → 修复步骤</h3>
+      <table class="guide-table">
+        <tr><th>现象</th><th>可能原因</th><th>一步步修复</th></tr>
+        <tr><td>缺少 <code>libgcc_s_seh-1.dll</code></td><td>旧压缩包运行库缺失</td><td>重新下载 v1.3.4 Windows 便携包；解压后确认 <code>ai.exe</code>、<code>hnn_core.dll</code>、<code>llm_demo.exe</code> 在同一目录再运行。</td></tr>
+        <tr><td><code>no Qt platform plugin could be initialized</code></td><td>旧桌面包插件目录缺失；本版已不依赖 Qt</td><td>改用 v1.3.4 纯 C 命令行 Windows 便携包，不再安装旧 Qt 桌面程序。</td></tr>
+        <tr><td>NSIS <code>Installer integrity check has failed</code></td><td>安装包下载损坏或不完整</td><td>删除本地安装包，重新从 Release 下载；核对文件大小与页面一致后再安装。</td></tr>
+        <tr><td><code>TLS initialization failed</code></td><td>网络/TLS 握手失败，代理或网络不稳定</td><td>切换 Wi-Fi / 移动网络；关闭或更换代理；确认能打开 ModelScope 官网后重新下载模型。</td></tr>
+        <tr><td><code>Failed to fetch repo info for ModelScope/MNN/...</code></td><td>模型仓库索引拉取失败（网络/代理/临时故障）</td><td>检查网络与代理后稍后重试；也可先在市场选择体积更小的模型测试。</td></tr>
+        <tr><td>已授予存储权限仍提示「需要所有文件访问权限」</td><td>Android 11+ 需要「所有文件访问」单独授权</td><td>系统设置 → 应用 → HNN CN ET → 权限 → 文件和媒体 → 选择「允许管理所有文件」，返回应用重新点击下载。</td></tr>
+        <tr><td>下载好的模型在首页 / 列表不显示</td><td>嵌套目录未被扫描（v1.3.4 已修复递归扫描）</td><td>重启服务端 / 下拉刷新模型列表；确认模型目录内含 <code>config.json</code> 或 <code>llm.mnn</code>；模型放在 <code>~/.hnn/models</code>（Android 为公共模型根目录）下。</td></tr>
+        <tr><td>2GB 老手机加载模型即闪退</td><td>内存不足；大模型超出可用 RAM</td><td>先关闭后台其他应用释放内存；选择 LITE 版本与更小参数模型；老手机与新手机版本分开安装，不要混用大模型。</td></tr>
+        <tr><td>401 <code>missing/invalid bearer</code></td><td>密钥未填、复制不完整或填错</td><td>从服务横幅 / 手机面板重新复制完整 <code>etc-...</code> 密钥；检查 Authorization 请求头格式为 <code>Bearer 密钥</code>；菜单 7 关闭密钥或菜单 8 关闭强制密钥后可免密钥测试。</td></tr>
+        <tr><td>端口占用 / 绑定失败</td><td>默认端口被其他程序占用</td><td>菜单 4 更改端口（如 18080），保存后重启服务；再用新端口连接客户端。</td></tr>
+        <tr><td>局域网其他设备连不上</td><td>不在同一网络、防火墙拦截、误用 127.0.0.1</td><td>确认手机/电脑与客户端在同一 Wi-Fi；关闭系统防火墙放行端口；地址使用横幅显示的局域网 IP，不要填 127.0.0.1；外网再走 frpc 穿透。</td></tr>
+        <tr><td>必须填 <code>llm.mnn</code> 才能加载模型</td><td>旧版模型名解析缺陷（v1.3.4 已修复）</td><td>升级到 v1.3.4；现在填真实模型名、市场名、目录名、完整 ID、大小写变体或 <code>llm.mnn</code> 都能命中同一模型。</td></tr>
+      </table>
     </div>
   </div>
 </section>
@@ -323,7 +425,8 @@
 <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;margin:10px 0">
 <p><b>电脑版 · 聊天（Windows 安装包）</b>：Setup-HNN-CN-ET-1.1.8.exe（ModelScope 直链下载 + 聊天 + 内置 API 服务，<a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/desktop-v1.1.8/Setup-HNN-CN-ET-1.1.8.exe" target="_blank">下载</a>）</p>
 <p><b>服务端 · Linux / Windows 便携包（终端版）</b>：<a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/HNN-CN-ET-Server-Linux.zip" target="_blank">Linux 下载</a> ｜ <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/HNN-CN-ET-Server-Windows.zip" target="_blank">Windows 下载</a>（若上方打不开，改用 GitHub Release 页）<br>
-菜单：1=首页（递归列出全部已下载模型→输入名称/编号/llm.mnn 均可加载）｜2=市场（与手机版完全一致的全部模型+大小→输入编号下载）｜3=远程模式（连手机服务版/可选 frpc 内网穿透）｜4=更改端口（持久化）｜6=鉴权模式开关（开/关持久化，关闭后免密钥）｜0=退出。<br>
+菜单：1=首页（递归列出全部已下载模型→输入名称/编号/llm.mnn 均可加载）｜2=市场（与手机版完全一致的全部模型+大小→输入编号下载）｜3=远程模式（连手机服务版/可选 frpc 内网穿透）｜4=更改端口（持久化）｜7=密钥开关｜8=强制密钥（开启后本机与局域网都必须带密钥）｜0=退出。<br>
+自定义人设：在程序当前目录新建 <code>system.ini</code>，写入 <code>system="你的固定提示语"</code>，下次对话自动生效，无需重启。<br>
 OpenAI 兼容接口 <code>GET /v1/models</code> 拉取模型列表、<code>POST /v1/chat/completions</code> 对话；默认绑定 0.0.0.0 局域网直连，启动横幅显示本机局域网 IP，CORS 已开放；ModelScope 官方 API 下载全部 MNN 模型，本机推理实测中文无乱码；压缩包内置全部 C 源码。</p>
 </div>
 
@@ -340,7 +443,7 @@ pkg install ai          # 等价 apt install ai
 # 3. 启动服务端
 ai</pre>
 <p>更新版本：<code>pkg update && pkg upgrade ai</code>；卸载：<code>pkg remove ai</code>。<br>
-菜单：1 首页（递归列出已下载模型，名称/编号/llm.mnn 均可加载）｜2 市场（ModelScope 官方 API 下载，与手机版一致）｜3 远程模式｜4 更改端口｜6 鉴权模式开关｜0 退出。<br>纯 C 编译（二进制 ~30KB），内存占用极小，模型存 <code>~/.hnn/models</code>；安装包内含全部源码。离线兜底脚本先尝试 32 位 arm，无法启动再回退 64 位 aarch64。</p>
+菜单：1 首页（递归列出已下载模型，名称/编号/llm.mnn 均可加载）｜2 市场（ModelScope 官方 API 下载，与手机版一致）｜3 远程模式｜4 更改端口｜7 密钥开关｜8 强制密钥｜0 退出。<br>自定义人设：在当前目录 <code>system.ini</code> 写 <code>system="提示语"</code>，下次对话生效。纯 C 编译（二进制 ~30KB），内存占用极小，模型存 <code>~/.hnn/models</code>；安装包内含全部源码。离线兜底脚本先尝试 32 位 arm，无法启动再回退 64 位 aarch64。</p>
 <p style="color:#8b949e;font-size:13px">兜底方式（源不可用时手动安装）：64 位 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/ai-termux-arm64.deb" target="_blank">ai-termux-arm64.deb</a>，32 位 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/ai-termux-arm.deb" target="_blank">ai-termux-arm.deb</a>，下载后 <code>pkg install ./文件名.deb</code>；也可使用 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/install-termux.sh" target="_blank">install-termux.sh</a> 自动先 32 位探测、失败回退 64 位。</p>
 </div>
 

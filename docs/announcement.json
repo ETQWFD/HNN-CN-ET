@@ -1,7 +1,7 @@
 {
   "id": "2026-10-29-v134-server",
   "tag": "新版 v1.3.4",
-  "title": "v1.3.4 模型名兼容修复 + 鉴权开关 + 局域网直连 + 三端提速",
-  "content": "修复模型真实名称/市场名/llm.mnn 权重名无法加载的问题：完整 ID、目录名、大小写变体、归一化名、权重文件名均可解析到同一模型；modelscope/modelers/builtin 嵌套目录下载的模型在首页与 GET /v1/models 全部显示。新增菜单 6 鉴权模式开关（可持久化，关闭后免密钥）；密钥改为 etc- 前缀 + 16 位大写字母与数字混合。默认绑定 0.0.0.0 局域网直连，启动横幅显示本机局域网 IP，CORS 预检齐全，第三方 OpenAI 客户端可直接拉取模型列表并对话；外网穿透为可选 frpc 方案。菜单 4 端口持久化，响应 model 字段回显实际模型名；模型目录缓存、动态缓冲、会话复用三端提速。安装包附带全部 C 源码；Termux 先 32 位 arm 探测、失败回退 64 位 aarch64；Windows DLL/EXE 版权署名统一 ETC。覆盖 Termux arm64/armv7、Linux amd64、Windows 便携包与手机四版本 APK。",
-  "publishedAt": "2026-10-29T19:45:00+08:00"
+  "title": "v1.3.4 模型名兼容修复 + 鉴权双开关 + system.ini 自定义人设 + 分步使用手册",
+  "content": "模型真实名称/市场名/目录名/大小写变体/归一化名/llm.mnn 权重名均可解析到同一模型，modelscope/modelers/builtin 嵌套目录下载的模型在首页与 GET /v1/models 全部显示。密钥菜单重构：7=密钥开关，8=强制密钥（开启后本机与局域网都必须带正确 Bearer），两项持久化到配置；密钥为 etc- 前缀 + 16 位大写字母与数字混合。新增 system.ini 自定义系统提示词：在程序当前目录写 system=\"提示语\"，下次对话自动生效，Android 服务版同样支持。默认绑定 0.0.0.0 局域网直连，横幅显示本机局域网 IP，CORS 预检齐全；菜单 4 端口持久化，响应 model 字段回显实际模型名；模型目录缓存、动态缓冲、会话复用三端提速。安装包内置全部 C 源码；Termux 先 32 位 arm 探测、失败回退 64 位；Windows DLL/EXE 版权署名 ETC。官网新增 Termux / Linux / Windows / Android 面板 / 第三方客户端分步手册与常见错误对照表。覆盖 Termux arm64/armv7、Linux amd64、Windows 便携包与手机四版本 APK。",
+  "publishedAt": "2026-10-29T20:30:00+08:00"
 }

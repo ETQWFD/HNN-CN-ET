@@ -122,7 +122,7 @@ class ModelServerActivity : AppCompatActivity() {
         binding.tvModelName.text = modelId ?: "unknown"
         val port = ApiServerConfig.getPort(this)
         val ip = getLocalIpAddress()
-        binding.tvEndpoint.text = getString(R.string.server_endpoint, "http://$ip:$port")
+        binding.tvEndpoint.text = getString(R.string.server_endpoint, "http://$ip:$port/v1")
         binding.tvApiKey.text = getString(R.string.server_api_key, ApiServerConfig.getApiKey(this))
         binding.tvAuth.text = getString(R.string.server_auth,
             if (ApiServerConfig.isAuthEnabled(this)) getString(R.string.server_auth_on)
