@@ -1,7 +1,7 @@
 {
-  "id": "2026-10-25-v117",
+  "id": "2026-10-29-v133-repo",
   "tag": "公告",
-  "title": "v1.3.3 服务端：Termux C 编译版（pkg/apt 安装）+ Linux + Windows DLL 版权 ET",
-  "content": "纯 C 编译的 ai 服务端：Termux 双架构（arm64/arm 32位）deb 包，pkg/apt install 后命令 ai 启动；Linux 可执行；Windows 核心打包 hnn_core.dll（右键属性版权 ET）。菜单含 4 更改端口。",
-  "publishedAt": "2026-10-25T09:20:00+08:00"
+  "title": "v1.3.3 上线 ET 自建软件源：pkg install ai / apt install ai 一键安装",
+  "content": "Termux 与 Linux 已接入 ET 自建 APT 软件源，添加一次源后即可 pkg install ai、apt install ai 按包名直接安装，无需手动下载 deb；自动匹配 aarch64 / arm 32 位 / amd64。纯 C 编译、非 Python，内存占用极小；菜单 1 首页 / 2 市场 / 3 远程 / 4 更改端口；ModelScope 官方 API 下载 MNN 模型，OpenAI 兼容 API，密钥 etc- 开头。",
+  "publishedAt": "2026-10-29T18:05:00+08:00"
 }
