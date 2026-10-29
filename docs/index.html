@@ -109,7 +109,7 @@
     <div class="guide-block">
       <h3>📱 一、Termux 手机安装（pkg / apt 双链路）</h3>
       <h4>1. 添加 ETC 软件源（只需一次）</h4>
-      <pre>echo "deb https://etqwfd.github.io/HNN-CN-ET/termux stable main" >> $PREFIX/etc/apt/sources.list.d/hnn.list
+      <pre>echo "deb [trusted=yes] https://etqwfd.github.io/HNN-CN-ET/termux stable main" >> $PREFIX/etc/apt/sources.list.d/hnn.list
 pkg update</pre>
       <h4>2. 安装（pkg 与 apt 等价，底层同一个源）</h4>
       <pre>pkg install ai        # 等价：apt update && apt install ai</pre>
@@ -434,7 +434,7 @@ OpenAI 兼容接口 <code>GET /v1/models</code> 拉取模型列表、<code>POST 
 <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;margin:10px 0">
 <p>首次先添加 ETC 软件源，之后直接 <code>pkg install ai</code> 按包名安装（64 位与 32 位自动匹配，无需手动下载 deb）：</p>
 <pre style="background:#161b22;padding:10px;border-radius:6px;overflow:auto"># 1. 添加 ETC 自建软件源（只需执行一次）
-echo "deb https://etqwfd.github.io/HNN-CN-ET/termux stable main" >> $PREFIX/etc/apt/sources.list.d/hnn.list
+echo "deb [trusted=yes] https://etqwfd.github.io/HNN-CN-ET/termux stable main" >> $PREFIX/etc/apt/sources.list.d/hnn.list
 pkg update
 
 # 2. 直接安装（aarch64 / arm 32 位自动识别）
