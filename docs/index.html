@@ -314,5 +314,19 @@
 菜单：1=首页（已下载模型→输入名称回车→加载→给出 API 地址/密钥/模型名称→常驻运行）｜2=市场（与手机版完全一致的全部模型+大小→输入编号下载）｜3=远程模式（连手机服务版/穿透）｜0=退出。<br>
 ModelScope 官方 API 下载全部 MNN 模型（与手机版完全相同），MNN 本机推理（实测正常出中文无乱码）。支持 frpc 内网穿透后调用。</p>
 </div>
+<h2 id="termux">📱 Termux 专用（C 编译版，32/64 位，非 Python）</h2>
+<div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;margin:10px 0">
+<p>手机 Termux 安装（下载后在本机安装，pkg / apt 均可）：</p>
+<pre style="background:#161b22;padding:10px;border-radius:6px;overflow:auto"># 64 位（arm64）
+curl -L -o ai.deb https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.3-server/ai-termux-arm64.deb
+pkg install ./ai.deb        # 或 apt install ./ai.deb
+ai                            # 启动服务端
+
+# 32 位（arm）
+curl -L -o ai.deb https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.3-server/ai-termux-arm.deb
+pkg install ./ai.deb
+ai</pre>
+<p>菜单：1 首页（已下载模型→起服务）｜2 市场（ModelScope 官方 API 下载，与手机版一致）｜3 远程模式｜4 更改端口｜0 退出。<br>纯 C 编译（二进制 ~25KB），内存占用极小，模型存 ~/.hnn/models。</p>
+</div>
 </body>
 </html>

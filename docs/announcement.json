@@ -1,7 +1,7 @@
 {
   "id": "2026-10-25-v117",
   "tag": "公告",
-  "title": "v1.3.2 服务端：模型真名显示 + etc 密钥 + 预热加速 + frpc 自动接入",
-  "content": "服务端升级：模型显示真实名称（不再 llm.mnn）；密钥自动生成 etc- 开头且鉴权默认开启；启动自动预热响应更快；自动检测 frpc.toml 并自动接入穿透。",
+  "title": "v1.3.3 服务端：Termux C 编译版（pkg/apt 安装）+ Linux + Windows DLL 版权 ET",
+  "content": "纯 C 编译的 ai 服务端：Termux 双架构（arm64/arm 32位）deb 包，pkg/apt install 后命令 ai 启动；Linux 可执行；Windows 核心打包 hnn_core.dll（右键属性版权 ET）。菜单含 4 更改端口。",
   "publishedAt": "2026-10-25T09:20:00+08:00"
 }
