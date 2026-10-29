@@ -4,15 +4,15 @@ Suite: stable
 Codename: stable
 Components: main
 Architectures: aarch64 arm
-Date: 20261029000000
+Date: Thu, 29 Oct 2026 10:08:37 UTC
 
 MD5Sum:
- 070151375a6aef02a507716b0ee69121 449 main/binary-aarch64/Packages
- 794fead9d6f6f936e0df88807437a8f0 365 main/binary-aarch64/Packages.gz
- 81608956505aea0df51a1a40a0fc7c48 440 main/binary-arm/Packages
- 6a090c04808eb18a653920d2ac223235 357 main/binary-arm/Packages.gz
+  070151375a6aef02a507716b0ee69121 449 main/binary-aarch64/Packages
+  794fead9d6f6f936e0df88807437a8f0 365 main/binary-aarch64/Packages.gz
+  81608956505aea0df51a1a40a0fc7c48 440 main/binary-arm/Packages
+  6a090c04808eb18a653920d2ac223235 357 main/binary-arm/Packages.gz
 SHA256:
- f17c649b42ce28b6c733fe26e676d01a1a5e9071f43a0caa5e070505d97899fc 449 main/binary-aarch64/Packages
- 912e9096699c9506c53f1ed6d85b815f93051bb4016283079a25f1a1b095762b 365 main/binary-aarch64/Packages.gz
- a1e1a26f9db13933d0a691d3a895ef3488ab0cd8e79656aefe96eda580b9900f 440 main/binary-arm/Packages
- 6e0a8d29716c02484d022c7cafdc11145a115c5799b0438f69150eaa7a47cb35 357 main/binary-arm/Packages.gz
+  f17c649b42ce28b6c733fe26e676d01a1a5e9071f43a0caa5e070505d97899fc 449 main/binary-aarch64/Packages
+  912e9096699c9506c53f1ed6d85b815f93051bb4016283079a25f1a1b095762b 365 main/binary-aarch64/Packages.gz
+  a1e1a26f9db13933d0a691d3a895ef3488ab0cd8e79656aefe96eda580b9900f 440 main/binary-arm/Packages
+  6e0a8d29716c02484d022c7cafdc11145a115c5799b0438f69150eaa7a47cb35 357 main/binary-arm/Packages.gz
