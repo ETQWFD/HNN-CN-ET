@@ -4,10 +4,11 @@ Architecture: arm
 Maintainer: ETC
 Depends: curl
 Filename: pool/main/a/ai/ai_1.3.4_arm.deb
-Size: 113980
-MD5sum: fd726819ef1d00e8f044b9319070009e
-SHA1: 6397ecfa6904f046a87945219fca3ac0b9debb49
-SHA256: fc30a7dce35003a374f6ff246329bd040ef5d56d3c72a7f6f570ab7e3a88a236
+Size: 16564260
+MD5sum: d521517507f5f0e047b219d8bd379dfd
+SHA1: b5854054525a07671754689e71da0d97885f0301
+SHA256: 6eca1edb243d535cf78fda7e4800b7635fd2446af9a1633c5193b71ba58d41d6
 Section: net
 Priority: optional
 Description: HNN CN ETC model server (MNN local inference, OpenAI-compatible API). Copyright (c) 2026 ETC. MIT License.
+

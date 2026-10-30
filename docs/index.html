@@ -1,464 +1,199 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HNN CN ET — 安卓端侧离线大模型聊天</title>
-  <meta name="description" content="HNN CN ET：安卓端侧离线大模型聊天应用，基于 MNN，32 位与 64 位设备可用，聊天记录不上传，免费无广告。" />
-  <link rel="icon" href="assets/icons/favicon.ico" />
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32x32.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16x16.png" />
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
-  <link rel="stylesheet" href="assets/css/style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HNN CN ET · 本地模型服务端</title>
+<style>
+  :root{
+    --bg:#f6f8fa; --panel:#ffffff; --ink:#1f2328; --muted:#59636e;
+    --line:#d1d9e0; --accent:#0969da; --code-bg:#f0f3f6; --pre-bg:#1f2328; --pre-ink:#e6edf3;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Helvetica,Arial,sans-serif;
+    font-size:15px;line-height:1.65}
+  .wrap{max-width:920px;margin:0 auto;padding:0 20px}
+  header.site{background:var(--panel);border-bottom:1px solid var(--line)}
+  header.site .wrap{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;padding-top:14px;padding-bottom:14px}
+  header.site .name{font-size:18px;font-weight:700;color:var(--ink);text-decoration:none}
+  header.site nav{display:flex;gap:14px;flex-wrap:wrap}
+  header.site nav a{color:var(--muted);text-decoration:none;font-size:14px}
+  header.site nav a:hover{color:var(--accent)}
+  .announce{background:#fff8c5;border-bottom:1px solid #d4a72c;font-size:14px}
+  .announce .wrap{padding-top:8px;padding-bottom:8px}
+  .announce b{margin-right:8px}
+  main{padding:28px 0 10px}
+  h1{font-size:26px;margin:6px 0 10px}
+  h2{font-size:20px;margin:34px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  h3{font-size:16px;margin:22px 0 8px}
+  p{margin:8px 0}
+  a{color:var(--accent)}
+  code{background:var(--code-bg);padding:2px 6px;border-radius:5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
+  pre{background:var(--pre-bg);color:var(--pre-ink);padding:14px 16px;border-radius:8px;overflow-x:auto;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.55}
+  pre code{background:none;padding:0;color:inherit;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--panel)}
+  ul,ol{padding-left:22px}
+  .lead{color:var(--muted);font-size:15px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:14px 0}
+  .muted{color:var(--muted)}
+  footer{border-top:1px solid var(--line);margin-top:40px;padding:20px 0 36px;color:var(--muted);font-size:13px}
+  .tag{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:20px;padding:1px 10px;color:var(--muted);margin-right:6px}
+</style>
 </head>
 <body>
 
-<div class="announce-bar" id="announceBar" style="display:none;">
-  <div class="container announce-inner">
-    <b id="announceTag">公告</b><span id="announceText"></span>
-  </div>
+<div class="announce" id="announce" style="display:none">
+  <div class="wrap"><b id="announceTag"></b><span id="announceText"></span></div>
 </div>
 
-<nav class="nav">
-  <div class="container nav-inner">
-    <a class="brand" href="#">
-      <img src="assets/icons/logo.png" alt="HNN CN ET" />
-      <span>HNN CN ET</span>
-    </a>
-    <button class="nav-toggle" id="navToggle" aria-label="菜单">☰</button>
-    <div class="nav-links" id="navLinks">
-      <a href="#features">功能</a>
+<header class="site">
+  <div class="wrap">
+    <a class="name" href="#top">HNN CN ET</a>
+    <nav>
       <a href="#download">下载</a>
-      <a href="#guide">使用说明</a>
+      <a href="#install">安装</a>
+      <a href="#start">快速开始</a>
+      <a href="#api">API</a>
+      <a href="#system">system.ini</a>
+      <a href="#errors">错误对照</a>
       <a href="#changelog">更新日志</a>
-      <a href="#contact">联系</a>
-      <a href="https://github.com/ETQWFD/HNN-CN-ET" target="_blank" rel="noopener">GitHub</a>
-    </div>
-  </div>
-</nav>
-
-<header class="hero">
-  <div class="container">
-    <span class="hero-badge">安卓端侧离线大模型聊天</span>
-    <h1>HNN CN ET</h1>
-    <p class="hero-copy">在安卓手机上本地运行大模型聊天。不用联网、不用付费、聊天记录不上传，32 位老设备也能正常用。</p>
-    <div class="hero-btns">
-      <a class="btn btn-primary" id="btnDownload" href="https://github.com/ETQWFD/HNN-CN-ET/releases/latest">立即下载 APK</a>
-      <a class="btn btn-ghost" href="https://github.com/ETQWFD/HNN-CN-ET" target="_blank" rel="noopener">查看源码</a>
-    </div>
-    <div class="hero-meta">
-      <span>架构 armeabi-v7a + arm64-v8a</span>
-      <span>推理引擎 MNN</span>
-      <span>协议 MIT</span>
-      <span>版本 <b id="heroVer">v1.3.0</b></span>
-    </div>
+    </nav>
   </div>
 </header>
 
-<section class="section" id="features">
-  <div class="container">
-    <h2 class="section-title">功能特性</h2>
-    <div class="cards">
-      <div class="card"><h3>端侧离线</h3><p>模型在手机本地运行，断网也能聊，不用等云端。</p></div>
-      <div class="card"><h3>隐私本地</h3><p>聊天记录默认不上传服务器，数据留在自己的设备里。</p></div>
-      <div class="card"><h3>32 位兼容</h3><p>同时支持 arm64-v8a 与 armeabi-v7a，老设备也能装。</p></div>
-      <div class="card"><h3>多模型切换</h3><p>应用内下载与管理多种模型，按需更换，随时切换。</p></div>
-      <div class="card"><h3>深度思考</h3><p>可开启深度思考模式，先分析再回答；关闭则直接回答。</p></div>
-      <div class="card"><h3>Agent 助手</h3><p>可打开应用、发消息、看视频、听音乐、创建文件，支持无障碍与悬浮窗。</p></div>
-    </div>
-  </div>
-</section>
+<main class="wrap" id="top">
 
-<section class="section section-alt" id="download">
-  <div class="container">
-    <h2 class="section-title">下载</h2>
-    <div class="download-card">
-      <div class="download-info">
-        <h3>最新版本 <span id="dlVer">v1.3.0</span></h3>
-        <p id="downloadNote">最新版本 v1.3.0（手机四版 + 电脑服务端 + Linux 服务端）（新/老 × 聊天/服务 四版本）（新/老 × 聊天/服务 四版本）（新/老 × 聊天/服务 四版本）（新版 / 老版 / 服务版三合一） · 下载根治：ModelScope 官方通道，全部模型可下载</p>
-        <p class="download-meta"><span id="dlName">HNN-CN-ET-1.3.0.apk</span><span id="dlSize"></span></p>
-        <p class="download-meta"><span id="dlTime"></span><span>累计下载 <b id="dlTotal">—</b> 次</span></p>
-      </div>
-      <a class="btn btn-primary" id="btnApk" href="https://github.com/ETQWFD/HNN-CN-ET/releases/latest">下载 APK</a>
-    </div>
-    <div class="download-card">
-      <div class="download-info">
-        <h3>Windows 电脑版 <span>v1.0.2</span></h3>
-        <p>Win11 风格整洁界面 · 深度思考 / 高速直答 / MCP / Agent 工作模式（可操作电脑）· 内置 API 服务 · 主题与背景图自定义 · 模型下载到本地</p>
-        <p class="download-meta"><span>HNN-CN-ET-Setup-1.0.2.exe</span><span>支持 Win10/11 64 位</span></p>
-      </div>
-      <a class="btn btn-primary" href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/desktop-v1.1.8/HNN-CN-ET-Setup-1.1.8.exe">下载电脑版</a>
-    </div>
-  </div>
-</section>
+<h1>HNN CN ET</h1>
+<p class="lead">纯 C 命令行模型服务端。基于 MNN 做本地推理，提供 OpenAI 兼容接口，支持 Termux、Linux、Windows。模型经 ModelScope 官方通道下载，解压即可运行。</p>
+<p>
+  <span class="tag">MIT License</span>
+  <span class="tag">Copyright (c) 2026 ETC</span>
+  <span class="tag">aarch64 / arm / amd64 / x86_64</span>
+</p>
 
-<section class="section" id="guide">
-  <div class="container">
-    <h2 class="section-title">使用说明（一步步教到能用）</h2>
+<h2 id="download">下载</h2>
+<p>全部资产在 GitHub Release：<a href="https://github.com/ETQWFD/HNN-CN-ET/releases/tag/v1.3.4-server" target="_blank">v1.3.4-server</a>。</p>
+<table>
+  <tr><th>平台</th><th>文件</th><th>说明</th></tr>
+  <tr><td>Termux 64 位</td><td><code>ai-termux-arm64.deb</code></td><td>含 ai、llm_demo、MNN 动态库与源码</td></tr>
+  <tr><td>Termux 32 位</td><td><code>ai-termux-arm.deb</code></td><td>老手机用，含全部依赖</td></tr>
+  <tr><td>Linux amd64</td><td><code>ai-linux-amd64.deb</code></td><td>Debian/Ubuntu apt 安装，依赖自动解决</td></tr>
+  <tr><td>Linux 便携</td><td><code>HNN-CN-ET-Server-Linux.zip</code></td><td>免 root，解压运行</td></tr>
+  <tr><td>Windows 64 位</td><td><code>HNN-CN-ET-Server-Windows.zip</code></td><td>运行时 DLL 已内置，无需另装库</td></tr>
+  <tr><td>Termux 脚本</td><td><code>install-termux.sh</code></td><td>先装 32 位探测，失败回退 64 位</td></tr>
+</table>
 
-    <div class="guide-block">
-      <h3>通用三步</h3>
-      <ol>
-        <li>在菜单「1 首页」选择一个已经下载好的模型，启动 API 服务；</li>
-        <li>复制屏幕（或手机服务面板）上的 <b>API 地址</b>、<b>密钥</b>、<b>模型名称</b>；</li>
-        <li>填到第三方 AI 客户端（Chatbox / NextChat / LobeChat 等）即可对话。</li>
-      </ol>
-      <div class="guide-note">服务端默认绑定 0.0.0.0，同一 Wi-Fi 下其他设备用屏幕显示的「局域网 IP」访问，不要用 127.0.0.1。菜单编号：1 首页 ｜ 2 市场 ｜ 3 远程模式 ｜ 4 更改端口 ｜ 7 密钥开关 ｜ 8 强制密钥 ｜ 0 退出。</div>
-    </div>
+<h2 id="install">安装</h2>
 
-    <div class="guide-block">
-      <h3>📱 一、Termux 手机安装（pkg / apt 双链路）</h3>
-      <h4>1. 添加 ETC 软件源（只需一次）</h4>
-      <pre>echo "deb [trusted=yes] https://etqwfd.github.io/HNN-CN-ET/termux stable main" >> $PREFIX/etc/apt/sources.list.d/hnn.list
-pkg update</pre>
-      <h4>2. 安装（pkg 与 apt 等价，底层同一个源）</h4>
-      <pre>pkg install ai        # 等价：apt update && apt install ai</pre>
-      <p>64 位与 32 位包由源自动匹配；若 32 位老手机自动识别失败，可下载 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/install-termux.sh" target="_blank">install-termux.sh</a>，脚本先装 32 位 arm，跑不起来再自动回退 64 位 aarch64。</p>
-      <h4>3. 启动并选模型</h4>
-      <pre>ai
-# 进入后输入 1 回车 → 选择模型编号/名称 → 服务常驻运行</pre>
-      <p>更新：<code>pkg update && pkg upgrade ai</code>；卸载：<code>pkg remove ai</code>。模型目录 <code>~/.hnn/models</code>。</p>
-    </div>
-
-    <div class="guide-block">
-      <h3>🐧 二、Linux（Debian / Ubuntu / Kali 等）安装</h3>
-      <pre># 1. 添加源（需 root）
-echo "deb [trusted=yes] https://etqwfd.github.io/HNN-CN-ET/linux-repo stable main" | sudo tee /etc/apt/sources.list.d/hnn.list
-sudo apt update
-
-# 2. 安装
-sudo apt install ai
-
-# 3. 启动
-ai</pre>
-      <p>更新：<code>sudo apt update && sudo apt upgrade ai</code>；卸载：<code>sudo apt remove ai</code>。也可直接下载 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/HNN-CN-ET-Server-Linux.zip" target="_blank">Linux 便携包</a>，解压后 <code>chmod +x ai llm_demo && ./ai</code>。</p>
-    </div>
-
-    <div class="guide-block">
-      <h3>🪟 三、Windows 电脑便携包</h3>
-      <ol>
-        <li>下载 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/HNN-CN-ET-Server-Windows.zip" target="_blank">Windows 便携包</a> 并解压；</li>
-        <li>确保 <code>ai.exe</code>、<code>hnn_core.dll</code>、<code>llm_demo.exe</code> 在同一个文件夹（不要分开移动）；</li>
-        <li>双击 <code>run.bat</code>（或运行 <code>ai.exe</code>），按菜单 1 选模型启动服务；</li>
-        <li>屏幕会显示本机地址、局域网地址、密钥与模型名，复制到客户端即可。</li>
-      </ol>
-      <p>本版为纯 C 命令行服务端，不再依赖 Qt；程序与 DLL 版权署名均为 ETC，压缩包 <code>source/</code> 目录内含全部 C 源码（MIT）。</p>
-    </div>
-
-    <div class="guide-block">
-      <h3>📲 四、Android 手机服务版（APK 内服务面板）</h3>
-      <ol>
-        <li>打开已下载模型，进入 API 服务面板；</li>
-        <li>面板顶部三步引导：选模型 → 复制地址/密钥/模型名 → 填到第三方客户端；</li>
-        <li>地址、模型名、密钥三项均有一键复制按钮，复制后弹出提示；</li>
-        <li>密钥开关说明：关闭密钥时本机与局域网可直接调用；开启强制密钥后，本机和局域网都必须携带正确密钥。</li>
-      </ol>
-      <p>局域网其他设备用手机 Wi-Fi 的局域网 IP 访问；外网访问请自行使用 frpc 等内网穿透工具，服务端不内置穿透。</p>
-    </div>
-
-    <div class="guide-block">
-      <h3>🔌 五、第三方 AI 客户端接入（Chatbox / NextChat / LobeChat）</h3>
-      <table class="guide-table">
-        <tr><th>客户端设置项</th><th>填写内容</th></tr>
-        <tr><td>API 类型 / Provider</td><td>OpenAI 兼容（OpenAI Compatible）</td></tr>
-        <tr><td>Base URL / API 地址</td><td><code>http://手机或电脑局域网IP:端口/v1</code>（注意结尾 <code>/v1</code>）</td></tr>
-        <tr><td>API Key / 密钥</td><td>屏幕显示的完整 <code>etc-...</code> 密钥（Android 面板按面板显示的密钥填写）</td></tr>
-        <tr><td>模型名称</td><td>面板或 <code>GET /v1/models</code> 返回的名称；填完整 ID、目录名、小写变体、归一化名、<code>llm.mnn</code> 均可命中同一模型</td></tr>
-      </table>
-      <h4>最简成功示例（命令行）</h4>
-      <pre>curl http://192.168.1.23:8080/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer etc-你的密钥" \
-  -d '{"model":"MNN__Qwen2.5-0.5B-Instruct-MNN","messages":[{"role":"user","content":"你好，介绍一下你自己"}]}'</pre>
-      <p>先访问 <code>http://IP:端口/v1/models</code> 可确认当前可用模型列表；浏览器跨域调用已开放 CORS（<code>Access-Control-Allow-Origin: *</code>）。</p>
-    </div>
-
-    <div class="guide-block">
-      <h3>✍️ 六、自定义系统提示词 system.ini</h3>
-      <p>需要固定人设、回答规则或语气时，在服务端程序当前工作目录新建 <code>system.ini</code>（Android 服务版读取公共模型根目录 <code>/storage/emulated/0/hnn/system.ini</code>，缺失时回退应用私有目录）：</p>
-      <pre>system="你是一个简洁的中文助手，每次回答先给结论，再补充说明。"</pre>
-      <ul>
-        <li>支持 <code>system = "..."</code> 空格写法，兼容中文引号 <code>“...”</code>；</li>
-        <li>文件修改后下一次对话自动生效，无需重启服务；</li>
-        <li>文件不存在或为空时，保持原有默认行为，不影响正常请求；</li>
-        <li>远程转发模式（菜单 3）不本地注入，避免与上游系统提示重复。</li>
-      </ul>
-    </div>
-
-    <div class="guide-block">
-      <h3>🛠️ 七、常见错误现象 → 原因 → 修复步骤</h3>
-      <table class="guide-table">
-        <tr><th>现象</th><th>可能原因</th><th>一步步修复</th></tr>
-        <tr><td>缺少 <code>libgcc_s_seh-1.dll</code></td><td>旧压缩包运行库缺失</td><td>重新下载 v1.3.4 Windows 便携包；解压后确认 <code>ai.exe</code>、<code>hnn_core.dll</code>、<code>llm_demo.exe</code> 在同一目录再运行。</td></tr>
-        <tr><td><code>no Qt platform plugin could be initialized</code></td><td>旧桌面包插件目录缺失；本版已不依赖 Qt</td><td>改用 v1.3.4 纯 C 命令行 Windows 便携包，不再安装旧 Qt 桌面程序。</td></tr>
-        <tr><td>NSIS <code>Installer integrity check has failed</code></td><td>安装包下载损坏或不完整</td><td>删除本地安装包，重新从 Release 下载；核对文件大小与页面一致后再安装。</td></tr>
-        <tr><td><code>TLS initialization failed</code></td><td>网络/TLS 握手失败，代理或网络不稳定</td><td>切换 Wi-Fi / 移动网络；关闭或更换代理；确认能打开 ModelScope 官网后重新下载模型。</td></tr>
-        <tr><td><code>Failed to fetch repo info for ModelScope/MNN/...</code></td><td>模型仓库索引拉取失败（网络/代理/临时故障）</td><td>检查网络与代理后稍后重试；也可先在市场选择体积更小的模型测试。</td></tr>
-        <tr><td>已授予存储权限仍提示「需要所有文件访问权限」</td><td>Android 11+ 需要「所有文件访问」单独授权</td><td>系统设置 → 应用 → HNN CN ET → 权限 → 文件和媒体 → 选择「允许管理所有文件」，返回应用重新点击下载。</td></tr>
-        <tr><td>下载好的模型在首页 / 列表不显示</td><td>嵌套目录未被扫描（v1.3.4 已修复递归扫描）</td><td>重启服务端 / 下拉刷新模型列表；确认模型目录内含 <code>config.json</code> 或 <code>llm.mnn</code>；模型放在 <code>~/.hnn/models</code>（Android 为公共模型根目录）下。</td></tr>
-        <tr><td>2GB 老手机加载模型即闪退</td><td>内存不足；大模型超出可用 RAM</td><td>先关闭后台其他应用释放内存；选择 LITE 版本与更小参数模型；老手机与新手机版本分开安装，不要混用大模型。</td></tr>
-        <tr><td>401 <code>missing/invalid bearer</code></td><td>密钥未填、复制不完整或填错</td><td>从服务横幅 / 手机面板重新复制完整 <code>etc-...</code> 密钥；检查 Authorization 请求头格式为 <code>Bearer 密钥</code>；菜单 7 关闭密钥或菜单 8 关闭强制密钥后可免密钥测试。</td></tr>
-        <tr><td>端口占用 / 绑定失败</td><td>默认端口被其他程序占用</td><td>菜单 4 更改端口（如 18080），保存后重启服务；再用新端口连接客户端。</td></tr>
-        <tr><td>局域网其他设备连不上</td><td>不在同一网络、防火墙拦截、误用 127.0.0.1</td><td>确认手机/电脑与客户端在同一 Wi-Fi；关闭系统防火墙放行端口；地址使用横幅显示的局域网 IP，不要填 127.0.0.1；外网再走 frpc 穿透。</td></tr>
-        <tr><td>必须填 <code>llm.mnn</code> 才能加载模型</td><td>旧版模型名解析缺陷（v1.3.4 已修复）</td><td>升级到 v1.3.4；现在填真实模型名、市场名、目录名、完整 ID、大小写变体或 <code>llm.mnn</code> 都能命中同一模型。</td></tr>
-      </table>
-    </div>
-  </div>
-</section>
-
-<section class="section section-alt" id="changelog">
-  <div class="container">
-    <h2 class="section-title">更新日志</h2>
-    <div class="changelog">
-      <div class="change">
-        <h3>v1.3.4-server <small>（2026-10-29）</small></h3>
-        <ul>
-          <li>模型名全面兼容：支持完整模型 ID、市场名、目录名、大小写变体、归一化名以及 llm.mnn 权重文件名，第三方客户端选哪个名都能命中同一模型；嵌套目录（modelscope / modelers / builtin）下载的模型在首页与 <code>GET /v1/models</code> 全部显示</li>
-          <li>新增菜单 6「鉴权模式」开关：开/关即时生效并持久化到 ~/.hnn/ai.conf；关闭后 API 无需密钥即可调用；服务横幅实时显示鉴权状态</li>
-          <li>密钥升级：etc- 前缀 + 16 位大写字母与数字混合随机密钥，不再是纯数字小写 hex</li>
-          <li>局域网默认直连：绑定 0.0.0.0 并在启动横幅同时显示 127.0.0.1 与本机局域网 IP；CORS 预检（OPTIONS）与跨域响应头齐全，其他设备/网页/第三方 OpenAI 客户端可直接拉取模型列表并对话；外网穿透为可选 frpc 方案，菜单 3 说明</li>
-          <li>菜单 4 更改端口持久化；补齐 OpenAI 兼容 <code>GET /v1/models</code>（兼容 /models），响应 model 字段回显实际加载模型名</li>
-          <li>三端提速：模型目录缓存、动态输出缓冲、会话复用，重复请求不再重复扫描与冷加载；安装包附带全部 C 源码（source/ 目录，MIT）</li>
-          <li>Termux 安装策略：32 位 arm 优先探测、跑不起来自动回退 64 位 aarch64；Windows DLL/EXE 版权署名统一为 ETC；覆盖 Termux arm64/armv7、Linux amd64、Windows 便携包与手机 APK 四版本</li>
-        </ul>
-      </div>
-      <div class="change">
-        <h3>v1.2.1 <small>（2026-10-26）</small></h3>
-        <ul>
-          <li>根治「点击下载没反应」：下载启动全链路兜底，任何异常（已下载判断/路径/权限）都弹出真实失败原因，绝不静默</li>
-          <li>修复「准备中」卡死：状态卡在准备中的模型再次点击即可重新拉起下载</li>
-          <li>存储权限引导：未授权「所有文件访问」时点击下载直接弹窗引导去系统设置授权</li>
-          <li>已下载判断防异常：文件系统异常不再影响下载流程</li>
-        </ul>
-      <div class="change">
-        <h3>v1.1.6 <small>（2026-10-24）</small></h3>
-        <ul>
-          <li>API 调用修复：CORS 默认开启（允许任意来源），官网/网页/局域网设备直接调用不再被浏览器跨域拦截；下载异常全部兜底上报，点击下载不会再无反应</li>
-          <li>电脑版安装包彻底修复：NSIS 打包改为显式完整文件清单，GCC 8.1 运行库 + Qt DLL + 插件 14 项全部进包，解决安装后缺 libgcc_s_seh-1.dll 无法启动</li>
-          <li>保留：导入模型、已下载自动跳过、失败原因弹窗、授权后自动迁移 /storage/emulated/0/hnn、删除彻底清理、API 默认免鉴权</li>
-        </ul>
-      <div class="change">
-        <h3>v1.1.5 <small>（2026-10-24）</small></h3>
-        <ul>
-          <li>新增「导入模型」：选择文件夹/文件自动检测模型基本文件（llm.mnn / model.mnn / gguf 等），有则导入 /storage/emulated/0/hnn，无则不导入并明确提示</li>
-          <li>修复无法下载：已下载模型不再重复下载；下载失败原因明确弹出（权限/404 等）；HuggingFace 源走 hf-mirror.com 国内镜像</li>
-          <li>模型迁移：授予存储权限后自动把旧模型迁移到 /storage/emulated/0/hnn，目录自动创建并使用</li>
-          <li>删除模型彻底清理：扫描全部命名残留与中断下载残留，删得干净</li>
-          <li>API 重构：默认免鉴权，局域网设备与网页直接调用本地模型（仍绑定 0.0.0.0）</li>
-        </ul>
-        <h3>Windows 电脑版 v1.1.8 <small>（2026-10-24）</small></h3>
-        <ul>
-          <li>修复「无法找到入口」：exe 改用 Qt 官方 MinGW GCC 8.1 工具链重建，配套 GCC 8.1 运行库，启动不再报错（wine 冒烟 30 秒无任何错误）</li>
-          <li>模型市场保留 DeepSeek-R1-1.5B、Qwen3.5-0.8B 小模型下载</li>
-        </ul>
-      <div class="change">
-        <h3>v1.1.4 <small>（2026-10-23）</small></h3>
-        <ul>
-          <li>修复无法下载：HuggingFace 源切换国内镜像 hf-mirror.com，下载真实可用；下载前自动创建 /storage/emulated/0/hnn 目录并给出明确错误提示</li>
-          <li>API 服务绑定 0.0.0.0（原 127.0.0.1 只能本机访问），局域网设备与网页可真实调用本地模型</li>
-          <li>模型市场顶部推荐：图片生成模型（SD1.5 / Sana）+ 深度思考小模型（DeepSeek-R1-1.5B / Qwen3.5-0.8B / LFM2-350M / Qwen3-1.7B）</li>
-          <li>设置页新增「模型直调」：选择已下载模型一键启动真实推理；「局域网 API 地址」显示 OpenAI 兼容调用地址</li>
-          <li>悬浮球拖动节流（16ms），低端机不卡</li>
-        </ul>
-        <h3>Windows 电脑版 v1.0.7 <small>（2026-10-23）</small></h3>
-        <ul>
-          <li>模型市场新增 DeepSeek-R1-1.5B（~1.5GB）与 Qwen3.5-0.8B（~0.8GB）小模型，直链已实测可下载</li>
-          <li>本地模型真实加载调用，API 局域网服务（0.0.0.0 + CORS）持续可用</li>
-        </ul>
-      <div class="change">
-        <h3>v1.1.3 <small>（2026-10-21）</small></h3>
-        <ul>
-          <li>模型存储迁移到公共目录 /storage/emulated/0/hnn：启动时自动把已下载模型从应用私有目录迁移过去，模型下载、扫描、删除、缓存全部切到新目录</li>
-          <li>下载模型前自动检查「所有文件访问」权限，缺失时引导一键授权，不再静默失败</li>
-          <li>迁移期间新旧目录双扫描兜底，模型不会“消失”</li>
-        </ul>
-      <div class="change">
-        <h3>v1.1.2 <small>（2026-10-19）</small></h3>
-        <ul>
-          <li>修复「调用mcp在那个目录中创建一个vs.txt」卡在加载：新增宽松创建文件意图，自动识别文件名并调用 MCP 创建文件工具（单服务器直用、多服务器弹窗选择）</li>
-          <li>「文本文档」等未指定文件名时自动生成默认文件名</li>
-          <li>修复流式响应空内容刷屏：过滤空白 delta，模型无输出时提示「模型未产生可显示内容」而不是一直转圈</li>
-          <li>API 服务：模型只输出空白时不再无限等待，正常结束流</li>
-        </ul>
-        <h3>Windows 电脑版 v1.0.6 <small>（2026-10-19）</small></h3>
-        <ul>
-          <li>创建文件意图放宽：支持「调用mcp在那个目录中创建一个vs.txt」「创建一个文本文档」等说法</li>
-          <li>只说「调用mcp」未指定工具时，列出该服务器所有可用工具</li>
-        </ul>
-        <h3>v1.1.1 <small>（2026-10-19）</small></h3>
-        <ul>
-          <li>修复 AI 不调用 MCP 工具：宽松识别「先调用一下mcp」「帮我用用mcp」等各种说法，不再要求严格语序</li>
-          <li>MCP 调用不再依赖 Agent 模式开关：只要消息含 MCP 意图就拦截执行，未指定工具名时自动列出可用工具</li>
-          <li>电脑版同步修复：MCP 意图 broad 识别 + isAgentCommand 匹配 + 空工具名列出可用工具</li>
-        </ul>
-        <h3>Windows 电脑版 v1.0.5 <small>（2026-10-19）</small></h3>
-        <ul>
-          <li>MCP 意图识别放宽，「先调用一下mcp」等说法可正确触发</li>
-          <li>未指定工具名时列出该服务器所有可用工具</li>
-        </ul>
-        <h3>v1.1.0 <small>（2026-10-19）</small></h3>
-        <ul>
-          <li>MCP 连接配置重做：设置页内联展开式，开关启用后直接在下方列表添加/测试/删除服务器，不再跳转独立页面</li>
-          <li>新增 MCP 总开关：未开启时 AI 调用 MCP 会明确提示去设置开启，避免「无法启动」的困惑</li>
-          <li>MCP 服务器卡片显示令牌状态（无令牌/已配置令牌），添加成功即时生效</li>
-          <li>Agent 工作模式与 MCP 解耦：打开软件走无障碍，文件/工具走 MCP，互不干扰</li>
-        </ul>
-        <h3>Windows 电脑版 v1.0.4 <small>（2026-10-19）</small></h3>
-        <ul>
-          <li>MCP 页面新增「启用 MCP 功能」开关，与手机版行为一致</li>
-          <li>未启用 MCP 时调用工具给出明确提示，不再静默失败</li>
-        </ul>
-        <h3>v1.0.9 <small>（2026-10-19）</small></h3>
-        <ul>
-          <li>MCP 工具真实可调用：AI 识别「调用 MCP / 调用工具 / 创建文件」等指令并执行；多个服务器时弹出选择框，可勾选本次对话固定使用某个服务器</li>
-          <li>Agent 工作模式增强：输入「帮我打开XX」可直接拉起已安装应用（内置抖音/微信/QQ 等常用应用映射）；无障碍权限未开启时主动弹窗申请，授权后继续完成任务</li>
-          <li>聊天输入框上方新增「深度思考」按钮：开启后模型先深度推理再回答（DeepSeek 风格），关闭则直接回答</li>
-          <li>设置新增「主题与外观」：主题模式（跟随系统/深色/明亮）、主题颜色（蓝/绿/红/黄/紫/青/自定义）、聊天背景图片（50% 透明度琉璃质感）</li>
-          <li>Agent 悬浮球改为圆形渐变 + 弹出菜单（继续聊天/暂停悬浮窗），可拖动</li>
-          <li>性能评测支持终止；所有弹窗升级为 Android 15（Material3）风格；MCP 添加成功即时生效</li>
-        </ul>
-        <h3>Windows 电脑版 v1.0.3 <small>（2026-10-19）</small></h3>
-        <ul>
-          <li>内置 OpenAI 兼容 API 服务可在局域网/浏览器正式调用：监听全部网卡、自动生成本机地址、支持 CORS 与 OPTIONS 预检</li>
-          <li>修复网页调用 API 时大请求体被截断的问题（HTTP body 完整缓冲）</li>
-          <li>API Key 格式：etc- + 62 位数字（共 66 位），鉴权后返回 SSE 流式响应</li>
-        </ul>
-        <h3>v1.0.8 <small>（2026-10-19）</small></h3>
-        <ul>
-          <li>聊天中显示「正在调用 MCP 工具…」，MCP 令牌可填可不填（无令牌工具留空）</li>
-          <li>修复聊天里冒出原始技术报错（数据库分配失败、基准串）——改为友好提示并写入日志</li>
-          <li>数据库读写串行化 + 后台修复，低内存设备不再报 CursorWindow 分配失败</li>
-          <li>生成失败不再卡在「正在思考…」，给出可重试的友好文案</li>
-        </ul>
-        <h3>Windows 电脑版 v1.0.2 <small>（2026-10-19）</small></h3>
-        <ul>
-          <li>MCP 服务器支持访问令牌（可选，公共服务器留空即可）</li>
-          <li>未授权时给出明确提示，Agent 可真实调用 MCP 工具</li>
-        </ul>
-        <h3>Windows 电脑版 v1.0.1 <small>（2026-10-18）</small></h3>
-        <ul>
-          <li>修复安装后无法启动（无法找到入口）：exe 静态链接 C++ 运行时，与 Qt 官方库完全兼容。</li>
-          <li>MCP 真实调用工具；打开任意已安装软件（扫描开始菜单）；支持访问令牌。</li>
-        </ul>
-      </div>
-      <div class="change">
-        <h3>Windows 电脑版 v1.0.0 <small>（2026-10-18）</small></h3>
-        <ul>
-          <li>全新 Windows 桌面版：Win11 风格整洁界面，明亮/暗黑/跟随设备主题 + 主题颜色 + 高清背景图（50% 透明度可调、可重置）。</li>
-          <li>设置内下载 AI 模型到本地 models 目录并直接使用；侧栏历史记录、随时检测更新。</li>
-          <li>Agent 工作模式可操作电脑（打开应用/创建、读取、修改文件/回到桌面），操作前密码确认，可限制工作文件夹；MCP 连接配置可添加与测试。</li>
-          <li>内置 API 服务（OpenAI 兼容）：开启后显示连接地址与 66 位 Key（etc- 开头），可真实流式调用，限制可开可关。</li>
-        </ul>
-      </div>
-      <div class="change">
-        <h3>v1.0.7 <small>（2026-10-18）</small></h3>
-        <ul>
-          <li>MCP 配置新增「访问令牌」（Bearer 认证）：MT 等要求令牌的服务器填入令牌即可连接。</li>
-          <li>服务器返回非 JSON（如 Unauthorized）不再报解析错误，精准提示「未授权：服务器要求访问令牌」。</li>
-        </ul>
-      </div>
-      <div class="change">
-        <h3>v1.0.6 <small>（2026-10-18）</small></h3>
-        <ul>
-          <li>修复 MCP 服务器无法连接问题：放开 Android 明文 HTTP 限制，局域网 http://IP:port 的 MCP 服务可直接测试与真实调用。</li>
-          <li>Agent 完全听懂设备指令：打开软件/发消息/看视频/听音乐/返回桌面，无无障碍权限时自动弹出申请，授权后自动继续执行未完成的任务。</li>
-          <li>AI 可通过「调用工具 名称 参数=值」真实调用 MCP 工具，创建、读取、修改、删除文件。</li>
-        </ul>
-      </div>
-      <div class="change">
-        <h3>v1.0.5 <small>（2026-10-18）</small></h3>
-        <ul>
-          <li>MCP 测试显示行内状态与失败原因（超时/无法连接），新增读取、列出、删除、修改文件与直接调用 MCP 工具。</li>
-          <li>发送消息后显示「正在思考…」加载提示，回复不再空白。</li>
-          <li>新增「高速直答」开关：直接回答、不拒绝问题、跳过深度思考，回复更快。</li>
-          <li>Agent 工作模式执行更稳定，无障碍缺失时明确引导开启。</li>
-        </ul>
-      </div>
-      <div class="change">
-        <h3>v1.0.4 <small>（2026-10-18）</small></h3>
-        <ul>
-          <li>优化模型初始化与加载流程，进入聊天更流畅。</li>
-          <li>官网改为明亮简洁版，使用应用图标。</li>
-        </ul>
-      </div>
-      <div class="change">
-        <h3>v1.0.3 <small>（2026-10-18）</small></h3>
-        <ul>
-          <li>新增「深度思考」开关。</li>
-          <li>新增「MCP 连接配置」与「Agent 工作模式」。</li>
-          <li>Agent 支持打开应用、发消息、看视频、听音乐、创建文件，支持无障碍与悬浮窗常驻。</li>
-          <li>AI 代码块可单独复制。</li>
-          <li>修复聊天记录最后一条消息消失的问题。</li>
-        </ul>
-      </div>
-      <div class="change">
-        <h3>v1.0.2 <small>（2026-10-18）</small></h3>
-        <ul>
-          <li>修复聊天卡住与标签显示问题。</li>
-          <li>新增「AI 模型审核」开关（默认关闭，原生对话）。</li>
-          <li>反馈可直接发邮件，新增公告系统。</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="contact">
-  <div class="container">
-    <h2 class="section-title">联系</h2>
-    <div class="contact-row">
-      <p>QQ 群：<a href="https://qm.qq.com/q/ETQWFD-HNN" target="_blank" rel="noopener">917902000</a></p>
-      <p>邮箱：<a href="mailto:2416444244@qq.com">2416444244@qq.com</a></p>
-    </div>
-  </div>
-</section>
-
-<footer class="footer">
-  <div class="container">
-    <p>HNN CN ET · 基于 MNN · MIT License · © ETC 2026</p>
-    <p><a href="https://github.com/ETQWFD/HNN-CN-ET" target="_blank" rel="noopener">GitHub 仓库</a></p>
-  </div>
-</footer>
-
-<script src="assets/js/main.js"></script>
-<h2 id="server">🖥️ 电脑 / 服务器 版</h2>
-<div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;margin:10px 0">
-<p><b>电脑版 · 聊天（Windows 安装包）</b>：Setup-HNN-CN-ET-1.1.8.exe（ModelScope 直链下载 + 聊天 + 内置 API 服务，<a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/desktop-v1.1.8/Setup-HNN-CN-ET-1.1.8.exe" target="_blank">下载</a>）</p>
-<p><b>服务端 · Linux / Windows 便携包（终端版）</b>：<a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/HNN-CN-ET-Server-Linux.zip" target="_blank">Linux 下载</a> ｜ <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/HNN-CN-ET-Server-Windows.zip" target="_blank">Windows 下载</a>（若上方打不开，改用 GitHub Release 页）<br>
-菜单：1=首页（递归列出全部已下载模型→输入名称/编号/llm.mnn 均可加载）｜2=市场（与手机版完全一致的全部模型+大小→输入编号下载）｜3=远程模式（连手机服务版/可选 frpc 内网穿透）｜4=更改端口（持久化）｜7=密钥开关｜8=强制密钥（开启后本机与局域网都必须带密钥）｜0=退出。<br>
-自定义人设：在程序当前目录新建 <code>system.ini</code>，写入 <code>system="你的固定提示语"</code>，下次对话自动生效，无需重启。<br>
-OpenAI 兼容接口 <code>GET /v1/models</code> 拉取模型列表、<code>POST /v1/chat/completions</code> 对话；默认绑定 0.0.0.0 局域网直连，启动横幅显示本机局域网 IP，CORS 已开放；ModelScope 官方 API 下载全部 MNN 模型，本机推理实测中文无乱码；压缩包内置全部 C 源码。</p>
-</div>
-
-<h2 id="termux">📱 Termux 一键安装（pkg install ai，32/64 位，纯 C 编译非 Python）</h2>
-<div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;margin:10px 0">
-<p>首次先添加 ETC 软件源，之后直接 <code>pkg install ai</code> 按包名安装（64 位与 32 位自动匹配，无需手动下载 deb）：</p>
-<pre style="background:#161b22;padding:10px;border-radius:6px;overflow:auto"># 1. 添加 ETC 自建软件源（只需执行一次）
+<h3>Termux（手机，pkg / apt 通用）</h3>
+<pre><code># 1. 添加源（只需一次）
 echo "deb [trusted=yes] https://etqwfd.github.io/HNN-CN-ET/termux stable main" >> $PREFIX/etc/apt/sources.list.d/hnn.list
 pkg update
 
-# 2. 直接安装（aarch64 / arm 32 位自动识别）
-pkg install ai          # 等价 apt install ai
+# 2. 安装（32/64 位由源自动匹配）
+pkg install ai
 
-# 3. 启动服务端
-ai</pre>
-<p>更新版本：<code>pkg update && pkg upgrade ai</code>；卸载：<code>pkg remove ai</code>。<br>
-菜单：1 首页（递归列出已下载模型，名称/编号/llm.mnn 均可加载）｜2 市场（ModelScope 官方 API 下载，与手机版一致）｜3 远程模式｜4 更改端口｜7 密钥开关｜8 强制密钥｜0 退出。<br>自定义人设：在当前目录 <code>system.ini</code> 写 <code>system="提示语"</code>，下次对话生效。纯 C 编译（二进制 ~30KB），内存占用极小，模型存 <code>~/.hnn/models</code>；安装包内含全部源码。离线兜底脚本先尝试 32 位 arm，无法启动再回退 64 位 aarch64。</p>
-<p style="color:#8b949e;font-size:13px">兜底方式（源不可用时手动安装）：64 位 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/ai-termux-arm64.deb" target="_blank">ai-termux-arm64.deb</a>，32 位 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/ai-termux-arm.deb" target="_blank">ai-termux-arm.deb</a>，下载后 <code>pkg install ./文件名.deb</code>；也可使用 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/download/v1.3.4-server/install-termux.sh" target="_blank">install-termux.sh</a> 自动先 32 位探测、失败回退 64 位。</p>
-</div>
+# 3. 启动
+ai</code></pre>
+<p class="muted">更新 <code>pkg upgrade ai</code>，卸载 <code>pkg remove ai</code>。32 位老手机若识别失败，运行 <code>install-termux.sh</code> 自动回退。模型目录 <code>~/.hnn/models</code>。</p>
 
-<h2 id="linuxrepo">🐧 Linux（Debian / Ubuntu / Kali 等）一键安装（apt install ai）</h2>
-<div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;margin:10px 0">
-<pre style="background:#161b22;padding:10px;border-radius:6px;overflow:auto"># 1. 添加 ETC 软件源（只需执行一次，需 root）
-echo "deb [trusted=yes] https://etqwfd.github.io/HNN-CN-ET/linux-repo stable main" | sudo tee /etc/apt/sources.list.d/hnn.list
+<h3>Linux（Debian / Ubuntu / Kali）</h3>
+<pre><code>echo "deb [trusted=yes] https://etqwfd.github.io/HNN-CN-ET/linux-repo stable main" | sudo tee /etc/apt/sources.list.d/hnn.list
 sudo apt update
-
-# 2. 直接安装
 sudo apt install ai
+ai</code></pre>
+<p class="muted">不便用 root 时下载 Linux 便携 zip，解压后 <code>chmod +x ai llm_demo && ./ai</code>。</p>
 
-# 3. 启动服务端
-ai</pre>
-<p>更新：<code>sudo apt update && sudo apt upgrade ai</code>；卸载：<code>sudo apt remove ai</code>。模型目录 <code>~/.hnn/models</code>，菜单与 Termux 版一致。</p>
+<h3>Windows</h3>
+<ol>
+  <li>下载 <code>HNN-CN-ET-Server-Windows.zip</code> 并解压，保持文件在同一文件夹；</li>
+  <li>双击 <code>run.bat</code> 或运行 <code>ai.exe</code>；</li>
+  <li>核心程序为静态编译，<code>libc++.dll</code>、<code>libunwind.dll</code> 已在目录内，无需另装运行库。</li>
+</ol>
+
+<h2 id="start">快速开始</h2>
+<div class="panel">
+  <ol>
+    <li>菜单输入 <code>1</code>，选择一个已下载的模型，启动服务；</li>
+    <li>屏幕显示 API 地址、密钥、模型名，复制；</li>
+    <li>填到第三方客户端的 Base URL / API Key / 模型名即可对话。</li>
+  </ol>
 </div>
+<p>菜单编号：<code>1</code> 首页选模型 ｜ <code>2</code> 模型市场下载 ｜ <code>3</code> 远程转发 ｜ <code>4</code> 改端口 ｜ <code>7</code> 密钥开关 ｜ <code>8</code> 强制密钥 ｜ <code>0</code> 退出。</p>
+<p class="muted">服务默认绑定 0.0.0.0，同一 Wi-Fi 下用屏幕显示的局域网 IP 访问，不要用 127.0.0.1。外网访问自行配置 frpc 等穿透。</p>
+
+<h2 id="api">API 调用</h2>
+<p>接口为 OpenAI 兼容，鉴权开启时带 <code>Authorization: Bearer etc-...</code>。</p>
+<pre><code># 模型列表
+curl http://192.168.1.23:8080/v1/models \
+  -H "Authorization: Bearer etc-你的密钥"
+
+# 对话
+curl http://192.168.1.23:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer etc-你的密钥" \
+  -d '{"model":"Qwen2.5-0.5B-Instruct-MNN","messages":[{"role":"user","content":"你好"}]}'</code></pre>
+<table>
+  <tr><th>客户端设置项</th><th>填写内容</th></tr>
+  <tr><td>接口类型</td><td>OpenAI 兼容</td></tr>
+  <tr><td>Base URL</td><td><code>http://局域网IP:端口/v1</code></td></tr>
+  <tr><td>API Key</td><td>完整 <code>etc-...</code> 密钥</td></tr>
+  <tr><td>模型名</td><td>完整 ID、目录名、大小写变体、归一化名均可命中，无需固定输 <code>llm.mnn</code></td></tr>
+</table>
+<p class="muted">已开放 CORS，浏览器可直接跨域调用。</p>
+
+<h2 id="system">system.ini 自定义提示词</h2>
+<p>在程序当前工作目录新建 <code>system.ini</code>，写入：</p>
+<pre><code>system="你是一个简洁的中文助手，先给结论，再补充说明。"</code></pre>
+<ul>
+  <li>兼容 <code>system = "..."</code> 空格写法与中文引号；</li>
+  <li>修改后下一次对话自动生效，无需重启；</li>
+  <li>文件缺失或为空时保持默认行为。</li>
+</ul>
+
+<h2 id="errors">错误对照</h2>
+<table>
+  <tr><th>现象</th><th>原因</th><th>处理</th></tr>
+  <tr><td>缺 <code>libgcc_s_seh / libwinpthread / libc++.dll</code></td><td>旧包运行库缺失</td><td>重新下载 v1.3.4 Windows 包，核心已静态、运行时 DLL 已内置</td></tr>
+  <tr><td><code>no Qt platform plugin</code></td><td>旧 Qt 桌面版</td><td>改用 v1.3.4 纯 C 命令行版，不依赖 Qt</td></tr>
+  <tr><td><code>TLS initialization failed</code></td><td>网络/代理握手失败</td><td>换网络或关代理，确认能打开 ModelScope 后重试</td></tr>
+  <tr><td><code>Failed to fetch repo info</code></td><td>仓库索引拉取失败</td><td>检查网络后重试，先选小模型验证</td></tr>
+  <tr><td>下载后首页不显示</td><td>嵌套目录未扫描</td><td>v1.3.4 已递归扫描；确认目录含 <code>config.json</code> 且位于 <code>~/.hnn/models</code></td></tr>
+  <tr><td>老手机加载即闪退</td><td>内存不足</td><td>关闭后台应用，选 32 位包与小参数模型</td></tr>
+  <tr><td>401 bearer 错误</td><td>密钥缺失或不完整</td><td>重新复制完整 <code>etc-...</code>；菜单 7/8 可调整鉴权</td></tr>
+  <tr><td>端口绑定失败</td><td>端口被占用</td><td>菜单 4 改端口后重启</td></tr>
+  <tr><td>局域网设备连不上</td><td>网络/防火墙/误用 127.0.0.1</td><td>同一 Wi-Fi、放行防火墙、用局域网 IP</td></tr>
+  <tr><td>必须输 <code>llm.mnn</code></td><td>旧版解析缺陷</td><td>升级 v1.3.4，真实模型名可直接命中</td></tr>
+</table>
+
+<h2 id="changelog">更新日志</h2>
+<h3>v1.3.4</h3>
+<ul>
+  <li>模型名四级匹配：完整 ID / 市场名 / 目录名 / 归一化名 / 权重名，响应回显真实模型名；</li>
+  <li>模型目录递归扫描，嵌套下载的模型全部显示；</li>
+  <li>菜单 7 密钥开关、菜单 8 强制密钥，均持久化；密钥为 etc- 前缀加大写字母数字；</li>
+  <li>system.ini 自定义系统提示词，对话自动注入；</li>
+  <li>Windows 核心静态编译、运行时 DLL 内置；Linux deb 声明运行库依赖；</li>
+  <li>默认绑定 0.0.0.0，CORS 齐全，端口持久化。</li>
+</ul>
+
+</main>
+
+<footer>
+  <div class="wrap">HNN CN ET · Copyright (c) 2026 ETC · MIT License · 源码见各安装包 <code>source/</code> 目录与 GitHub 仓库。</div>
+</footer>
+
+<script>
+fetch('announcement.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+  if(!d)return;
+  document.getElementById('announce').style.display='block';
+  document.getElementById('announceTag').textContent=d.tag||'公告';
+  document.getElementById('announceText').textContent=d.title||'';
+}).catch(()=>{});
+</script>
 </body>
 </html>
