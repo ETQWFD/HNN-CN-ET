@@ -83,7 +83,7 @@
   <tr><td>Termux 32 位</td><td><code>ai-termux-arm.deb</code></td><td>老手机用，含全部依赖</td></tr>
   <tr><td>Linux amd64</td><td><code>ai-linux-amd64.deb</code></td><td>Debian/Ubuntu apt 安装，依赖自动解决</td></tr>
   <tr><td>Linux 便携</td><td><code>HNN-CN-ET-Server-Linux.zip</code></td><td>免 root，解压运行</td></tr>
-  <tr><td>Windows 64 位</td><td><code>HNN-CN-ET-Server-Windows.zip</code></td><td>运行时 DLL 已内置，无需另装库</td></tr>
+  <tr><td>Windows 64 位</td><td><code>HNN-CN-ET-Server-Windows.zip</code></td><td>全静态编译，零第三方 DLL，解压即用</td></tr>
   <tr><td>Termux 脚本</td><td><code>install-termux.sh</code></td><td>先装 32 位探测，失败回退 64 位</td></tr>
 </table>
 
@@ -112,7 +112,7 @@ ai</code></pre>
 <ol>
   <li>下载 <code>HNN-CN-ET-Server-Windows.zip</code> 并解压，保持文件在同一文件夹；</li>
   <li>双击 <code>run.bat</code> 或运行 <code>ai.exe</code>；</li>
-  <li>核心程序为静态编译，<code>libc++.dll</code>、<code>libunwind.dll</code> 已在目录内，无需另装运行库。</li>
+  <li>三个程序均为全静态编译，仅依赖 Windows 10 及以上系统自带的 UCRT，无任何第三方 DLL，解压即用。</li>
 </ol>
 
 <h2 id="start">快速开始</h2>
@@ -158,7 +158,7 @@ curl http://192.168.1.23:8080/v1/chat/completions \
 <h2 id="errors">错误对照</h2>
 <table>
   <tr><th>现象</th><th>原因</th><th>处理</th></tr>
-  <tr><td>缺 <code>libgcc_s_seh / libwinpthread / libc++.dll</code></td><td>旧包运行库缺失</td><td>重新下载 v1.3.4 Windows 包，核心已静态、运行时 DLL 已内置</td></tr>
+  <tr><td>缺 <code>libgcc_s_seh / libwinpthread / libc++.dll</code></td><td>运行的是旧包</td><td>删除旧解压目录，重新下载 v1.3.4 全静态包（已无第三方 DLL）</td></tr>
   <tr><td><code>no Qt platform plugin</code></td><td>旧 Qt 桌面版</td><td>改用 v1.3.4 纯 C 命令行版，不依赖 Qt</td></tr>
   <tr><td><code>TLS initialization failed</code></td><td>网络/代理握手失败</td><td>换网络或关代理，确认能打开 ModelScope 后重试</td></tr>
   <tr><td><code>Failed to fetch repo info</code></td><td>仓库索引拉取失败</td><td>检查网络后重试，先选小模型验证</td></tr>
