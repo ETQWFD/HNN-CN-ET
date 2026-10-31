@@ -4,10 +4,10 @@ Architecture: amd64
 Maintainer: ETC
 Depends: curl, libc6, libstdc++6, libgcc-s1
 Filename: pool/main/a/ai/ai_1.3.4_amd64.deb
-Size: 1846702
-MD5sum: 0c8537fd5a6656e4c2e5310eebf3bdb0
-SHA1: 0334440317a6a1aafb211d63d25582ea616063df
-SHA256: fa77eb1e5edfacdde60145355115886eeb45ff895e6a6b582ac533843b3a78eb
+Size: 1847656
+MD5sum: 2be29540307c2fc7b5cb9d423542b58f
+SHA1: 2a902cb135ae0bff86c4d792520e412cff66fe58
+SHA256: bde029c4f9acd99891c9433293924047defcc87d73291f1fea6be8d54bf898d5
 Section: net
 Priority: optional
 Description: HNN CN ETC model server (MNN local inference, OpenAI-compatible API). Copyright (c) 2026 ETC. MIT License.
