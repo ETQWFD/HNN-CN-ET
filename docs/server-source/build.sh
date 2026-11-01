@@ -28,7 +28,7 @@ do_windows() {
     echo "[4/4] Windows: windres -> DLL -> EXE ..."
     "$MINGW_BIN/x86_64-w64-mingw32-windres" versioninfo_dll.rc -O coff -o dllres.o
     "$MINGW_BIN/x86_64-w64-mingw32-gcc" -O2 -static -DHNN_CORE_DLL -shared ai.c dllres.o \
-        -Wl,--out-implib,libhnn_core.a -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic -lws2_32 -o hnn_core.dll
+        -Wl,--out-implib,libhnn_core.a -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic -lws2_32 -liphlpapi -o hnn_core.dll
     "$MINGW_BIN/x86_64-w64-mingw32-gcc" -O2 -static launcher_win.c dllres.o -L. -lhnn_core \
         -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic -lws2_32 -o ai.exe
 }

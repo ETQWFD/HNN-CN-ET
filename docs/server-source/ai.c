@@ -22,6 +22,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <dirent.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
 #else
 #include "win_dirent.h"
 #endif
@@ -36,6 +38,7 @@
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <iphlpapi.h>
 #include <process.h>
 #include <direct.h>
 #define strcasecmp _stricmp
@@ -668,6 +671,60 @@ static void *conn_thread(void *arg) {
     return NULL;
 }
 static volatile int running = 1;
+#define MAX_LAN 8
+/* 枚举本机所有处于 Up 状态、非回环的 IPv4 地址，不依赖外网连接，
+   无外网/纯局域网也能正确返回，多网卡可返回多个。返回地址数量。 */
+static int get_lan_ips(char ips[][16], int max) {
+    int n = 0;
+#ifndef _WIN32
+    /* SIOCGIFCONF 枚举，Linux 与 Android(API21+) 通用，不依赖 getifaddrs(API24) */
+    int s = socket(AF_INET, SOCK_DGRAM, 0);
+    if (s < 0) return 0;
+    char buf[1024];
+    struct ifconf ifc;
+    ifc.ifc_len = sizeof buf;
+    ifc.ifc_buf = buf;
+    if (ioctl(s, SIOCGIFCONF, &ifc) < 0) { close(s); return 0; }
+    int count = ifc.ifc_len / (int)sizeof(struct ifreq);
+    struct ifreq *reqs = (struct ifreq *)buf;
+    for (int i = 0; i < count && n < max; i++) {
+        struct ifreq *r = &reqs[i];
+        struct ifreq fl;
+        memset(&fl, 0, sizeof fl);
+        strncpy(fl.ifr_name, r->ifr_name, IFNAMSIZ - 1);
+        if (ioctl(s, SIOCGIFFLAGS, &fl) < 0) continue;
+        if (!(fl.ifr_flags & IFF_UP) || (fl.ifr_flags & IFF_LOOPBACK)) continue;
+        struct sockaddr_in *sin = (struct sockaddr_in *)&r->ifr_addr;
+        inet_ntop(AF_INET, &sin->sin_addr, ips[n], 16);
+        if (!strncmp(ips[n], "127.", 4) || !strncmp(ips[n], "169.254.", 8)) continue;
+        n++;
+    }
+    close(s);
+#else
+    ULONG sz = 0;
+    ULONG flags = GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER;
+    if (GetAdaptersAddresses(AF_INET, flags, NULL, NULL, &sz) != ERROR_BUFFER_OVERFLOW) return 0;
+    IP_ADAPTER_ADDRESSES *aa = (IP_ADAPTER_ADDRESSES *)malloc(sz);
+    if (!aa) return 0;
+    if (GetAdaptersAddresses(AF_INET, flags, NULL, aa, &sz) == NO_ERROR) {
+        for (PIP_ADAPTER_ADDRESSES a = aa; a && n < max; a = a->Next) {
+            if (a->OperStatus != IfOperStatusUp) continue;
+            if (a->IfType == IF_TYPE_SOFTWARE_LOOPBACK) continue;
+            for (PIP_ADAPTER_UNICAST_ADDRESS u = a->FirstUnicastAddress; u && n < max; u = u->Next) {
+                struct sockaddr *sa = u->Address.lpSockaddr;
+                if (!sa || sa->sa_family != AF_INET) continue;
+                struct sockaddr_in *sin = (struct sockaddr_in *)sa;
+                inet_ntop(AF_INET, &sin->sin_addr, ips[n], 16);
+                if (!strncmp(ips[n], "127.", 4) || !strncmp(ips[n], "169.254.", 8)) continue;
+                n++;
+            }
+        }
+    }
+    free(aa);
+#endif
+    return n;
+}
+
 static void on_sig(int s) { (void)s; running = 0; }
 static int start_api(int port) {
 #ifdef _WIN32
@@ -682,22 +739,9 @@ static int start_api(int port) {
     sa.sin_family = AF_INET; sa.sin_port = htons((unsigned short)port); sa.sin_addr.s_addr = htonl(INADDR_ANY);
     if (bind(srv, (struct sockaddr *)&sa, sizeof sa) < 0) { cprint("  端口 %d 绑定失败\n", port); close(srv); return 0; }
     listen(srv, 8);
-    char host[128] = "127.0.0.1";
-    /* 探测局域网 IP：用 UDP socket 连一个外部地址后 getsockname，
-       不实际发包，跨平台（Winsock/POSIX 通用），不依赖 hostname 等外部命令 */
-    int ud = socket(AF_INET, SOCK_DGRAM, 0);
-    if (ud >= 0) {
-        struct sockaddr_in rm;
-        memset(&rm, 0, sizeof rm);
-        rm.sin_family = AF_INET; rm.sin_port = htons(53);
-        inet_pton(AF_INET, "8.8.8.8", &rm.sin_addr);
-        if (connect(ud, (struct sockaddr *)&rm, sizeof rm) == 0) {
-            struct sockaddr_in la; socklen_t ll = sizeof la;
-            if (getsockname(ud, (struct sockaddr *)&la, &ll) == 0)
-                inet_ntop(AF_INET, &la.sin_addr, host, sizeof host);
-        }
-        close(ud);
-    }
+    /* 直接枚举本机网卡 IPv4，不依赖外网；无外网/纯局域网也能拿到真实地址 */
+    char lan_ips[MAX_LAN][16];
+    int lan_n = get_lan_ips(lan_ips, MAX_LAN);
     cprint("\n==========================================================\n");
     cprint("  HNN CN ET Server v%s  (Copyright 2026 ETC)\n", VERSION);
     cprint("  ✅ API 服务运行中（常驻，不会关闭）\n");
@@ -708,7 +752,13 @@ static int start_api(int port) {
     cprint("  🔐 密钥开关 : %s\n", AUTH_ON ? "开" : "关");
     cprint("  🔒 强制密钥 : %s\n", FORCE_AUTH ? "开（本机/局域网都要带密钥）" : "关");
     cprint("  🌐 本机地址 : http://127.0.0.1:%d/v1/chat/completions\n", port);
-    cprint("  🌐 局域网   : http://%s:%d/v1/chat/completions\n", host, port);
+    if (lan_n > 0) {
+        cprint("  🌐 局域网地址（同 WiFi/网段设备用以下任一地址）:\n");
+        for (int i = 0; i < lan_n; i++)
+            cprint("               http://%s:%d/v1/chat/completions\n", lan_ips[i], port);
+    } else {
+        cprint("  🌐 局域网   : 未检测到网卡地址，请确认已连接网络或网卡已启用\n");
+    }
     cprint("  💡 想固定人设/规则：编辑当前目录 system.ini，在 system=\"...\" 引号内写提示语，\n");
     cprint("     下次对话自动生效，不用重启。\n");
     cprint("  按 Ctrl+C 停止服务\n");
