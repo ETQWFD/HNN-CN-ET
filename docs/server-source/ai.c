@@ -77,6 +77,28 @@ static void trim(char *s) {
     while (n > 0 && (s[n-1] == '\n' || s[n-1] == '\r' || s[n-1] == ' ')) s[--n] = 0;
     while (*s == ' ') memmove(s, s+1, strlen(s));
 }
+/* 递归创建多级目录（Windows _mkdir 只建一级，故逐级创建；已存在的忽略错误） */
+static void mkpath(const char *path) {
+    char tmp[MAXPATH];
+    strncpy(tmp, path, sizeof tmp - 1); tmp[sizeof tmp - 1] = 0;
+    size_t len = strlen(tmp);
+    for (size_t i = 1; i < len; i++) {
+        if (tmp[i] == '/' || tmp[i] == '\\') {
+            char c = tmp[i]; tmp[i] = 0;
+#ifdef _WIN32
+            _mkdir(tmp);
+#else
+            mkdir(tmp, 0755);
+#endif
+            tmp[i] = c;
+        }
+    }
+#ifdef _WIN32
+    _mkdir(tmp);
+#else
+    mkdir(tmp, 0755);
+#endif
+}
 static char *base_name(const char *p) {
     const char *s = strrchr(p, '/');
 #ifdef _WIN32
@@ -186,25 +208,62 @@ static void load_system_prompt(void) {
     }
 }
 
+#ifdef _WIN32
+/* Windows: 用 CreateProcess 直接启动并捕获 stdout/stderr，不经 cmd.exe，
+   避免路径里的括号、&、%、引号等被 shell 解释导致参数错乱 */
+static char *capture_exec(const char *cmdline) {
+    HANDLE rd = NULL, wr = NULL;
+    SECURITY_ATTRIBUTES sa;
+    sa.nLength = sizeof sa; sa.lpSecurityDescriptor = NULL; sa.bInheritHandle = TRUE;
+    if (!CreatePipe(&rd, &wr, &sa, 0)) return strdup("管道创建失败");
+    SetHandleInformation(rd, HANDLE_FLAG_INHERIT, 0);
+    char *cl = _strdup(cmdline);
+    STARTUPINFOA si; ZeroMemory(&si, sizeof si); si.cb = sizeof si;
+    si.dwFlags |= STARTF_USESTDHANDLES;
+    si.hStdOutput = wr; si.hStdError = wr;
+    si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    PROCESS_INFORMATION pi; ZeroMemory(&pi, sizeof pi);
+    BOOL ok = CreateProcessA(NULL, cl, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
+    free(cl); CloseHandle(wr);
+    if (!ok) { CloseHandle(rd); return strdup("无法启动 llm_demo"); }
+    size_t cap = 65536, len = 0;
+    char *buf = malloc(cap);
+    if (!buf) { CloseHandle(rd); return strdup("内存不足"); }
+    DWORD got;
+    while (ReadFile(rd, buf + len, (DWORD)(cap - len - 1), &got, NULL) && got > 0) {
+        len += got;
+        if (cap - len < 8192) { cap *= 2; buf = realloc(buf, cap); }
+        buf[len] = 0;
+    }
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    CloseHandle(pi.hProcess); CloseHandle(pi.hThread); CloseHandle(rd);
+    buf[len] = 0;
+    return buf;
+}
+#endif
+
 /* ---------- 子进程推理（MNN llm_demo 一次性模式） ---------- */
 static char *run_llm(const char *model_dir, const char *prompt, int max_tokens) {
     char pf[MAXPATH]; snprintf(pf, sizeof pf, "%s/.ai_prompt.txt", MODEL_DIR);
     FILE *p = fopen(pf, "w");
     if (!p) return strdup("写入 prompt 失败");
     fputs(prompt, p); fclose(p);
+    char *raw;
+#ifdef _WIN32
+    /* 直接 CreateProcess，参数用双引号包裹；不走 shell，括号安全 */
+    char cmdline[4096];
+    snprintf(cmdline, sizeof cmdline, "\"%s\" \"%s/config.json\" \"%s\" %d",
+             LLM_DEMO_PATH, model_dir, pf, max_tokens);
+    raw = capture_exec(cmdline);
+#else
     char cmd[MAXPATH * 2 + 256];
-#ifndef _WIN32
     snprintf(cmd, sizeof cmd, "\"%s\" \"%s/config.json\" \"%s\" %d 2>/dev/null",
              LLM_DEMO_PATH, model_dir, pf, max_tokens);
-#else
-    snprintf(cmd, sizeof cmd, "\"%s\" \"%s/config.json\" \"%s\" %d 2>NUL",
-             LLM_DEMO_PATH, model_dir, pf, max_tokens);
-#endif
     FILE *fp = popen(cmd, "r");
     if (!fp) return strdup("无法启动 llm_demo");
     /* 循环读取直到 EOF，缓冲动态增长，不再用固定 MAXBUF 截断长回答 */
     size_t cap = 65536, len = 0;
-    char *raw = malloc(cap);
+    raw = malloc(cap);
     if (!raw) { pclose(fp); return strdup("内存不足"); }
     size_t n;
     while ((n = fread(raw + len, 1, cap - len - 1, fp)) > 0) {
@@ -219,6 +278,7 @@ static char *run_llm(const char *model_dir, const char *prompt, int max_tokens) 
     }
     pclose(fp);
     raw[len] = 0;
+#endif
     /* 过滤 llm_demo 日志行，取答案（手动按行切分，避免 strtok 静态状态跨线程竞争） */
     static const char *skip[] = {"config path", "The device", "main,", "prompt file", "#",
         "prompt tokens", "vision time", "vision speed", "audio ", "pixels", "MP/s", "decode tokens",
@@ -463,7 +523,11 @@ static char *build_models_json(void) {
 /* 远程 GET /v1/models 转发，原样返回 */
 static char *remote_get_models(void) {
     char cmd[1024];
+#ifdef _WIN32
+    snprintf(cmd, sizeof cmd, "curl -sL -m 30 \"%s/v1/models\"", REMOTE_URL);
+#else
     snprintf(cmd, sizeof cmd, "curl -sL -m 30 '%s/v1/models'", REMOTE_URL);
+#endif
     FILE *fp = popen(cmd, "r");
     if (!fp) return strdup("{\"object\":\"list\",\"data\":[]}");
     size_t cap = 8192, len = 0;
@@ -619,11 +683,20 @@ static int start_api(int port) {
     if (bind(srv, (struct sockaddr *)&sa, sizeof sa) < 0) { cprint("  端口 %d 绑定失败\n", port); close(srv); return 0; }
     listen(srv, 8);
     char host[128] = "127.0.0.1";
-    /* 探测局域网 IP（尽力而为） */
-    FILE *f = popen("hostname -I 2>/dev/null || ip addr show 2>/dev/null | grep 'inet ' | grep -v 127.0.0.1 | head -1", "r");
-    if (f) {
-        char b[256]; size_t n = fread(b, 1, sizeof b - 1, f); b[n] = 0; pclose(f);
-        char *tok = strtok(b, " "); if (tok) { trim(tok); if (strncmp(tok, "169.254", 7) && strcmp(tok, "127.0.0.1")) strncpy(host, tok, 127); }
+    /* 探测局域网 IP：用 UDP socket 连一个外部地址后 getsockname，
+       不实际发包，跨平台（Winsock/POSIX 通用），不依赖 hostname 等外部命令 */
+    int ud = socket(AF_INET, SOCK_DGRAM, 0);
+    if (ud >= 0) {
+        struct sockaddr_in rm;
+        memset(&rm, 0, sizeof rm);
+        rm.sin_family = AF_INET; rm.sin_port = htons(53);
+        inet_pton(AF_INET, "8.8.8.8", &rm.sin_addr);
+        if (connect(ud, (struct sockaddr *)&rm, sizeof rm) == 0) {
+            struct sockaddr_in la; socklen_t ll = sizeof la;
+            if (getsockname(ud, (struct sockaddr *)&la, &ll) == 0)
+                inet_ntop(AF_INET, &la.sin_addr, host, sizeof host);
+        }
+        close(ud);
     }
     cprint("\n==========================================================\n");
     cprint("  HNN CN ET Server v%s  (Copyright 2026 ETC)\n", VERSION);
@@ -677,6 +750,11 @@ static void banner(void) {
 }
 DLLEXPORT int ai_server_main(int argc, char **argv) {
     srand((unsigned)time(NULL));
+#ifdef _WIN32
+    /* 控制台切 UTF-8，避免中文按系统 GBK 代码页显示成乱码（直接运行 exe 也生效） */
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
     /* 路径：优先程序同目录（Termux $PREFIX/bin 时模型放 ~/.hnn/models） */
 #ifdef _WIN32
     const char *home = getenv("HNN_HOME") ? getenv("HNN_HOME") : getenv("USERPROFILE");
@@ -760,7 +838,17 @@ DLLEXPORT int ai_server_main(int argc, char **argv) {
             trim(name);
             if (!name[0]) continue;
             char mdir[MAXPATH];
-            if (!find_model(name, mdir)) { cprint("  未找到该模型\n"); continue; }
+            int picked = 0;
+            /* 支持列表编号选择（输入纯数字且在范围内） */
+            int all_digit = 1;
+            for (char *q = name; *q; q++) if (*q < '0' || *q > '9') { all_digit = 0; break; }
+            if (all_digit) {
+                int idx = atoi(name);
+                if (idx >= 1 && idx <= g_model_count) {
+                    snprintf(mdir, sizeof mdir, "%s", g_models[idx - 1].dir); picked = 1;
+                }
+            }
+            if (!picked && !find_model(name, mdir)) { cprint("  未找到该模型\n"); continue; }
             snprintf(ACTIVE_MODEL, sizeof ACTIVE_MODEL, "%s", base_name(mdir));
             snprintf(ACTIVE_MODEL_DIR, sizeof ACTIVE_MODEL_DIR, "%s", mdir); /* 缓存绝对路径，请求直接复用 */
             cprint("  正在加载模型，首次加载可能需要数十秒…\n");
@@ -778,8 +866,13 @@ DLLEXPORT int ai_server_main(int argc, char **argv) {
             char mdir[MAXPATH]; snprintf(mdir, sizeof mdir, "%s/%s", MODEL_DIR, name);
             mkdir(mdir, 0755);
             char cmd[4096];
+#ifdef _WIN32
+            snprintf(cmd, sizeof cmd,
+                "curl -sL -m 60 \"https://modelscope.cn/api/v1/models/MNN/%s/repo/files?Recursive=1\"", name);
+#else
             snprintf(cmd, sizeof cmd,
                 "curl -sL -m 60 'https://modelscope.cn/api/v1/models/MNN/%s/repo/files?Recursive=1'", name);
+#endif
             FILE *f = popen(cmd, "r");
             char jb[MAXBUF]; size_t n = fread(jb, 1, sizeof jb - 1, f); jb[n] = 0; pclose(f);
             /* 解析 Path 字段并下载每个文件 */
@@ -794,11 +887,27 @@ DLLEXPORT int ai_server_main(int argc, char **argv) {
                 if (strstr(path, ".gitattributes") || strstr(path, "README")) { p = e; continue; }
                 cprint("  -> %s\n", path);
                 char durl[2048]; char outp[MAXPATH];
-                snprintf(durl, sizeof durl, "https://modelscope.cn/api/v1/models/MNN/%s/repo?FilePath=%s", name, path);
+                /* resolve CDN 直链，走对象存储加速，比 repo 接口少一次重定向 */
+                snprintf(durl, sizeof durl, "https://modelscope.cn/models/MNN/%s/resolve/master/%s", name, path);
                 snprintf(outp, sizeof outp, "%s/%s", mdir, path);
+                /* 在 C 内递归建好父目录，避免依赖 shell 的 mkdir -p（Windows cmd 不支持） */
+                char odir[MAXPATH];
+                strncpy(odir, outp, sizeof odir - 1); odir[sizeof odir - 1] = 0;
+                char *sl = strrchr(odir, '/');
+#ifdef _WIN32
+                char *bs = strrchr(odir, '\\');
+                if (bs && (!sl || bs > sl)) sl = bs;
+#endif
+                if (sl) { *sl = 0; mkpath(odir); }
                 char dcmd[4096];
-                snprintf(dcmd, sizeof dcmd, "mkdir -p '%s' && curl -sL -m 1800 '%s' -o '%s'", mdir, durl, outp);
-                system(dcmd);
+                /* 显示进度条；弱网自动重试 3 次；引号按平台区分 */
+#ifdef _WIN32
+                snprintf(dcmd, sizeof dcmd, "curl -L --progress-bar --retry 3 --retry-delay 2 -m 1800 \"%s\" -o \"%s\"", durl, outp);
+#else
+                snprintf(dcmd, sizeof dcmd, "curl -L --progress-bar --retry 3 --retry-delay 2 -m 1800 '%s' -o '%s'", durl, outp);
+#endif
+                int rc = system(dcmd);
+                if (rc != 0) cprint("  [警告] 该文件下载返回码 %d，可稍后重试或检查网络。\n", rc);
                 count++;
                 p = e;
             }
