@@ -1,18 +1,18 @@
 Origin: ETC
-Label: HNN CN ETC
+Label: HNN CN ETC Server
 Suite: stable
 Codename: stable
-Components: main
+Date: Sun, 01 Nov 2026 07:03:03 UTC
 Architectures: aarch64 arm
-Date: Sun, 01 Nov 2026 06:20:18 +0000
-
+Components: main
+Description: HNN CN ETC Server apt repository
 MD5Sum:
-  1beff3f40a747f4abdd4e7e30b9828cc 900 main/binary-aarch64/Packages
-  42fad69070659c100f2cd8f5851372b5 483 main/binary-aarch64/Packages.gz
-  1beff3f40a747f4abdd4e7e30b9828cc 900 main/binary-arm/Packages
-  42fad69070659c100f2cd8f5851372b5 483 main/binary-arm/Packages.gz
+ ac85665ef6a7cf4886b5807a1f14f648      453 main/binary-aarch64/Packages
+ 7aaea26f76556541cd3fbb7ba51ebe67      366 main/binary-aarch64/Packages.gz
+ 3babacbf5ed53ba3a7a54fef05ec2dd7      445 main/binary-arm/Packages
+ 4dcc2fc11dd11002b49a8e9fc1394d6c      362 main/binary-arm/Packages.gz
 SHA256:
-  2b18361665f3c4e86a7d657111e72265228993e261d5bc812cf4fb10e6bba088 900 main/binary-aarch64/Packages
-  1e84311b1c111305fc225a63041a377449509bd45c72a739368dd599cbbe9de4 483 main/binary-aarch64/Packages.gz
-  2b18361665f3c4e86a7d657111e72265228993e261d5bc812cf4fb10e6bba088 900 main/binary-arm/Packages
-  1e84311b1c111305fc225a63041a377449509bd45c72a739368dd599cbbe9de4 483 main/binary-arm/Packages.gz
+ fa735e981547da03db722bdf7fc1179440a9c1ccb60f48ce5f1d9d8939306c4f      453 main/binary-aarch64/Packages
+ 3a9fe37ed7e0b97e4b19e92599299615292aed2038e84cf3498ddddafb576df3      366 main/binary-aarch64/Packages.gz
+ bec53e593cd0eb35ae37fd43deff7a048c33f64dadf968f1c38d055996f58545      445 main/binary-arm/Packages
+ e15f4fefbea4416ab353bf8117e67ce0d91a40b032b0fdc08fed7edd9b4d60b8      362 main/binary-arm/Packages.gz

@@ -111,6 +111,28 @@ static char *base_name(const char *p) {
     return (char *)(s ? s + 1 : p);
 }
 
+/* 递归删除目录（用于清理 llm_demo 独立工作目录；lstat 不跟随符号链接，防误删链接目标） */
+static void rmrf(const char *path) {
+    DIR *d = opendir(path);
+    if (!d) { remove(path); return; }
+    struct dirent *e;
+    while ((e = readdir(d))) {
+        if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..")) continue;
+        char sub[MAXPATH];
+        snprintf(sub, sizeof sub, "%s/%s", path, e->d_name);
+        struct stat st;
+#ifdef _WIN32
+        if (!stat(sub, &st) && S_ISDIR(st.st_mode)) rmrf(sub);
+        else remove(sub);
+#else
+        if (!lstat(sub, &st) && S_ISDIR(st.st_mode) && !S_ISLNK(st.st_mode)) rmrf(sub);
+        else remove(sub);
+#endif
+    }
+    closedir(d);
+    rmdir(path);
+}
+
 /* 解析可执行文件真实路径（替代 argv[0]，避免 PATH 启动/相对路径时
    拿不到程序目录导致 cwd bug）。buf 返回可执行文件全路径。 */
 static void self_exe_path(char *buf, size_t n) {
@@ -236,7 +258,7 @@ static void load_system_prompt(void) {
 #ifdef _WIN32
 /* Windows: 用 CreateProcess 直接启动并捕获 stdout/stderr，不经 cmd.exe，
    避免路径里的括号、&、%、引号等被 shell 解释导致参数错乱 */
-static char *capture_exec(const char *cmdline) {
+static char *capture_exec_in(const char *cmdline, const char *wkdir) {
     HANDLE rd = NULL, wr = NULL;
     SECURITY_ATTRIBUTES sa;
     sa.nLength = sizeof sa; sa.lpSecurityDescriptor = NULL; sa.bInheritHandle = TRUE;
@@ -248,9 +270,9 @@ static char *capture_exec(const char *cmdline) {
     si.hStdOutput = wr; si.hStdError = wr;
     si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
     PROCESS_INFORMATION pi; ZeroMemory(&pi, sizeof pi);
-    /* llm_demo 内部 tmp_path 相对路径需可写 cwd，用 HOME 作为子进程工作目录 */
+    /* llm_demo 内部 tmp_path 相对路径需可写 cwd，用独立工作目录作为子进程工作目录 */
     char wk[MAXPATH];
-    snprintf(wk, sizeof wk, "%s", HOME_DIR[0] ? HOME_DIR : ".");
+    snprintf(wk, sizeof wk, "%s", wkdir && wkdir[0] ? wkdir : ".");
     BOOL ok = CreateProcessA(NULL, cl, NULL, NULL, TRUE, 0, NULL, wk, &si, &pi);
     free(cl); CloseHandle(wr);
     if (!ok) { CloseHandle(rd); return strdup("无法启动 llm_demo"); }
@@ -270,38 +292,54 @@ static char *capture_exec(const char *cmdline) {
 }
 #endif
 
+/* 推理互斥锁与序号：llm_demo 每次调用使用 HOME 下独立工作子目录，
+   并发 API 请求串行执行，避免同时写同一 prompt 文件/tmp 目录导致 double free */
+static pthread_mutex_t llm_mutex = PTHREAD_MUTEX_INITIALIZER;
+static unsigned llm_seq = 0;
+
 /* ---------- 子进程推理（MNN llm_demo 一次性模式） ---------- */
 static char *run_llm(const char *model_dir, const char *prompt, int max_tokens) {
-    char pf[MAXPATH]; snprintf(pf, sizeof pf, "%s/.ai_prompt.txt", MODEL_DIR);
+    /* 加锁串行化推理：并发请求下 llm_demo 若同时跑会互相覆盖 prompt 文件、
+       并共用相对 tmp 目录，导致 double free/corruption */
+    pthread_mutex_lock(&llm_mutex);
+    /* 独立工作子目录：HOME/.ai_work/<seq>/ 下放 prompt 与 tmp，互不干扰 */
+    char wdir[MAXPATH];
+    llm_seq++;
+    snprintf(wdir, sizeof wdir, "%s/.ai_work/%u", HOME_DIR[0] ? HOME_DIR : ".", llm_seq);
+    mkpath(wdir);
+    char pf[MAXPATH]; snprintf(pf, sizeof pf, "%s/prompt.txt", wdir);
     FILE *p = fopen(pf, "w");
-    if (!p) return strdup("写入 prompt 失败");
+    if (!p) { pthread_mutex_unlock(&llm_mutex); return strdup("写入 prompt 失败"); }
     fputs(prompt, p); fclose(p);
     char *raw;
 #ifdef _WIN32
     /* 直接 CreateProcess，参数用双引号包裹；不走 shell，括号安全；
-       lpCurrentDirectory 用 HOME，llm_demo 的 tmp_path 相对路径落在可写目录 */
+       lpCurrentDirectory 用独立工作目录，llm_demo 的 tmp_path 相对路径落在可写隔离目录 */
     char cmdline[4096];
     snprintf(cmdline, sizeof cmdline, "\"%s\" \"%s/config.json\" \"%s\" %d",
              LLM_DEMO_PATH, model_dir, pf, max_tokens);
-    raw = capture_exec(cmdline);
+    raw = capture_exec_in(cmdline, wdir);
+    rmrf(wdir);
 #else
     char cmd[MAXPATH * 2 + 256];
     snprintf(cmd, sizeof cmd, "\"%s\" \"%s/config.json\" \"%s\" %d 2>/dev/null",
              LLM_DEMO_PATH, model_dir, pf, max_tokens);
     /* llm_demo 内部 tmp_path 用相对路径，cwd 必须可写（避免 double free/崩溃）；
-       先切到 HOME（.hnn 所在，必然存在），执行后恢复原目录 */
+       先切到独立工作目录，执行后恢复原目录 */
     char old_cwd[MAXPATH];
     int have_old = (getcwd(old_cwd, sizeof old_cwd) != NULL);
-    char run_dir[MAXPATH];
-    snprintf(run_dir, sizeof run_dir, "%s", HOME_DIR[0] ? HOME_DIR : ".");
-    (void)chdir(run_dir);
+    (void)chdir(wdir);
     FILE *fp = popen(cmd, "r");
     if (have_old) (void)chdir(old_cwd);
-    if (!fp) return strdup("无法启动 llm_demo");
+    if (!fp) {
+        rmrf(wdir);
+        pthread_mutex_unlock(&llm_mutex);
+        return strdup("无法启动 llm_demo");
+    }
     /* 循环读取直到 EOF，缓冲动态增长，不再用固定 MAXBUF 截断长回答 */
     size_t cap = 65536, len = 0;
     raw = malloc(cap);
-    if (!raw) { pclose(fp); return strdup("内存不足"); }
+    if (!raw) { pclose(fp); rmrf(wdir); pthread_mutex_unlock(&llm_mutex); return strdup("内存不足"); }
     size_t n;
     while ((n = fread(raw + len, 1, cap - len - 1, fp)) > 0) {
         len += n;
@@ -315,7 +353,9 @@ static char *run_llm(const char *model_dir, const char *prompt, int max_tokens) 
     }
     pclose(fp);
     raw[len] = 0;
+    rmrf(wdir);
 #endif
+    pthread_mutex_unlock(&llm_mutex);
     /* 过滤 llm_demo 日志行，取答案（手动按行切分，避免 strtok 静态状态跨线程竞争） */
     static const char *skip[] = {"config path", "The device", "main,", "prompt file", "#",
         "prompt tokens", "vision time", "vision speed", "audio ", "pixels", "MP/s", "decode tokens",
@@ -333,8 +373,8 @@ static char *run_llm(const char *model_dir, const char *prompt, int max_tokens) 
             if (!strncmp(ls, skip[i], strlen(skip[i]))) { sk = 1; break; }
         if (!sk && *ls) {
             size_t need = strlen(out) + strlen(ls) + 2;
-            if (need + 1 > outcap) {
-                while (outcap < need + 1) outcap *= 2;
+            if (need >= outcap) {
+                while (outcap <= need) outcap *= 2;
                 out = realloc(out, outcap);
             }
             strcat(out, ls); strcat(out, "\n");
@@ -343,7 +383,10 @@ static char *run_llm(const char *model_dir, const char *prompt, int max_tokens) 
         start = nl + 1;
     }
     if (!out[0]) {
-        strncpy(out, raw, 399); out[399] = 0;
+        /* 空输出兜底：只拷不超过 outcap 的内容，避免 399 写 256 的堆溢出 */
+        size_t cp = strlen(raw);
+        if (cp > outcap - 1) cp = outcap - 1;
+        memcpy(out, raw, cp); out[cp] = 0;
     }
     free(raw);
     return out;
