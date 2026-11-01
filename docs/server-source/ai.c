@@ -111,6 +111,28 @@ static char *base_name(const char *p) {
     return (char *)(s ? s + 1 : p);
 }
 
+/* 解析可执行文件真实路径（替代 argv[0]，避免 PATH 启动/相对路径时
+   拿不到程序目录导致 cwd bug）。buf 返回可执行文件全路径。 */
+static void self_exe_path(char *buf, size_t n) {
+#ifdef _WIN32
+    GetModuleFileNameA(NULL, buf, (DWORD)n);
+#else
+    ssize_t r = readlink("/proc/self/exe", buf, n - 1);
+    if (r > 0) buf[r] = 0;
+    else snprintf(buf, n, ".");
+#endif
+}
+/* 可执行文件所在目录（不含末级 / 文件名） */
+static void self_exe_dir(char *buf, size_t n) {
+    self_exe_path(buf, n);
+    char *s = strrchr(buf, '/');
+#ifdef _WIN32
+    char *b = strrchr(buf, '\\');
+    if (!s || (b && b > s)) s = b;
+#endif
+    if (s) *s = 0; else snprintf(buf, n, ".");
+}
+
 /* ---------- 配置 ---------- */
 static void default_key(void) {
     /* 大写 A-Z + 小写 a-z + 数字 0-9 混合字符集；前缀 etc-，其后 16 位随机 */
@@ -226,7 +248,10 @@ static char *capture_exec(const char *cmdline) {
     si.hStdOutput = wr; si.hStdError = wr;
     si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
     PROCESS_INFORMATION pi; ZeroMemory(&pi, sizeof pi);
-    BOOL ok = CreateProcessA(NULL, cl, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
+    /* llm_demo 内部 tmp_path 相对路径需可写 cwd，用 HOME 作为子进程工作目录 */
+    char wk[MAXPATH];
+    snprintf(wk, sizeof wk, "%s", HOME_DIR[0] ? HOME_DIR : ".");
+    BOOL ok = CreateProcessA(NULL, cl, NULL, NULL, TRUE, 0, NULL, wk, &si, &pi);
     free(cl); CloseHandle(wr);
     if (!ok) { CloseHandle(rd); return strdup("无法启动 llm_demo"); }
     size_t cap = 65536, len = 0;
@@ -253,7 +278,8 @@ static char *run_llm(const char *model_dir, const char *prompt, int max_tokens) 
     fputs(prompt, p); fclose(p);
     char *raw;
 #ifdef _WIN32
-    /* 直接 CreateProcess，参数用双引号包裹；不走 shell，括号安全 */
+    /* 直接 CreateProcess，参数用双引号包裹；不走 shell，括号安全；
+       lpCurrentDirectory 用 HOME，llm_demo 的 tmp_path 相对路径落在可写目录 */
     char cmdline[4096];
     snprintf(cmdline, sizeof cmdline, "\"%s\" \"%s/config.json\" \"%s\" %d",
              LLM_DEMO_PATH, model_dir, pf, max_tokens);
@@ -262,7 +288,15 @@ static char *run_llm(const char *model_dir, const char *prompt, int max_tokens) 
     char cmd[MAXPATH * 2 + 256];
     snprintf(cmd, sizeof cmd, "\"%s\" \"%s/config.json\" \"%s\" %d 2>/dev/null",
              LLM_DEMO_PATH, model_dir, pf, max_tokens);
+    /* llm_demo 内部 tmp_path 用相对路径，cwd 必须可写（避免 double free/崩溃）；
+       先切到 HOME（.hnn 所在，必然存在），执行后恢复原目录 */
+    char old_cwd[MAXPATH];
+    int have_old = (getcwd(old_cwd, sizeof old_cwd) != NULL);
+    char run_dir[MAXPATH];
+    snprintf(run_dir, sizeof run_dir, "%s", HOME_DIR[0] ? HOME_DIR : ".");
+    (void)chdir(run_dir);
     FILE *fp = popen(cmd, "r");
+    if (have_old) (void)chdir(old_cwd);
     if (!fp) return strdup("无法启动 llm_demo");
     /* 循环读取直到 EOF，缓冲动态增长，不再用固定 MAXBUF 截断长回答 */
     size_t cap = 65536, len = 0;
@@ -826,27 +860,18 @@ DLLEXPORT int ai_server_main(int argc, char **argv) {
     mkdir(bin, 0755);
 #endif
     snprintf(CONF_PATH, sizeof CONF_PATH, "%s/.hnn/ai.conf", home ? home : ".");
-    /* 记录可执行文件目录（用于查找 system.ini） */
-    snprintf(EXE_DIR, sizeof EXE_DIR, "%s", argv[0][0] ? argv[0] : ".");
-    {
-        char *es = strrchr(EXE_DIR, '/');
-#ifdef _WIN32
-        char *eb = strrchr(EXE_DIR, '\\');
-        if (!es || (eb && eb > es)) es = eb;
-#endif
-        if (es) *es = 0; else strcpy(EXE_DIR, ".");
-    }
+    /* 记录可执行文件目录（用于查找 system.ini）——用 /proc/self/exe / GetModuleFileName
+       解析真实路径，PATH 启动、软链接、任意 cwd 都不影响 */
+    self_exe_dir(EXE_DIR, sizeof EXE_DIR);
+    char self_exe[MAXPATH];
+    self_exe_path(self_exe, sizeof self_exe);
     /* llm_demo 位置：按平台逐个探测候选，命中即写入 LLM_DEMO_PATH */
 #ifdef _WIN32
     /* Windows: ① %USERPROFILE%\.hnn\bin\llm_demo.exe → ② 程序同目录 llm_demo.exe → ③ 程序同目录 bin\llm_demo.exe */
     snprintf(LLM_DEMO_PATH, sizeof LLM_DEMO_PATH, "%s\\.hnn\\bin\\llm_demo.exe", home ? home : ".");
     if (access(LLM_DEMO_PATH, X_OK)) {
         char exe_dir[MAXPATH];
-        snprintf(exe_dir, sizeof exe_dir, "%s", argv[0][0] ? argv[0] : ".");
-        char *slash = strrchr(exe_dir, '/');
-        char *bs = strrchr(exe_dir, '\\');
-        if (!slash || (bs && bs > slash)) slash = bs;
-        if (slash) *slash = 0; else strcpy(exe_dir, ".");
+        self_exe_dir(exe_dir, sizeof exe_dir);
         snprintf(LLM_DEMO_PATH, sizeof LLM_DEMO_PATH, "%s\\llm_demo.exe", exe_dir);
         if (access(LLM_DEMO_PATH, X_OK)) {
             snprintf(LLM_DEMO_PATH, sizeof LLM_DEMO_PATH, "%s\\bin\\llm_demo.exe", exe_dir);
@@ -855,15 +880,22 @@ DLLEXPORT int ai_server_main(int argc, char **argv) {
         }
     }
 #else
-    /* Linux/Termux: ① ~/.hnn/bin/llm_demo → ② 程序同目录 llm_demo */
+    /* Linux/Termux: ① ~/.hnn/bin/llm_demo → ② 程序同目录 llm_demo（真实 exe 路径） */
     snprintf(LLM_DEMO_PATH, sizeof LLM_DEMO_PATH, "%s/.hnn/bin/llm_demo", home ? home : ".");
     if (access(LLM_DEMO_PATH, X_OK)) {
-        snprintf(LLM_DEMO_PATH, sizeof LLM_DEMO_PATH, "%s/llm_demo", argv[0][0] ? argv[0] : ".");
-        char *slash = strrchr(LLM_DEMO_PATH, '/');
-        if (slash) *slash = 0; else strcpy(LLM_DEMO_PATH, ".");
+        char exe_dir[MAXPATH];
+        self_exe_dir(exe_dir, sizeof exe_dir);
+        snprintf(LLM_DEMO_PATH, sizeof LLM_DEMO_PATH, "%s/llm_demo", exe_dir);
     }
 #endif
     load_conf();
+    /* 命令行参数：ai --port 18080 可临时覆盖配置的端口（不写回 ai.conf） */
+    for (int i = 1; i + 1 < argc; i++) {
+        if (!strcmp(argv[i], "--port") || !strcmp(argv[i], "-p")) {
+            int cp = atoi(argv[i + 1]);
+            if (cp >= 1 && cp <= 65535) API_PORT = cp;
+        }
+    }
     banner();
     while (1) {
         cprint("\n  请选择：\n");
@@ -985,7 +1017,7 @@ DLLEXPORT int ai_server_main(int argc, char **argv) {
             if (np < 1 || np > 65535) { cprint("  无效端口\n"); continue; }
             API_PORT = np;
             save_conf();
-            cprint("  端口已改为 %d（已保存，下次启动服务生效）\n", API_PORT);
+            cprint("  端口已改为 %d（已保存，重新进菜单1启动服务即生效）\n", API_PORT);
         } else if (!strcmp(line, "7")) {
             AUTH_ON = !AUTH_ON;
             save_conf();
