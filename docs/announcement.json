@@ -1,7 +1,7 @@
 {
-  "id": "2026-11-07-v135-server",
-  "tag": "新版 v1.3.5",
-  "title": "v1.3.5 调用链路全面修复：密钥兼容、真流式 SSE、请求体完整读取、回答不再复读日志",
-  "content": "修掉「服务端不能被正常调用 / 开密钥就 401 / DeepSeek Harness 里 terminated」的根因。鉴权：头名大小写不敏感，兼容 Bearer/bearer、多空格与 x-api-key。流式：stream=true 返回标准 SSE（role 首包、内容增量、finish_reason、[DONE]），支持 stream_options.include_usage，生成期间每 5 秒心跳，长回答不再被判超时。请求体：按 Content-Length 补齐（上限 8MB）并支持 chunked，长历史与长系统提示不再截断。输出解析：只在 llm_demo 的 prompt file is 之后取正文，遇到分隔线结束，不再把 config path is ... 当回答。多轮：解析全部 messages，最后一问与 system 都注入。新增 /health、/v1/models/<id>、/v1/completions；客户端断开触发 SIGPIPE 不再杀进程；GET 无 Content-Length 不再挂起。手机版同步修复鉴权覆盖、x-api-key、role 首包与 usage 块、模型名回显。覆盖 Termux arm64/armv7、Linux amd64、Windows 便携包与手机四版本 APK。",
-  "publishedAt": "2026-11-07T22:30:00+08:00"
+  "id": "2026-11-13-v135-model-check",
+  "tag": "v1.3.5 更新",
+  "title": "修复「模型推理失败：llm_demo 未返回内容」：模型缺失自检 + 嵌套目录自动下沉",
+  "content": "现在会逐个检查 config.json、llm_config.json、tokenizer.txt、llm.mnn、llm.mnn.weight、embeddings_bf16.bin，缺哪个直接列出来；下载器多套一层目录时自动下沉到含权重的子目录；llm_demo 的 Failed/Can't/Unable/Error 行会被采集进错误信息。Windows 包同时内置 4 个运行时 DLL。三平台安装包与 apt 索引已重建，Release v1.3.5-server。",
+  "publishedAt": "2026-11-13T18:45:00+08:00"
 }
