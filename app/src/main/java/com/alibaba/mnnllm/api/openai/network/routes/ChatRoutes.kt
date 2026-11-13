@@ -1,6 +1,7 @@
 package com.alibaba.mnnllm.api.openai.network.routes
 
 import OpenAIChatRequest
+import com.alibaba.mnnllm.api.openai.network.auth.ApiAuthUtils
 import com.alibaba.mnnllm.api.openai.network.logging.ChatLogger
 import com.alibaba.mnnllm.api.openai.network.services.MNNChatService
 import io.ktor.http.ContentType
@@ -22,6 +23,8 @@ fun Route.chatRoutes() {
 
     post("/v1/chat/completions") {
         val traceId = UUID.randomUUID().toString()
+        // v1.3.5：这里自己判密钥，兼容 Authorization: bearer / Bearer 与 x-api-key
+        if (!ApiAuthUtils.ensureAuthorized(call)) return@post
         logger.logRequestStart(traceId, call)
         try {
             val chatRequest = call.receive<OpenAIChatRequest>()

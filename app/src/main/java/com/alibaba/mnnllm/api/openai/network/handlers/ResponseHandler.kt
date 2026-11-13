@@ -36,9 +36,11 @@ class ResponseHandler {
     suspend fun handleStreamResponseWithFullHistory(
         call: ApplicationCall,
         history: List<android.util.Pair<String, String>>,
-        traceId: String
+        traceId: String,
+        modelName: String = "mnn-local",
+        includeUsage: Boolean = false
     ) {
-        val responseMetadata = createResponseMetadata()
+        val responseMetadata = createResponseMetadata(modelName)
         
         call.respond(SSEServerContent(call) {
             //set heartbeenat
@@ -46,6 +48,11 @@ class ResponseHandler {
                 period = HEARTBEAT_PERIOD_SECONDS.seconds
                 event = ServerSentEvent(comments = "keep-alive")
             }
+
+            // v1.3.5：先发标准 role 首包，客户端能立刻确认链路通了
+            send(ServerSentEvent(data = chatResponseFormatter.createRoleChunk(
+                responseMetadata.responseId, responseMetadata.created, responseMetadata.model
+            )))
 
             // Use an unlimited channel to decouple generation (producer) from network sending (consumer).
             // This avoids using runBlocking inside the coroutine and allows the generator to run at full speed
@@ -71,7 +78,8 @@ class ResponseHandler {
                                                 responseMetadata.responseId,
                                                 responseMetadata.created,
                                                 progress,
-                                                false
+                                                false,
+                                                model = responseMetadata.model
                                             )
                                             // Send to channel non-blocking
                                             sentAnyDelta = true
@@ -111,7 +119,8 @@ class ResponseHandler {
                                     responseMetadata.responseId,
                                     responseMetadata.created,
                                     "（模型未产生可显示内容，请重试或更换模型）",
-                                    false
+                                    false,
+                                    model = responseMetadata.model
                                 )
                                 channel.send(ServerSentEvent(data = noticeJson))
                             }
@@ -120,10 +129,20 @@ class ResponseHandler {
                                 responseMetadata.created,
                                 "",
                                 true,
-                                usage = usage
+                                usage = usage,
+                                model = responseMetadata.model
                             )
                             channel.send(ServerSentEvent(data = finalJson))
                             
+                            // v1.3.5：include_usage=true 时补一个 choices 为空的 usage 块（OpenAI 规范）
+                            if (includeUsage) {
+                                channel.send(ServerSentEvent(data = chatResponseFormatter.createUsageChunk(
+                                    responseMetadata.responseId,
+                                    responseMetadata.created,
+                                    responseMetadata.model,
+                                    usage
+                                )))
+                            }
                             // Send [DONE] marker
                             delay(DONE_DELAY_MS)
                             channel.send(ServerSentEvent(data = "[DONE]"))
@@ -136,7 +155,8 @@ class ResponseHandler {
                             responseMetadata.responseId,
                             responseMetadata.created,
                             "LlmSession not available",
-                            true
+                            true,
+                            model = responseMetadata.model
                         )
                         channel.send(ServerSentEvent(data = errorJson))
                     }
@@ -149,7 +169,8 @@ class ResponseHandler {
                                  responseMetadata.responseId,
                                  responseMetadata.created,
                                  "",
-                                 true
+                                 true,
+                                 model = responseMetadata.model
                              )
                              channel.send(ServerSentEvent(data = finalJson))
                              delay(DONE_DELAY_MS)
@@ -190,10 +211,11 @@ class ResponseHandler {
     /** * processwithhistorymessagenon-streamingresponse * * @param call Ktorapplicationcallcontext * @param history historymessagelist*/
     suspend fun handleNonStreamResponseWithFullHistory(
         call: ApplicationCall,
-        history: List<android.util.Pair<String, String>>
+        history: List<android.util.Pair<String, String>>,
+        modelName: String = "mnn-local"
     ) {
         val fullResponse = StringBuilder()
-        val responseMetadata = createResponseMetadata()
+        val responseMetadata = createResponseMetadata(modelName)
         
         var result = HashMap<String, Any>()
         try {
@@ -220,15 +242,17 @@ class ResponseHandler {
     /** * response metadata*/
     private data class ResponseMetadata(
         val responseId: String,
-        val created: Long
+        val created: Long,
+        val model: String
     )
     
     /** * createresponse metadata*/
-    private fun createResponseMetadata(): ResponseMetadata {
+    private fun createResponseMetadata(model: String): ResponseMetadata {
         val timestamp = System.currentTimeMillis()
         return ResponseMetadata(
             responseId = "chatcmpl-$timestamp",
-            created = timestamp / 1000
+            created = timestamp / 1000,
+            model = model
         )
     }
     
@@ -261,6 +285,12 @@ class ResponseHandler {
         metrics: HashMap<String, Any>
     ): String {
         val usage = chatResponseFormatter.createUsageFromMetrics(metrics)
-        return chatResponseFormatter.createChatCompletionResponse(responseMetadata.responseId, responseMetadata.created, content, usage)
+        return chatResponseFormatter.createChatCompletionResponse(
+            responseMetadata.responseId,
+            responseMetadata.created,
+            content,
+            usage,
+            responseMetadata.model
+        )
     }
 }

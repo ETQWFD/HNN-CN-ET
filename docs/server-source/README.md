@@ -1,8 +1,8 @@
-# HNN CN ETC Server v1.3.4 C 服务端源码存档
+# HNN CN ETC Server v1.3.5 C 服务端源码存档
 
 Copyright (c) 2026 ETC · MIT License
 
-本目录存档 HNN CN ETC Server v1.3.4 版本的跨平台纯 C 服务端全部源码与编译脚本。
+本目录存档 HNN CN ETC Server v1.3.5 版本的跨平台纯 C 服务端全部源码与编译脚本。
 服务端为单文件主体（`ai.c`）+ Windows 平台适配薄壳，不依赖第三方运行库，可直接在
 Termux / Linux / Windows 下编译为可执行文件或 DLL。
 

@@ -170,14 +170,22 @@ class MNNChatService {
             if (unifiedHistory.isNotEmpty()) {
                 logger.logInferenceStart(traceId, unifiedHistory.size)
 
+                // v1.3.5：回显客户端请求的模型名；带上 include_usage 开关
+                val servedModel = chatRequest.model?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: runCatching { getLlmSession().modelId() }.getOrNull()
+                    ?: "mnn-local"
+                val includeUsage = chatRequest.streamOptions?.includeUsage == true
+
                 if (chatRequest.stream == true) {
                     responseHandler.handleStreamResponseWithFullHistory(
                         call,
                         unifiedHistory,
-                        traceId
+                        traceId,
+                        servedModel,
+                        includeUsage
                     )
                 } else {
-                    responseHandler.handleNonStreamResponseWithFullHistory(call, unifiedHistory)
+                    responseHandler.handleNonStreamResponseWithFullHistory(call, unifiedHistory, servedModel)
                 }
 
                 logger.logInferenceComplete(traceId)

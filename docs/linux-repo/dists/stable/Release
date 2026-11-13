@@ -1,14 +1,14 @@
-Origin: ETC
-Label: HNN CN ETC Server
+Origin: HNN CN ETC
+Label: HNN CN ETC
 Suite: stable
 Codename: stable
-Date: Sun, 01 Nov 2026 07:03:02 UTC
 Architectures: amd64
 Components: main
 Description: HNN CN ETC Server apt repository
+Date: Fri, 13 Nov 2026 10:40:15 +0000
 MD5Sum:
- f325e485496fc6cde8e237ca8889c981      478 main/binary-amd64/Packages
- 0e134f165af5fc00739c1b63495c20f5      383 main/binary-amd64/Packages.gz
+ 50505cf28611f4b58978d4ed8c6d3272              376 main/binary-amd64/Packages.gz
+SHA1:
+ e5e8cda89623b5fef92143753c4218271c6affb0              376 main/binary-amd64/Packages.gz
 SHA256:
- 1b7ae765b2020ed29d0125ec11ec80e02db1a7e4c73853faa8b3b90f30133ed4      478 main/binary-amd64/Packages
- 2b027c5a11d5507b0646bdc16f224d96506f796d7334891aaa0bcdbf586a2c94      383 main/binary-amd64/Packages.gz
+ 8100c57965df6b4553d1c32139ae6d5e3062dc511f752e1eb7cd2245339719c7              376 main/binary-amd64/Packages.gz

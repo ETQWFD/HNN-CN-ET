@@ -1,7 +1,7 @@
 {
-  "id": "2026-10-29-v134-server",
-  "tag": "新版 v1.3.4",
-  "title": "v1.3.4 模型名兼容修复 + 鉴权双开关 + system.ini 自定义人设 + 分步使用手册",
-  "content": "模型真实名称/市场名/目录名/大小写变体/归一化名/llm.mnn 权重名均可解析到同一模型，modelscope/modelers/builtin 嵌套目录下载的模型在首页与 GET /v1/models 全部显示。密钥菜单重构：7=密钥开关，8=强制密钥（开启后本机与局域网都必须带正确 Bearer），两项持久化到配置；密钥为 etc- 前缀 + 16 位大写字母与数字混合。新增 system.ini 自定义系统提示词：在程序当前目录写 system=\"提示语\"，下次对话自动生效，Android 服务版同样支持。默认绑定 0.0.0.0 局域网直连，横幅显示本机局域网 IP，CORS 预检齐全；菜单 4 端口持久化，响应 model 字段回显实际模型名；模型目录缓存、动态缓冲、会话复用三端提速。安装包内置全部 C 源码；Termux 先 32 位 arm 探测、失败回退 64 位；Windows DLL/EXE 版权署名 ETC。官网新增 Termux / Linux / Windows / Android 面板 / 第三方客户端分步手册与常见错误对照表。覆盖 Termux arm64/armv7、Linux amd64、Windows 便携包与手机四版本 APK。",
-  "publishedAt": "2026-10-29T20:30:00+08:00"
+  "id": "2026-11-07-v135-server",
+  "tag": "新版 v1.3.5",
+  "title": "v1.3.5 调用链路全面修复：密钥兼容、真流式 SSE、请求体完整读取、回答不再复读日志",
+  "content": "修掉「服务端不能被正常调用 / 开密钥就 401 / DeepSeek Harness 里 terminated」的根因。鉴权：头名大小写不敏感，兼容 Bearer/bearer、多空格与 x-api-key。流式：stream=true 返回标准 SSE（role 首包、内容增量、finish_reason、[DONE]），支持 stream_options.include_usage，生成期间每 5 秒心跳，长回答不再被判超时。请求体：按 Content-Length 补齐（上限 8MB）并支持 chunked，长历史与长系统提示不再截断。输出解析：只在 llm_demo 的 prompt file is 之后取正文，遇到分隔线结束，不再把 config path is ... 当回答。多轮：解析全部 messages，最后一问与 system 都注入。新增 /health、/v1/models/<id>、/v1/completions；客户端断开触发 SIGPIPE 不再杀进程；GET 无 Content-Length 不再挂起。手机版同步修复鉴权覆盖、x-api-key、role 首包与 usage 块、模型名回显。覆盖 Termux arm64/armv7、Linux amd64、Windows 便携包与手机四版本 APK。",
+  "publishedAt": "2026-11-07T22:30:00+08:00"
 }

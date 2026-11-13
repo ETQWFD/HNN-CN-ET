@@ -9,66 +9,100 @@ import com.alibaba.mnnllm.api.openai.network.models.Message
 import com.alibaba.mnnllm.api.openai.network.models.Usage
 import kotlinx.serialization.json.Json
 
-/** * responseformattool * responsible forcreateandformatvariousresponsedata*/
+/** 响应格式化工具：v1.3.5 起模型名由请求方决定，不再写死 "mnn-local"。 */
 class ChatResponseFormatter {
 
-    private val json = Json { prettyPrint = false }
+    // explicitNulls=false：不要把 "role":null / "usage":null 塞进每个块，
+    // 严格的客户端（DSH / LangChain）对多余字段的容错没想象中好。
+    private val json = Json {
+        prettyPrint = false
+        explicitNulls = false
+        encodeDefaults = true
+    }
 
-    /** * createDeltaresponse * @param responseId responseID * @param created creation timestamp * @param content content * @param isLast whether aslastchunk * @param usage usage statisticsinfo（only inlastchunkprovide） * @return formatted JSONstring*/
+    /** 首包：只带 role，OpenAI 流式响应的标准开场 */
+    fun createRoleChunk(
+        responseId: String,
+        created: Long,
+        model: String
+    ): String = json.encodeToString(
+        DeltaResponse.serializer(), DeltaResponse(
+            id = responseId,
+            `object` = "chat.completion.chunk",
+            created = created,
+            model = model,
+            choices = listOf(
+                Choice(delta = Delta(role = "assistant", content = ""), finish_reason = null, index = 0)
+            ),
+            usage = null
+        )
+    )
+
+    /** 内容增量 / 结束块 */
     fun createDeltaResponse(
         responseId: String,
         created: Long,
         content: String,
         isLast: Boolean = false,
-        usage: Usage? = null
-    ): String {
-        return json.encodeToString(
-            DeltaResponse.serializer(), DeltaResponse(
-                id = responseId,
-                `object` = "chat.completion.chunk",
-                created = created,
-                model = "mnn-local",
-                choices = listOf(
-                    Choice(
-                        delta = Delta(content),
-                        finish_reason = if (isLast) "stop" else null,
-                        // index = 0
-                    )
-                ),
-                usage = if (isLast) usage else null //only inlastchunkcontainingusage
-            )
+        usage: Usage? = null,
+        model: String = "mnn-local"
+    ): String = json.encodeToString(
+        DeltaResponse.serializer(), DeltaResponse(
+            id = responseId,
+            `object` = "chat.completion.chunk",
+            created = created,
+            model = model,
+            choices = listOf(
+                Choice(
+                    delta = Delta(content = content),
+                    finish_reason = if (isLast) "stop" else null,
+                    index = 0
+                )
+            ),
+            usage = if (isLast) usage else null
         )
-    }
+    )
 
-    /** * createnon-streamingchatcompleteresponse * @param responseId responseID * @param created creation timestamp * @param content completecontent * @param usage usage statisticsinfo * @return formatted JSONstring*/
+    /** stream_options.include_usage=true 时，OpenAI 会额外发一个 choices 为空的 usage 块 */
+    fun createUsageChunk(
+        responseId: String,
+        created: Long,
+        model: String,
+        usage: Usage
+    ): String = json.encodeToString(
+        DeltaResponse.serializer(), DeltaResponse(
+            id = responseId,
+            `object` = "chat.completion.chunk",
+            created = created,
+            model = model,
+            choices = emptyList(),
+            usage = usage
+        )
+    )
+
     fun createChatCompletionResponse(
         responseId: String,
         created: Long,
         content: String,
-        usage: Usage
-    ): String {
-        return json.encodeToString(
-            ChatCompletionResponse.serializer(), ChatCompletionResponse(
-                id = responseId,
-                `object` = "chat.completion",
-                created = created,
-                model = "mnn-local",
-                choices = listOf(
-                    CompletionChoice(
-                        message = Message(
-                            role = "assistant",
-                            content = content
-                        ),
-                        finish_reason = "stop",
-                        index = 0
-                    )
-                ),
-                usage = usage
-            )
+        usage: Usage,
+        model: String = "mnn-local"
+    ): String = json.encodeToString(
+        ChatCompletionResponse.serializer(), ChatCompletionResponse(
+            id = responseId,
+            `object` = "chat.completion",
+            created = created,
+            model = model,
+            choices = listOf(
+                CompletionChoice(
+                    message = Message(role = "assistant", content = content),
+                    finish_reason = "stop",
+                    index = 0
+                )
+            ),
+            usage = usage
         )
-    }
+    )
 
-    /** * fromLLMstatisticsinfocreateUsageobject * @param metrics LLMreturnstatisticsinfoHashMap * @return Usageobject*/
     fun createUsageFromMetrics(metrics: HashMap<String, Any>): Usage {
         val promptTokens = (metrics["prompt_len"] as? Long)?.toInt() ?: 0
         val completionTokens = (metrics["decode_len"] as? Long)?.toInt() ?: 0

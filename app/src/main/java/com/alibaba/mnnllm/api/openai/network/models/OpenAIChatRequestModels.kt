@@ -31,8 +31,18 @@ data class OpenAIChatRequest(
     val temperature: Double? = null,
     val top_p: Double? = null,
     val stream: Boolean? = null,
+    @SerialName("stream_options")
+    val streamOptions: StreamOptions? = null,
     val frequency_penalty: Double? = null,
     val presence_penalty: Double? = null,
+)
+
+/** v1.3.5：DeepSeek Harness 等客户端会带 stream_options.include_usage，
+ *  之前被 ignoreUnknownKeys 直接丢掉，客户端等不到 usage 块。 */
+@Serializable
+data class StreamOptions(
+    @SerialName("include_usage")
+    val includeUsage: Boolean = false
 )
 
 // ========================

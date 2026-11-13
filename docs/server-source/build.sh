@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build.sh — HNN CN ET Server v1.3.4 四目标编译脚本
+# build.sh — HNN CN ET Server v1.3.5 四目标编译脚本
 # Copyright (c) 2026 ETC · MIT License
 # 用法: bash build.sh            # 全部目标
 #       bash build.sh linux      # 只编 Linux amd64

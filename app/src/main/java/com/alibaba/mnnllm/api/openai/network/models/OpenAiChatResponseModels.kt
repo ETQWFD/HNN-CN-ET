@@ -18,12 +18,13 @@ data class DeltaResponse(
 data class Choice(
     val delta: Delta,
     val finish_reason : String? = null,
-   //val index: Int //will need tofor incomingrequest detectionindexand in responsewhenadd index
+    val index: Int = 0
 )
 
 @Serializable
 data class Delta(
-    val content: String
+    val role: String? = null,
+    val content: String = ""
 )
 
 /** * Tokenusestatisticsinfo * comply withOpenAI APIstandard*/

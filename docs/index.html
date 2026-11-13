@@ -76,7 +76,7 @@
 </p>
 
 <h2 id="download">下载</h2>
-<p>全部资产在 GitHub Release：<a href="https://github.com/ETQWFD/HNN-CN-ET/releases/tag/v1.3.4-server" target="_blank">v1.3.4-server</a>。</p>
+<p>全部资产在 GitHub Release：<a href="https://github.com/ETQWFD/HNN-CN-ET/releases/tag/v1.3.5-server" target="_blank">v1.3.5-server</a>。</p>
 <table>
   <tr><th>平台</th><th>文件</th><th>说明</th></tr>
   <tr><td>Termux 64 位</td><td><code>ai-termux-arm64.deb</code></td><td>含 ai、llm_demo、MNN 动态库与源码</td></tr>
@@ -158,20 +158,35 @@ curl http://192.168.1.23:8080/v1/chat/completions \
 <h2 id="errors">错误对照</h2>
 <table>
   <tr><th>现象</th><th>原因</th><th>处理</th></tr>
-  <tr><td>缺 <code>libgcc_s_seh / libwinpthread / libc++.dll</code></td><td>运行的是旧包</td><td>删除旧解压目录，重新下载 v1.3.4 全静态包（已无第三方 DLL）</td></tr>
-  <tr><td><code>no Qt platform plugin</code></td><td>旧 Qt 桌面版</td><td>改用 v1.3.4 纯 C 命令行版，不依赖 Qt</td></tr>
+  <tr><td>缺 <code>libgcc_s_seh / libwinpthread / libc++.dll</code></td><td>运行的是旧包</td><td>删除旧解压目录，重新下载 v1.3.5 全静态包（已无第三方 DLL）</td></tr>
+  <tr><td><code>no Qt platform plugin</code></td><td>旧 Qt 桌面版</td><td>改用 v1.3.5 纯 C 命令行版，不依赖 Qt</td></tr>
   <tr><td><code>TLS initialization failed</code></td><td>网络/代理握手失败</td><td>换网络或关代理，确认能打开 ModelScope 后重试</td></tr>
   <tr><td><code>Failed to fetch repo info</code></td><td>仓库索引拉取失败</td><td>检查网络后重试，先选小模型验证</td></tr>
-  <tr><td>下载后首页不显示</td><td>嵌套目录未扫描</td><td>v1.3.4 已递归扫描；确认目录含 <code>config.json</code> 且位于 <code>~/.hnn/models</code></td></tr>
+  <tr><td>下载后首页不显示</td><td>嵌套目录未扫描</td><td>v1.3.5 已递归扫描；确认目录含 <code>config.json</code> 且位于 <code>~/.hnn/models</code></td></tr>
   <tr><td>老手机加载即闪退</td><td>内存不足</td><td>关闭后台应用，选 32 位包与小参数模型</td></tr>
   <tr><td>401 bearer 错误</td><td>密钥缺失或不完整</td><td>重新复制完整 <code>etc-...</code>；菜单 7/8 可调整鉴权</td></tr>
   <tr><td>端口绑定失败</td><td>端口被占用</td><td>菜单 4 改端口后重启</td></tr>
   <tr><td>局域网设备连不上</td><td>网络/防火墙/误用 127.0.0.1</td><td>同一 Wi-Fi、放行防火墙、用局域网 IP</td></tr>
-  <tr><td>必须输 <code>llm.mnn</code></td><td>旧版解析缺陷</td><td>升级 v1.3.4，真实模型名可直接命中</td></tr>
+  <tr><td>必须输 <code>llm.mnn</code></td><td>旧版解析缺陷</td><td>升级 v1.3.5，真实模型名可直接命中</td></tr>
+  <tr><td>开了密钥就全部 401</td><td>头名/前缀大小写敏感，只认 <code>Bearer</code></td><td>v1.3.5 起大小写不敏感，也认 <code>x-api-key</code>；实在不行菜单 7 关掉密钥</td></tr>
+  <tr><td>DeepSeek Harness 里 terminated / 重试 7 秒</td><td>旧版没有 SSE，客户端等流式等到超时</td><td>v1.3.5 真流式 + 3~5 秒心跳，长生成也不再断</td></tr>
+  <tr><td>回答是 <code>config path is ...</code></td><td>旧版日志过滤失败后回退整段原始输出</td><td>v1.3.5 只取 <code>prompt file is</code> 之后的正文</td></tr>
+  <tr><td>长历史请求 400 / 答非所问</td><td>旧版只 recv 一次，请求体被截断</td><td>v1.3.5 按 Content-Length 补齐，支持 chunked</td></tr>
+  <tr><td>多轮对话丢上下文</td><td>旧版只解析第一条消息</td><td>v1.3.5 解析全部 messages，system 与最后一问都取到</td></tr>
 </table>
 
 <h2 id="changelog">更新日志</h2>
-<h3>v1.3.4</h3>
+<h3>v1.3.5</h3>
+<ul>
+  <li>密钥：头名不分大小写，<code>Bearer</code>/<code>bearer</code>、多空格、<code>x-api-key</code> 全部认；</li>
+  <li>真流式：<code>stream=true</code> 走 SSE（role 首包 → 增量 → finish_reason → <code>[DONE]</code>），支持 <code>stream_options.include_usage</code>，生成中每 5 秒心跳；</li>
+  <li>请求体按 Content-Length 完整读取（上限 8MB），支持 chunked，长历史与长系统提示不再截断；</li>
+  <li>回答只取 llm_demo <code>prompt file is</code> 之后的正文，不再复读 <code>config path is ...</code>，Markdown 标题保留；</li>
+  <li>多轮 messages 正确解析，system / developer 提示照常注入；</li>
+  <li>新增 <code>/health</code>、<code>/v1/models/&lt;id&gt;</code>、<code>/v1/completions</code>；客户端断开不再让进程退出；</li>
+  <li>手机版同步：models 纳入密钥校验、兼容 x-api-key、补 role 首包与 usage 块、响应回显请求的模型名。</li>
+</ul>
+<h3>v1.3.5</h3>
 <ul>
   <li>模型名四级匹配：完整 ID / 市场名 / 目录名 / 归一化名 / 权重名，响应回显真实模型名；</li>
   <li>模型目录递归扫描，嵌套下载的模型全部显示；</li>

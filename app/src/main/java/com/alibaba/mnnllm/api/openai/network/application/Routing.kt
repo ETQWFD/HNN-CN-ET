@@ -8,7 +8,6 @@ import io.ktor.http.ContentType
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
 import io.ktor.server.application.install
-import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
@@ -45,9 +44,9 @@ fun Application.configureRouting() {
         // Anthropic-compatible endpoint (/v1/messages) with x-api-key or bearer auth.
         anthropicRoutes()
 
-        authenticate("auth-bearer") {
-            chatRoutes()
-        }
+        // HNN CN ET v1.3.5：chat 路由自己判密钥（同时认 Bearer 与 x-api-key），
+        // 不再依赖 ktor bearer 插件，避免只带 x-api-key 的客户端被直接 401。
+        chatRoutes()
     }
 
     install(CallLogging) {
