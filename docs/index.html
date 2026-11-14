@@ -68,7 +68,7 @@
 <main class="wrap" id="top">
 
 <h1>HNN CN ET</h1>
-<p class="lead">纯 C 命令行模型服务端。基于 MNN 做本地推理，提供 OpenAI 兼容接口，支持 Termux、Linux、Windows。模型经 ModelScope 官方通道下载，解压即可运行。</p>
+<p class="lead">Go 重写的 MNN 命令行模型服务端。提供 OpenAI 兼容接口，真流式输出、深度思考 reasoning_content，支持 Termux、Linux、Windows。模型经 ModelScope 官方通道下载，llm_demo 推理，解压即可运行。</p>
 <p>
   <span class="tag">MIT License</span>
   <span class="tag">Copyright (c) 2026 ETC</span>
@@ -76,7 +76,7 @@
 </p>
 
 <h2 id="download">下载</h2>
-<p>全部资产在 GitHub Release：<a href="https://github.com/ETQWFD/HNN-CN-ET/releases/tag/v1.3.5-server" target="_blank">v1.3.5-server</a>。</p>
+<p>全部资产在 GitHub Release：<a href="https://github.com/ETQWFD/HNN-CN-ET/releases/tag/v1.3.6-go" target="_blank">v1.3.6-go</a>（Go 服务端）；旧版 <a href="https://github.com/ETQWFD/HNN-CN-ET/releases/tag/v1.3.5-server" target="_blank">v1.3.5-server</a> 仍可下载。</p>
 <table>
   <tr><th>平台</th><th>文件</th><th>说明</th></tr>
   <tr><td>Termux 64 位</td><td><code>ai-termux-arm64.deb</code></td><td>含 ai、llm_demo、MNN 动态库与源码</td></tr>
@@ -85,6 +85,7 @@
   <tr><td>Linux 便携</td><td><code>HNN-CN-ET-Server-Linux.zip</code></td><td>免 root，解压运行</td></tr>
   <tr><td>Windows 64 位</td><td><code>HNN-CN-ET-Server-Windows.zip</code></td><td>全静态编译，零第三方 DLL，解压即用</td></tr>
   <tr><td>Termux 脚本</td><td><code>install-termux.sh</code></td><td>先装 32 位探测，失败回退 64 位</td></tr>
+  <tr><td>Go 服务端</td><td><code>ai-go-linux-amd64 / arm64 / armv7 / ai-go.exe</code></td><td>v1.3.6 单文件，需系统已有 <code>llm_demo</code> 与模型</td></tr>
 </table>
 
 <h2 id="install">安装</h2>
@@ -177,6 +178,16 @@ curl http://192.168.1.23:8080/v1/chat/completions \
 </table>
 
 <h2 id="changelog">更新日志</h2>
+<h3>v1.3.6（Go 服务端）</h3>
+<ul>
+  <li>服务端改用 Go 重写，单文件约 6 MB，不再依赖 hnn_core.dll，Windows 单 exe 即可运行；</li>
+  <li>真流式：llm_demo 每吐一行就下发 SSE 增量，首包 role、5 秒心跳、finish_reason、usage、<code>[DONE]</code>；</li>
+  <li>深度思考：请求带 <code>"thinking": true</code> 时返回 <code>reasoning_content</code> 流；原生 Qwen3/R1 单遍拆 <code>&lt;think&gt;</code>，其他模型两段式先分析再作答；</li>
+  <li>完整多轮上下文（旧版只取最后一条用户消息）；</li>
+  <li>鉴权大小写不敏感，支持 <code>Bearer</code>、<code>x-api-key</code>、<code>?key=</code>；</li>
+  <li>模型完整性自检、嵌套目录自动下沉、<code>/health</code>、<code>/v1/models</code>、<code>/v1/completions</code> 全部保留；</li>
+  <li>手机版同步修复深度思考：开关开启后先显示思考块并流式输出思考过程，再给答案。</li>
+</ul>
 <h3>v1.3.5</h3>
 <ul>
   <li>密钥：头名不分大小写，<code>Bearer</code>/<code>bearer</code>、多空格、<code>x-api-key</code> 全部认；</li>
