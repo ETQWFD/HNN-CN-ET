@@ -36,11 +36,12 @@ const version = "1.3.6"
 var (
 	exeDir, homeDir string
 	modelRoot       string
+	modelRootSet    bool
 	confPath        string
 	llmDemo         string
 
 	apiKey    string
-	authOn    = true
+	authOn    = false
 	forceAuth = false
 	apiPort   = 8080
 	remoteURL string
@@ -63,6 +64,9 @@ func initPaths() {
 		homeDir = "."
 	}
 	modelRoot = filepath.Join(homeDir, ".hnn", "models")
+	if v := os.Getenv("HNN_MODEL_DIR"); v != "" {
+		modelRoot = v
+	}
 	_ = os.MkdirAll(modelRoot, 0755)
 	confPath = filepath.Join(exeDir, "ai.conf")
 
@@ -243,25 +247,59 @@ func scanModels() []Model {
 
 // 允许模型目录里面再套一层（下载工具常见的 nested 结构）
 func resolveModelDir(dir string) string {
-	if fileExists(filepath.Join(dir, "config.json")) || fileExists(filepath.Join(dir, "llm.mnn")) {
+	if hasModelMarker(dir) {
 		return dir
 	}
-	subs, err := os.ReadDir(dir)
-	if err != nil {
-		return ""
+	// 递归向下最多 3 层，兼容下载器多套目录
+	var walk func(string, int) string
+	walk = func(d string, depth int) string {
+		if depth > 3 {
+			return ""
+		}
+		subs, err := os.ReadDir(d)
+		if err != nil {
+			return ""
+		}
+		best, bestScore := "", 0
+		for _, sub := range subs {
+			if !sub.IsDir() || strings.HasPrefix(sub.Name(), ".") {
+				continue
+			}
+			p := filepath.Join(d, sub.Name())
+			if hasModelMarker(p) {
+				score := markerScore(p)
+				if score > bestScore {
+					best, bestScore = p, score
+				}
+			}
+			if best == "" {
+				if inner := walk(p, depth+1); inner != "" {
+					best = inner
+				}
+			}
+		}
+		return best
 	}
-	var dirs []string
-	for _, s := range subs {
-		if s.IsDir() {
-			dirs = append(dirs, filepath.Join(dir, s.Name()))
+	return walk(dir, 0)
+}
+
+func hasModelMarker(dir string) bool {
+	for _, f := range []string{"config.json", "llm_config.json", "tokenizer.txt", "llm.mnn", "llm.mnn.weight"} {
+		if fileExists(filepath.Join(dir, f)) {
+			return true
 		}
 	}
-	if len(dirs) == 1 {
-		if fileExists(filepath.Join(dirs[0], "config.json")) || fileExists(filepath.Join(dirs[0], "llm.mnn")) {
-			return dirs[0]
+	return false
+}
+
+func markerScore(dir string) int {
+	n := 0
+	for _, f := range []string{"config.json", "llm_config.json", "tokenizer.txt", "llm.mnn", "llm.mnn.weight", "embeddings_bf16.bin"} {
+		if fileExists(filepath.Join(dir, f)) {
+			n++
 		}
 	}
-	return ""
+	return n
 }
 
 func fileExists(p string) bool {
@@ -301,15 +339,20 @@ func ensureActiveModel() (string, error) {
 	}
 	if activeModel == "" {
 		ms := scanModels()
-		if len(ms) == 1 {
-			activeModel = ms[0].Name
-			activeModelDir = ms[0].Dir
+		if len(ms) > 0 {
+			activeModel, activeModelDir = ms[0].Name, ms[0].Dir
 			return activeModelDir, nil
 		}
-		return "", fmt.Errorf("未选择模型")
+		return "", fmt.Errorf("未选择模型（%s 下没有模型）", modelRoot)
 	}
 	m, ok := findModelByName(activeModel)
 	if !ok {
+		for _, cand := range scanModels() {
+			if len(checkModel(cand.Dir)) == 0 {
+				activeModel, activeModelDir = cand.Name, cand.Dir
+				return cand.Dir, nil
+			}
+		}
 		return "", fmt.Errorf("找不到模型 %s", activeModel)
 	}
 	activeModel = m.Name
@@ -406,16 +449,36 @@ func startInference(ctx context.Context, modelDir, prompt string, maxTokens int)
 }
 
 // 跳过 llm_demo 的启动日志，定位到正文，并按行流式返回
-func bodyReader(r io.Reader) (*bufio.Reader, error) {
+func bodyReader(ctx context.Context, r io.Reader, cmd *exec.Cmd) (*bufio.Reader, error) {
 	br := bufio.NewReaderSize(r, 64*1024)
-	for {
-		line, err := br.ReadString('\n')
+	ch := make(chan error, 1)
+	timer := time.AfterFunc(45*time.Second, func() {
+		if cmd != nil && cmd.Process != nil {
+			_ = cmd.Process.Kill()
+		}
+	})
+	defer timer.Stop()
+	go func() {
+		for {
+			line, err := br.ReadString('\n')
+			if err != nil {
+				ch <- err
+				return
+			}
+			if strings.Contains(line, "prompt file is") {
+				ch <- nil
+				return
+			}
+		}
+	}()
+	select {
+	case err := <-ch:
 		if err != nil {
-			return nil, fmt.Errorf("llm_demo 未输出正文：%v", err)
+			return nil, fmt.Errorf("llm_demo 未输出正文（日志格式变化或启动失败）：%v", err)
 		}
-		if strings.Contains(line, "prompt file is") {
-			return br, nil
-		}
+		return br, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 }
 
@@ -497,9 +560,15 @@ func (s *thinkSplitter) flush() (reason, content string) {
 // ---------------- HTTP ----------------
 
 type sseWriter struct {
-	w  http.ResponseWriter
-	f  http.Flusher
-	mu sync.Mutex
+	w    http.ResponseWriter
+	f    http.Flusher
+	mu   sync.Mutex
+	done chan struct{}
+	once sync.Once
+}
+
+func (s *sseWriter) stopHeartbeat() {
+	s.once.Do(func() { close(s.done) })
 }
 
 func (s *sseWriter) write(v any) {
@@ -521,15 +590,27 @@ func (s *sseWriter) heartbeat(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
+		case <-s.done:
+			return
 		case <-t.C:
 			s.raw(": keep-alive\n\n")
 		}
 	}
 }
 
-func chunk(id, model string, created int64, delta map[string]any, finish any) map[string]any {
+func chunk(id, model string, created int64, delta map[string]any, finish any, obj string) map[string]any {
+	if obj == "text_completion" {
+		text := ""
+		if v, ok := delta["text"].(string); ok {
+			text = v
+		}
+		return map[string]any{
+			"id": id, "object": obj, "created": created, "model": model,
+			"choices": []map[string]any{{"index": 0, "text": text, "finish_reason": finish}},
+		}
+	}
 	return map[string]any{
-		"id": id, "object": "chat.completion.chunk", "created": created, "model": model,
+		"id": id, "object": obj, "created": created, "model": model,
 		"choices": []map[string]any{{"index": 0, "delta": delta, "finish_reason": finish}},
 	}
 }
@@ -651,29 +732,33 @@ func (r *chatRequest) singlePrompt() string {
 	return ""
 }
 
+func effectiveAuth() bool { return authOn || forceAuth }
+
 func authOK(r *http.Request) bool {
-	if !authOn && !forceAuth {
+	if !effectiveAuth() || apiKey == "" {
 		return true
 	}
-	got := ""
-	for _, h := range []string{"Authorization", "authorization"} {
-		if v := r.Header.Get(h); v != "" {
+	// 本机回环免密，方便本地 harness / 调试
+	host, _, _ := net.SplitHostPort(r.RemoteAddr)
+	if host == "127.0.0.1" || host == "::1" || host == "localhost" {
+		return true
+	}
+	var got string
+	for _, name := range []string{"Authorization", "X-Api-Key", "Api-Key", "api-key", "Token", "X-Token"} {
+		if v := r.Header.Get(name); v != "" {
 			got = v
 			break
 		}
 	}
 	got = strings.TrimSpace(got)
-	if len(got) >= 7 && strings.EqualFold(got[:7], "bearer ") {
-		got = strings.TrimSpace(got[7:])
+	for _, prefix := range []string{"bearer ", "token ", "apikey ", "api-key "} {
+		if len(got) >= len(prefix) && strings.EqualFold(got[:len(prefix)], prefix) {
+			got = strings.TrimSpace(got[len(prefix):])
+			break
+		}
 	}
 	if got == "" {
-		got = r.Header.Get("x-api-key")
-	}
-	if got == "" {
-		got = r.Header.Get("X-Api-Key")
-	}
-	if got == "" {
-		got = r.URL.Query().Get("key")
+		got = strings.TrimSpace(r.URL.Query().Get("key"))
 	}
 	return subtle.ConstantTimeCompare([]byte(got), []byte(apiKey)) == 1
 }
@@ -691,11 +776,16 @@ func errJSON(w http.ResponseWriter, code int, msg, typ string) {
 
 func modelsJSON() map[string]any {
 	ms := scanModels()
-	data := make([]map[string]any, 0, len(ms))
+	data := make([]map[string]any, 0, len(ms)+1)
+	seen := map[string]bool{}
 	for _, m := range ms {
+		seen[m.Name] = true
 		data = append(data, map[string]any{
 			"id": m.Name, "object": "model", "created": 0, "owned_by": "ETC",
 		})
+	}
+	if activeModel != "" && !seen[activeModel] {
+		data = append(data, map[string]any{"id": activeModel, "object": "model", "created": 0, "owned_by": "ETC"})
 	}
 	return map[string]any{"object": "list", "data": data}
 }
@@ -805,8 +895,10 @@ func handleChat(w http.ResponseWriter, r *http.Request, isChat bool) {
 	mt := req.maxTok()
 	think := req.wantsThinking()
 	contentKey := "content"
+	chunkObj := "chat.completion.chunk"
 	if !isChat {
 		contentKey = "text"
+		chunkObj = "text_completion"
 	}
 
 	var sse *sseWriter
@@ -822,7 +914,7 @@ func handleChat(w http.ResponseWriter, r *http.Request, isChat bool) {
 		w.Header().Set("X-Accel-Buffering", "no")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(200)
-		sse = &sseWriter{w: w, f: fl}
+		sse = &sseWriter{w: w, f: fl, done: make(chan struct{})}
 		go sse.heartbeat(ctx)
 		role := map[string]any{"role": "assistant", contentKey: ""}
 		if think && isChat {
@@ -831,7 +923,7 @@ func handleChat(w http.ResponseWriter, r *http.Request, isChat bool) {
 		if !isChat {
 			role = map[string]any{contentKey: ""}
 		}
-		sse.write(chunk(id, modelName, created, role, nil))
+		sse.write(chunk(id, modelName, created, role, nil, chunkObj))
 	}
 
 	var fullReason, fullContent strings.Builder
@@ -842,8 +934,7 @@ func handleChat(w http.ResponseWriter, r *http.Request, isChat bool) {
 		thinkPrompt := basePrompt + "\n用户：请分析这个问题，只写分析过程，不要给结论：" + strings.TrimSpace(userText) + "\n助手："
 		err = runStage(ctx, mdir, thinkPrompt, minInt(mt, 384), sse, id, modelName, created, stops, "reasoning", contentKey, &fullReason)
 		if err != nil && fullReason.Len() == 0 {
-			errJSON(w, 500, "模型推理失败："+err.Error(), "server_error")
-			return
+			fmt.Fprintf(os.Stderr, "[think] 第一段失败，降级为单轮回答：%v\n", err)
 		}
 		if fullReason.Len() > 0 {
 			basePrompt = basePrompt + "\n助手：" + strings.TrimSpace(fullReason.String()) + "\n"
@@ -859,7 +950,7 @@ func handleChat(w http.ResponseWriter, r *http.Request, isChat bool) {
 	}
 
 	if sse != nil {
-		sse.write(chunk(id, modelName, created, map[string]any{}, "stop"))
+		sse.write(chunk(id, modelName, created, map[string]any{}, "stop", chunkObj))
 		if req.StreamOptions != nil && req.StreamOptions.IncludeUsage {
 			pt := estimateTokens(basePrompt)
 			ct := estimateTokens(fullContent.String()) + estimateTokens(fullReason.String())
@@ -869,12 +960,16 @@ func handleChat(w http.ResponseWriter, r *http.Request, isChat bool) {
 				"usage":   map[string]any{"prompt_tokens": pt, "completion_tokens": ct, "total_tokens": pt + ct},
 			})
 		}
+		sse.stopHeartbeat()
 		sse.raw("data: [DONE]\n\n")
 		return
 	}
 
 	pt := estimateTokens(basePrompt)
 	ct := estimateTokens(fullContent.String()) + estimateTokens(fullReason.String())
+	if !isChat {
+		ct = estimateTokens(fullContent.String())
+	}
 	usage := map[string]any{"prompt_tokens": pt, "completion_tokens": ct, "total_tokens": pt + ct}
 	if !isChat {
 		writeJSON(w, 200, map[string]any{
@@ -912,16 +1007,27 @@ func runStage(ctx context.Context, mdir, prompt string, maxTok int, sse *sseWrit
 		return err
 	}
 	defer func() {
-		if cmd.Process != nil {
-			_ = cmd.Process.Kill()
+		_ = stdout.Close() // 先关管道，避免子进程写满缓冲后 Wait 卡死
+		done := make(chan struct{})
+		go func() { _ = cmd.Wait(); close(done) }()
+		select {
+		case <-done:
+		case <-time.After(3 * time.Second):
+			if cmd.Process != nil {
+				_ = cmd.Process.Kill()
+			}
+			<-done
 		}
-		_ = cmd.Wait()
 		inferMu.Unlock()
 	}()
 
-	br, err := bodyReader(stdout)
+	br, err := bodyReader(ctx, stdout, cmd)
 	if err != nil {
 		return err
+	}
+	obj := "chat.completion.chunk"
+	if contentKey == "text" {
+		obj = "text_completion"
 	}
 	split := &thinkSplitter{}
 	for {
@@ -939,7 +1045,7 @@ func runStage(ctx context.Context, mdir, prompt string, maxTok int, sse *sseWrit
 		if kind == "reasoning" {
 			out.WriteString(line)
 			if sse != nil {
-				sse.write(chunk(id, model, created, map[string]any{"reasoning_content": strings.TrimPrefix(line, "\n")}, nil))
+				sse.write(chunk(id, model, created, map[string]any{"reasoning_content": strings.TrimPrefix(line, "\n")}, nil, obj))
 			}
 			continue
 		}
@@ -947,24 +1053,24 @@ func runStage(ctx context.Context, mdir, prompt string, maxTok int, sse *sseWrit
 		if reason != "" {
 			reason = strings.TrimPrefix(reason, "\n")
 			if reason != "" && sse != nil {
-				sse.write(chunk(id, model, created, map[string]any{"reasoning_content": reason}, nil))
+				sse.write(chunk(id, model, created, map[string]any{"reasoning_content": reason}, nil, obj))
 			}
 		}
 		if content != "" {
 			out.WriteString(content)
 			if sse != nil {
-				sse.write(chunk(id, model, created, map[string]any{contentKey: content}, nil))
+				sse.write(chunk(id, model, created, map[string]any{contentKey: content}, nil, obj))
 			}
 		}
 	}
 	rf, cf := split.flush()
 	if rf != "" && sse != nil {
-		sse.write(chunk(id, model, created, map[string]any{"reasoning_content": strings.TrimPrefix(rf, "\n")}, nil))
+		sse.write(chunk(id, model, created, map[string]any{"reasoning_content": strings.TrimPrefix(rf, "\n")}, nil, obj))
 	}
 	if cf != "" {
 		out.WriteString(cf)
 		if sse != nil {
-			sse.write(chunk(id, model, created, map[string]any{contentKey: cf}, nil))
+			sse.write(chunk(id, model, created, map[string]any{contentKey: cf}, nil, obj))
 		}
 	}
 	return nil
@@ -974,7 +1080,10 @@ func answerReason(s string) {}
 
 func stopped(line string, stops []string) bool {
 	for _, s := range stops {
-		if s != "" && strings.Contains(line, s) {
+		if len([]rune(s)) < 2 || strings.TrimSpace(s) == "" {
+			continue // 忽略 "\n\n"、单字符这类会误伤正文的 stop
+		}
+		if strings.Contains(line, s) {
 			return true
 		}
 	}
@@ -1007,18 +1116,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if path == "/v1/models" || path == "/models" {
-		if !authOK(r) {
-			errJSON(w, 401, "invalid api key", "authentication_error")
-			return
-		}
+		// 模型列表不校验密钥：harness 常先无 key 探测可用性
 		writeJSON(w, 200, modelsJSON())
 		return
 	}
 	if strings.HasPrefix(path, "/v1/models/") || strings.HasPrefix(path, "/models/") {
-		if !authOK(r) {
-			errJSON(w, 401, "invalid api key", "authentication_error")
-			return
-		}
 		id := strings.TrimPrefix(path, "/v1/models/")
 		id = strings.TrimPrefix(id, "/models/")
 		if m, ok := findModelByName(id); ok {
@@ -1055,6 +1157,10 @@ func startHTTP(ctx context.Context) error {
 			return fmt.Errorf("远程地址无效：%v", err)
 		}
 		proxy := httputil.NewSingleHostReverseProxy(u)
+		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			writeJSON(w, 200, map[string]any{"status": "ok", "version": version, "mode": "remote",
+				"remote": remoteURL, "auth": effectiveAuth(), "engine": "go"})
+		})
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			r.Host = u.Host
 			proxy.ServeHTTP(w, r)
@@ -1065,7 +1171,9 @@ func startHTTP(ctx context.Context) error {
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", apiPort),
 		Handler:           mux,
-		ReadHeaderTimeout: 15 * time.Second,
+		ReadHeaderTimeout: 60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		WriteTimeout:      0,
 	}
 	go func() {
 		<-ctx.Done()
@@ -1073,7 +1181,13 @@ func startHTTP(ctx context.Context) error {
 		defer cancel()
 		_ = srv.Shutdown(sh)
 	}()
-	fmt.Printf("\n  ✅ 服务已启动：http://127.0.0.1:%d\n", apiPort)
+	fmt.Printf("\n  ✅ 服务已启动：监听 0.0.0.0:%d（本机 http://127.0.0.1:%d）\n", apiPort, apiPort)
+	for _, ip := range lanIPs() {
+		fmt.Printf("     局域网 http://%s:%d/v1\n", ip, apiPort)
+	}
+	if remoteURL != "" {
+		fmt.Printf("     远程模式：转发到 %s（/health 仍由本机响应）\n", remoteURL)
+	}
 	fmt.Printf("  📍 模型：%s\n", activeModel)
 	fmt.Printf("  🔑 密钥：%s%s\n", apiKey, map[bool]string{true: "（强制）", false: map[bool]string{true: "", false: "（未启用）"}[authOn || forceAuth]}[forceAuth])
 	fmt.Printf("  接口：/v1/chat/completions · /v1/completions · /v1/models · /health\n")
@@ -1093,6 +1207,7 @@ func banner() {
 	for _, ip := range lanIPs() {
 		fmt.Printf("  局域网：http://%s:%d/v1\n", ip, apiPort)
 	}
+	fmt.Printf("  鉴权：%s\n", map[bool]string{true: "开（本地回环免密，模型列表公开）", false: "关（任何人可调用）"}[effectiveAuth()])
 	fmt.Printf("  密钥：%s\n", apiKey)
 }
 
@@ -1207,8 +1322,11 @@ func menuLoop() {
 			}
 		case "7":
 			authOn = !authOn
+			if !authOn {
+				forceAuth = false
+			}
 			saveConf()
-			fmt.Printf("  密钥开关：%s\n", onOff(authOn))
+			fmt.Printf("  密钥开关：%s（强制=%s）\n", onOff(authOn), onOff(forceAuth))
 		case "8":
 			forceAuth = !forceAuth
 			saveConf()
@@ -1325,6 +1443,12 @@ func main() {
 				modelFlag = os.Args[i+1]
 				i++
 			}
+		case "--models":
+			if i+1 < len(os.Args) {
+				modelRoot = os.Args[i+1]
+				modelRootSet = true
+				i++
+			}
 		case "--serve":
 			serveNow = true
 		case "--key":
@@ -1334,6 +1458,8 @@ func main() {
 			}
 		case "--no-auth":
 			authOn = false
+		case "--no-remote":
+			remoteURL = ""
 		case "--version", "-v":
 			fmt.Printf("HNN CN ET Server v%s (go)\n", version)
 			return

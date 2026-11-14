@@ -187,6 +187,8 @@ curl http://192.168.1.23:8080/v1/chat/completions \
   <li>鉴权大小写不敏感，支持 <code>Bearer</code>、<code>x-api-key</code>、<code>?key=</code>；</li>
   <li>模型完整性自检、嵌套目录自动下沉、<code>/health</code>、<code>/v1/models</code>、<code>/v1/completions</code> 全部保留；</li>
   <li>手机版同步修复深度思考：开关开启后先显示思考块并流式输出思考过程，再给答案。</li>
+  <li>harness 兼容补丁：<code>/health</code> 与 <code>/v1/models</code> 不再强制密钥；默认不强制鉴权、本机回环免密；鉴权头扩展为 Bearer/Token/x-api-key/Api-Key；模型目录支持 <code>HNN_MODEL_DIR</code>/<code>--models</code> 与 3 层嵌套；banner 打印 0.0.0.0 与局域网地址；远程模式 <code>/health</code> 仍本机响应并可用 <code>--no-remote</code> 忽略；请求头超时放宽到 60 秒并加 IdleTimeout。</li>
+  <li>调用链加固：等 <code>prompt file is</code> 加 45 秒兜底；子进程退出先关管道再 Wait，避免 stdout 写满导致推理锁死；两段式思考第一段失败自动降级单轮；stop 过滤空白/单字符，避免误截正文；<code>/v1/completions</code> 流式改为 <code>choices[].text</code> 与 <code>text_completion</code>，usage 不再把思考算进 completion_tokens；<code>[DONE]</code> 前停心跳。</li>
 </ul>
 <h3>v1.3.5</h3>
 <ul>

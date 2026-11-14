@@ -10,7 +10,8 @@
 - **深度思考**：请求带 `"thinking": true`（也兼容 `enable_thinking`、`reasoning_effort`、`chat_template_kwargs.enable_thinking`）时：
   - 原生支持思考的模型（Qwen3 / R1 / GLM-4.5 等，或 config.json 里 `enable_thinking: true`）直接单遍输出，服务端把 `<think>…</think>` 拆成 `reasoning_content` 流；
   - 不支持的原生模型，先用一轮“只分析、不下结论”的推理产出思考过程，再跑一轮给出答案，两段都实时流式输出。
-- **鉴权**：`Authorization: Bearer` 头大小写不敏感，另支持 `x-api-key` 与 `?key=`。
+- **鉴权**：默认不强制；开启后 `Authorization: Bearer`、`Token`、`x-api-key`、`Api-Key`、`?key=` 都认，头名/前缀大小写不敏感，本机回环免密；`/health` 与 `/v1/models` 始终公开。
+- **模型目录**：默认 `~/.hnn/models`，可用 `HNN_MODEL_DIR` 或 `--models` 指定；允许 3 层嵌套，缺 config 但有权重的目录也会列出并由调用方看到精确缺失项。
 - **请求体**：按 Content-Length 完整读取，chunked 由 net/http 处理，上限 16 MB。
 - **模型完整性自检**：缺 `config.json / llm_config.json / tokenizer.txt / llm.mnn / llm.mnn.weight / embeddings_bf16.bin` 时直接列出缺哪个，拒绝启动；模型目录嵌套一层会自动下沉。
 - **不再依赖 hnn_core.dll**：Go 版只负责 HTTP 与进程调度，二进制约 6 MB，Windows 单 exe 即可运行（需 `llm_demo.exe`）。
@@ -21,11 +22,11 @@
 # 菜单模式（默认）
 ./ai-go-linux-amd64
 
-# 直接启动
+# 直接启动（默认不强制鉴权，模型列表公开，本机回环免密）
 ./ai-go-linux-amd64 --serve --model Qwen2.5-0.5B-Instruct-MNN --port 8080
 
-# 临时关闭鉴权
-./ai-go-linux-amd64 --serve --model <模型名> --no-auth
+# 自定义模型目录 / 忽略 ai.conf 里的 remote
+./ai-go-linux-amd64 --serve --models /data/models --no-remote
 ```
 
 `llm_demo` 探测顺序：`~/.hnn/bin/llm_demo` → 程序同目录 `llm_demo` → 程序同目录 `bin/llm_demo`。
