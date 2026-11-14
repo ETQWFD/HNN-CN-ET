@@ -76,7 +76,7 @@ func initPaths() {
 		filepath.Join(exeDir, "bin", exeName("llm_demo")),
 	}
 	for _, c := range cands {
-		if st, err := os.Stat(c); err == nil && !st.IsDir() {
+		if st, err := os.Stat(c); err == nil && !st.IsDir() && executableMagic(c) {
 			llmDemo = c
 			break
 		}
@@ -94,6 +94,50 @@ func exeName(base string) string {
 }
 
 func isWindows() bool { return os.PathSeparator == '\\' }
+
+// 校验可执行文件头：Windows 必须是 MZ，Linux 必须是 ELF。
+// 旧包里把 Linux 版 llm_demo 改名成 .exe，这里直接跳过，避免一启动就 EOF。
+func executableMagic(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	head := make([]byte, 4)
+	if _, err := io.ReadFull(f, head); err != nil {
+		return false
+	}
+	if isWindows() {
+		return head[0] == 'M' && head[1] == 'Z'
+	}
+	return head[0] == 0x7f && head[1] == 'E' && head[2] == 'L' && head[3] == 'F'
+}
+
+type tailBuf struct {
+	mu    sync.Mutex
+	lines []string
+}
+
+func (t *tailBuf) add(line string) {
+	t.mu.Lock()
+	t.lines = append(t.lines, line)
+	if len(t.lines) > 8 {
+		t.lines = t.lines[len(t.lines)-8:]
+	}
+	t.mu.Unlock()
+}
+
+func (t *tailBuf) String() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return strings.Join(t.lines, " | ")
+}
+
+type inferProc struct {
+	cmd  *exec.Cmd
+	out  io.ReadCloser
+	tail *tailBuf
+}
 
 // ---------------- 配置 ----------------
 
@@ -407,20 +451,23 @@ func buildPrompt(messages []chatMessage, sysIni string) string {
 	return sb.String()
 }
 
-// 启动 llm_demo，返回 stdout 读取器
-func startInference(ctx context.Context, modelDir, prompt string, maxTokens int) (*exec.Cmd, io.ReadCloser, error) {
+// 启动 llm_demo，返回进程与 stdout 读取器
+func startInference(ctx context.Context, modelDir, prompt string, maxTokens int) (*inferProc, error) {
 	if !fileExists(llmDemo) {
-		return nil, nil, fmt.Errorf("找不到 llm_demo（应为 %s）", llmDemo)
+		return nil, fmt.Errorf("找不到 llm_demo（候选路径都不存在或不是可执行文件）")
+	}
+	if !executableMagic(llmDemo) {
+		return nil, fmt.Errorf("llm_demo 不是当前平台的可执行文件（%s）；Windows 必须是 PE，Linux 必须是 ELF", llmDemo)
 	}
 	tmp, err := os.CreateTemp("", "hnn-prompt-*.txt")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	path := tmp.Name()
 	if _, err := tmp.WriteString(prompt); err != nil {
 		tmp.Close()
 		os.Remove(path)
-		return nil, nil, err
+		return nil, err
 	}
 	tmp.Close()
 	cmd := exec.CommandContext(ctx, llmDemo, filepath.Join(modelDir, "config.json"), path, strconv.Itoa(maxTokens))
@@ -428,33 +475,35 @@ func startInference(ctx context.Context, modelDir, prompt string, maxTokens int)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		os.Remove(path)
-		return nil, nil, err
+		return nil, err
 	}
 	stderr, _ := cmd.StderrPipe()
 	if err := cmd.Start(); err != nil {
 		os.Remove(path)
-		return nil, nil, err
+		return nil, err
 	}
+	tail := &tailBuf{}
 	go func() {
 		defer os.Remove(path)
 		sc := bufio.NewScanner(stderr)
 		for sc.Scan() {
 			line := strings.TrimSpace(sc.Text())
 			if line != "" {
+				tail.add(line)
 				fmt.Fprintf(os.Stderr, "[llm] %s\n", line)
 			}
 		}
 	}()
-	return cmd, stdout, nil
+	return &inferProc{cmd: cmd, out: stdout, tail: tail}, nil
 }
 
-// 跳过 llm_demo 的启动日志，定位到正文，并按行流式返回
-func bodyReader(ctx context.Context, r io.Reader, cmd *exec.Cmd) (*bufio.Reader, error) {
-	br := bufio.NewReaderSize(r, 64*1024)
+// 跳过 llm_demo 的启动日志，定位到正文；等待上限 120 秒（大模型首次加载较慢）
+func bodyReader(ctx context.Context, p *inferProc) (*bufio.Reader, error) {
+	br := bufio.NewReaderSize(p.out, 64*1024)
 	ch := make(chan error, 1)
-	timer := time.AfterFunc(45*time.Second, func() {
-		if cmd != nil && cmd.Process != nil {
-			_ = cmd.Process.Kill()
+	timer := time.AfterFunc(120*time.Second, func() {
+		if p.cmd.Process != nil {
+			_ = p.cmd.Process.Kill()
 		}
 	})
 	defer timer.Stop()
@@ -474,7 +523,11 @@ func bodyReader(ctx context.Context, r io.Reader, cmd *exec.Cmd) (*bufio.Reader,
 	select {
 	case err := <-ch:
 		if err != nil {
-			return nil, fmt.Errorf("llm_demo 未输出正文（日志格式变化或启动失败）：%v", err)
+			tail := p.tail.String()
+			if tail != "" {
+				return nil, fmt.Errorf("llm_demo 未输出正文（%v）：%s", err, tail)
+			}
+			return nil, fmt.Errorf("llm_demo 未输出正文（%v）", err)
 		}
 		return br, nil
 	case <-ctx.Done():
@@ -491,6 +544,11 @@ type thinkSplitter struct {
 
 func (s *thinkSplitter) feed(chunk string) (reason, content string) {
 	s.buf += chunk
+	// DeepSeek-R1 用的是 " thinking"，Qwen 用 "<think>"，统一一下
+	s.buf = strings.ReplaceAll(s.buf, " thinking", "<think>")
+	s.buf = strings.ReplaceAll(s.buf, "<｜end▁of▁thinking｜>", "</think>")
+	s.buf = strings.ReplaceAll(s.buf, "＜think＞", "<think>")
+	s.buf = strings.ReplaceAll(s.buf, "＜/think＞", "</think>")
 	for {
 		switch s.state {
 		case 0:
@@ -944,12 +1002,28 @@ func handleChat(w http.ResponseWriter, r *http.Request, isChat bool) {
 	}
 
 	err = runStage(ctx, mdir, basePrompt, mt, sse, id, modelName, created, stops, "content", contentKey, &fullContent)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[llm] 推理失败：%v\n", err)
+	}
 	if err != nil && fullContent.Len() == 0 {
-		errJSON(w, 500, "模型推理失败："+err.Error(), "server_error")
+		msg := "模型推理失败：" + err.Error()
+		if sse != nil {
+			// 流已经开始，绝不能再写一次 HTTP 头；用 error 事件 + finish_reason 收尾，
+			// 否则客户端只会看到 “Stream ended without finish_reason”。
+			sse.write(map[string]any{"error": map[string]any{"message": msg, "type": "server_error"}})
+			sse.write(chunk(id, modelName, created, map[string]any{contentKey: msg}, "stop", chunkObj))
+			sse.stopHeartbeat()
+			sse.raw("data: [DONE]\n\n")
+			return
+		}
+		errJSON(w, 500, msg, "server_error")
 		return
 	}
 
 	if sse != nil {
+		if strings.TrimSpace(fullContent.String()) == "" && strings.TrimSpace(fullReason.String()) == "" {
+			sse.write(chunk(id, modelName, created, map[string]any{contentKey: "模型没有返回内容，请检查模型文件是否完整或重试。"}, nil, chunkObj))
+		}
 		sse.write(chunk(id, modelName, created, map[string]any{}, "stop", chunkObj))
 		if req.StreamOptions != nil && req.StreamOptions.IncludeUsage {
 			pt := estimateTokens(basePrompt)
@@ -1001,27 +1075,27 @@ func minInt(a, b int) int {
 // kind=reasoning 时原样当思考；kind=content 时若模型自带 <think> 标签也能拆出来。
 func runStage(ctx context.Context, mdir, prompt string, maxTok int, sse *sseWriter, id string, model string, created int64, stops []string, kind string, contentKey string, out *strings.Builder) error {
 	inferMu.Lock()
-	cmd, stdout, err := startInference(ctx, mdir, prompt, maxTok)
+	p, err := startInference(ctx, mdir, prompt, maxTok)
 	if err != nil {
 		inferMu.Unlock()
 		return err
 	}
 	defer func() {
-		_ = stdout.Close() // 先关管道，避免子进程写满缓冲后 Wait 卡死
+		_ = p.out.Close() // 先关管道，避免子进程写满缓冲后 Wait 卡死
 		done := make(chan struct{})
-		go func() { _ = cmd.Wait(); close(done) }()
+		go func() { _ = p.cmd.Wait(); close(done) }()
 		select {
 		case <-done:
 		case <-time.After(3 * time.Second):
-			if cmd.Process != nil {
-				_ = cmd.Process.Kill()
+			if p.cmd.Process != nil {
+				_ = p.cmd.Process.Kill()
 			}
 			<-done
 		}
 		inferMu.Unlock()
 	}()
 
-	br, err := bodyReader(ctx, stdout, cmd)
+	br, err := bodyReader(ctx, p)
 	if err != nil {
 		return err
 	}
