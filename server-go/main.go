@@ -134,9 +134,21 @@ func (t *tailBuf) String() string {
 }
 
 type inferProc struct {
-	cmd  *exec.Cmd
-	out  io.ReadCloser
-	tail *tailBuf
+	cmd      *exec.Cmd
+	out      io.ReadCloser
+	tail     *tailBuf
+	marker   chan struct{}
+	markOnce sync.Once
+	waitOnce sync.Once
+	exitErr  error
+}
+
+func (p *inferProc) found() {
+	p.markOnce.Do(func() { close(p.marker) })
+}
+
+func (p *inferProc) wait() {
+	p.waitOnce.Do(func() { p.exitErr = p.cmd.Wait() })
 }
 
 // ---------------- 配置 ----------------
@@ -459,18 +471,21 @@ func startInference(ctx context.Context, modelDir, prompt string, maxTokens int)
 	if !executableMagic(llmDemo) {
 		return nil, fmt.Errorf("llm_demo 不是当前平台的可执行文件（%s）；Windows 必须是 PE，Linux 必须是 ELF", llmDemo)
 	}
-	tmp, err := os.CreateTemp("", "hnn-prompt-*.txt")
+	// 提示词文件放在模型目录里、用纯 ASCII 文件名，并只把相对路径交给 llm_demo。
+	// Windows 下 llm_demo 用 ANSI fopen，绝对路径里的中文用户名会让它打不开文件。
+	tmp, err := os.CreateTemp(modelDir, "hnn_prompt_*.txt")
 	if err != nil {
 		return nil, err
 	}
 	path := tmp.Name()
+	base := filepath.Base(path)
 	if _, err := tmp.WriteString(prompt); err != nil {
 		tmp.Close()
 		os.Remove(path)
 		return nil, err
 	}
 	tmp.Close()
-	cmd := exec.CommandContext(ctx, llmDemo, filepath.Join(modelDir, "config.json"), path, strconv.Itoa(maxTokens))
+	cmd := exec.CommandContext(ctx, llmDemo, "config.json", base, strconv.Itoa(maxTokens))
 	cmd.Dir = modelDir
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -483,6 +498,7 @@ func startInference(ctx context.Context, modelDir, prompt string, maxTokens int)
 		return nil, err
 	}
 	tail := &tailBuf{}
+	pr := &inferProc{cmd: cmd, out: stdout, tail: tail, marker: make(chan struct{})}
 	go func() {
 		defer os.Remove(path)
 		sc := bufio.NewScanner(stderr)
@@ -491,16 +507,24 @@ func startInference(ctx context.Context, modelDir, prompt string, maxTokens int)
 			if line != "" {
 				tail.add(line)
 				fmt.Fprintf(os.Stderr, "[llm] %s\n", line)
+				if strings.Contains(line, "prompt file is") {
+					pr.found()
+				}
 			}
 		}
 	}()
-	return &inferProc{cmd: cmd, out: stdout, tail: tail}, nil
+	return pr, nil
 }
 
-// 跳过 llm_demo 的启动日志，定位到正文；等待上限 120 秒（大模型首次加载较慢）
+// 跳过 llm_demo 的启动日志，定位到正文；等待上限 120 秒（大模型首次加载较慢）。
+// 若 demo 的日志格式不同、没有 "prompt file is"，则把已读到的非日志行当正文继续。
 func bodyReader(ctx context.Context, p *inferProc) (*bufio.Reader, error) {
 	br := bufio.NewReaderSize(p.out, 64*1024)
-	ch := make(chan error, 1)
+	type res struct {
+		err  error
+		repl *bufio.Reader
+	}
+	ch := make(chan res, 1)
 	timer := time.AfterFunc(120*time.Second, func() {
 		if p.cmd.Process != nil {
 			_ = p.cmd.Process.Kill()
@@ -508,31 +532,70 @@ func bodyReader(ctx context.Context, p *inferProc) (*bufio.Reader, error) {
 	})
 	defer timer.Stop()
 	go func() {
+		var head []string
 		for {
 			line, err := br.ReadString('\n')
 			if err != nil {
-				ch <- err
+				// EOF：没有任何正文时，把读到的行交给上层做诊断/兜底
+				var keep []string
+				for _, l := range head {
+					t := strings.TrimSpace(l)
+					if t == "" {
+						continue
+					}
+					low := strings.ToLower(t)
+					if strings.HasPrefix(low, "config") || strings.HasPrefix(low, "load") ||
+						strings.HasPrefix(low, "prompt tokens") || strings.HasPrefix(low, "decode tokens") ||
+						strings.HasPrefix(low, "main") || strings.HasPrefix(low, "#") || strings.HasPrefix(low, "model") {
+						continue
+					}
+					keep = append(keep, l)
+				}
+				if len(keep) > 0 {
+					// 没有标记但确有正文，直接当内容用
+					ch <- res{repl: bufio.NewReaderSize(io.MultiReader(strings.NewReader(strings.Join(keep, "")), br), 64*1024)}
+					return
+				}
+				ch <- res{err: fmt.Errorf("%v|head:%s|tail:%s", err, strings.Join(lastLines(head, 4), " / "), p.tail.String())}
 				return
 			}
 			if strings.Contains(line, "prompt file is") {
-				ch <- nil
+				ch <- res{}
 				return
+			}
+			head = append(head, line)
+			if len(head) > 20 {
+				head = head[len(head)-20:]
 			}
 		}
 	}()
 	select {
-	case err := <-ch:
-		if err != nil {
-			tail := p.tail.String()
-			if tail != "" {
-				return nil, fmt.Errorf("llm_demo 未输出正文（%v）：%s", err, tail)
-			}
-			return nil, fmt.Errorf("llm_demo 未输出正文（%v）", err)
+	case r := <-ch:
+		if r.repl != nil {
+			fmt.Fprintf(os.Stderr, "[llm] llm_demo 未输出标记，改用已读输出作为正文\n")
+			return r.repl, nil
 		}
+		if r.err != nil {
+			p.wait()
+			code := ""
+			if p.exitErr != nil {
+				code = " exit=" + p.exitErr.Error()
+			}
+			return nil, fmt.Errorf("llm_demo 未输出正文（%s）%s；llm_demo=%s", r.err, code, llmDemo)
+		}
+		return br, nil
+	case <-p.marker:
 		return br, nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
+}
+
+func lastLines(s []string, n int) []string {
+	if len(s) <= n {
+		return s
+	}
+	return s[len(s)-n:]
 }
 
 // 把文本流拆成 reasoning / content 两路
@@ -1083,7 +1146,7 @@ func runStage(ctx context.Context, mdir, prompt string, maxTok int, sse *sseWrit
 	defer func() {
 		_ = p.out.Close() // 先关管道，避免子进程写满缓冲后 Wait 卡死
 		done := make(chan struct{})
-		go func() { _ = p.cmd.Wait(); close(done) }()
+		go func() { p.wait(); close(done) }()
 		select {
 		case <-done:
 		case <-time.After(3 * time.Second):
@@ -1263,6 +1326,7 @@ func startHTTP(ctx context.Context) error {
 		fmt.Printf("     远程模式：转发到 %s（/health 仍由本机响应）\n", remoteURL)
 	}
 	fmt.Printf("  📍 模型：%s\n", activeModel)
+	fmt.Printf("  🧩 推理程序：%s\n", llmDemo)
 	fmt.Printf("  🔑 密钥：%s%s\n", apiKey, map[bool]string{true: "（强制）", false: map[bool]string{true: "", false: "（未启用）"}[authOn || forceAuth]}[forceAuth])
 	fmt.Printf("  接口：/v1/chat/completions · /v1/completions · /v1/models · /health\n")
 	fmt.Printf("  深度思考：请求体加 \"thinking\": true，返回 reasoning_content 流\n")
