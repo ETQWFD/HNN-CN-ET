@@ -192,6 +192,7 @@ curl http://192.168.1.23:8080/v1/chat/completions \
   <li>harness 兼容补丁：<code>/health</code> 与 <code>/v1/models</code> 不再强制密钥；默认不强制鉴权、本机回环免密；鉴权头扩展为 Bearer/Token/x-api-key/Api-Key；模型目录支持 <code>HNN_MODEL_DIR</code>/<code>--models</code> 与 3 层嵌套；banner 打印 0.0.0.0 与局域网地址；远程模式 <code>/health</code> 仍本机响应并可用 <code>--no-remote</code> 忽略；请求头超时放宽到 60 秒并加 IdleTimeout。</li>
   <li>Windows 修正：旧 v1.3.5 包里 <code>llm_demo.exe</code> 实际是 Linux ELF 改名，Windows 上必然无法推理；v1.3.6 换成真正的 PE32+ llm_demo，并新增单文件 <code>HNN-CN-ET-Go-Setup.exe</code>（内含 ai-go.exe 与 llm_demo.exe，首次运行自动解压）。</li>
   <li>流式收尾修复：推理失败时不再二次写 HTTP 头（消除 <code>superfluous response.WriteHeader</code>），改为 <code>error</code> 事件 + <code>finish_reason</code> + <code>[DONE]</code>，harness 不再报 “Stream ended without finish_reason”；推理错误同时打到控制台。</li>
+  <li>Windows 推理程序升级：<code>llm_demo.exe</code> 由 MNN 3.6.2 源码重新编译（静态链接，仅依赖系统 msvcrt/ws2_32）。旧 3.6.1 版加载 3.6.2 导出的模型会在 <code>ucrtbase.dll</code> 内 0xc0000005 崩溃，表现为「llm_demo 未输出正文（EOF）」。</li>
   <li>DeepSeek-R1 兼容：识别 <code>&lt;think&gt;</code> 与 <code>&lt;think&gt;</code> 两种思考标签；<code>llm_demo</code> 启动前校验文件头（Windows 必须 PE、Linux 必须 ELF），旧包里 Linux 版冒充 <code>llm_demo.exe</code> 会被自动跳过。</li>
   <li>调用链加固：等 <code>prompt file is</code> 加 45 秒兜底；子进程退出先关管道再 Wait，避免 stdout 写满导致推理锁死；两段式思考第一段失败自动降级单轮；stop 过滤空白/单字符，避免误截正文；<code>/v1/completions</code> 流式改为 <code>choices[].text</code> 与 <code>text_completion</code>，usage 不再把思考算进 completion_tokens；<code>[DONE]</code> 前停心跳。</li>
 </ul>
