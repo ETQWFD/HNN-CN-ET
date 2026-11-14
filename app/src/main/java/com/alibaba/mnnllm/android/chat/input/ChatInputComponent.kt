@@ -142,7 +142,7 @@ class ChatInputComponent(
         // Load config off main thread to avoid ANR (file I/O)
         chatActivity.lifecycleScope.launch {
             val enableThinking = withContext(Dispatchers.IO) {
-                ModelConfig.loadConfig(currentModelId)?.jinja?.context?.enableThinking != false
+                ModelConfig.loadConfig(currentModelId)?.jinja?.context?.enableThinking == true
             }
             binding.btnToggleThinking.isSelected = enableThinking
         }

@@ -182,6 +182,7 @@ class ChatActivity : AppCompatActivity() {
         Log.d(TAG, "onSessionCreated: setting up UI with ${history?.size ?: 0} history items, isDiffusion=$isDiffusion")
         chatListComponent.setup(modelName, history)
         applyDirectReplyMode()
+        applyThinkingMode(binding.btnToggleThinking.isSelected)
     }
 
     private fun applyDirectReplyMode() {
@@ -201,6 +202,53 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
+    /** 深度思考状态：UI 开关是否开启 */
+    private var thinkingEnabled = true
+    /** 是否已向 system prompt 注入思考指令（避免重复追加） */
+    private var thinkPromptApplied = false
+
+    private val THINK_MARK = "【HNN深度思考】"
+    private val THINK_PLACEHOLDER = "正在分析问题…"
+    private val THINK_INSTRUCTION = "规则：回答任何问题前，先在 <think> 与 </think> 之间写出思考过程" +
+            "（理解问题 → 拆解条件 → 拟定步骤 → 自检结论），再写最终回答。" +
+            "思考部分要简洁具体，不复述题目、不写空话；最终回答直接给出结论与必要解释。"
+
+    /**
+     * HNN CN ET v1.3.6：深度思考必须真的“想”再答。
+     * 支持原生 thinking 的模型（Qwen3 / DeepSeek-R1 等，jinja.enableThinking=true）
+     * 走 MNN 原生开关；其余模型（Qwen2.5 等）改用 system prompt 要求输出 <think> 段，
+     * 由 GenerateResultProcessor 解析成可折叠的思考块，避免“开关点了没反应”。
+     */
+    private fun applyThinkingMode(enabled: Boolean) {
+        thinkingEnabled = enabled
+        val llm = chatSession as? com.alibaba.mnnllm.android.llm.LlmSession ?: return
+        val nativeThinking = try {
+            val cfg = com.alibaba.mnnllm.android.modelsettings.ModelConfig.loadConfig(modelId!!)
+            cfg?.jinja?.context?.enableThinking == true
+        } catch (e: Exception) {
+            false
+        }
+        try {
+            // 原生支持：交给 MNN；不支持则关闭原生，改用提示词驱动
+            llm.updateThinking(enabled && nativeThinking)
+            val cur = llm.getSystemPrompt() ?: ""
+            val stripped = if (cur.contains(THINK_MARK)) {
+                cur.substringBefore(THINK_MARK).trimEnd()
+            } else cur
+            if (enabled && !nativeThinking && !com.alibaba.mnnllm.android.mainsettings.MainSettings.isDirectReplyEnabled(this)) {
+                llm.updateSystemPrompt(
+                    (if (stripped.isBlank()) "" else stripped + "\n\n") + THINK_MARK + THINK_INSTRUCTION
+                )
+                thinkPromptApplied = true
+            } else if (thinkPromptApplied || cur.contains(THINK_MARK)) {
+                llm.updateSystemPrompt(stripped)
+                thinkPromptApplied = false
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "applyThinkingMode failed: ${e.message}")
+        }
+    }
+
     private fun setupChatListComponent() {
         chatListComponent = ChatListComponent(this, this.dateFormat!!, binding)
     }
@@ -216,7 +264,7 @@ class ChatActivity : AppCompatActivity() {
         this.chatInputModule!!.apply {
             setOnThinkingModeChanged {isThinking ->
                 Log.d(TAG, "isThinking: $isThinking")
-                (chatSession as LlmSession).updateThinking(isThinking)
+                applyThinkingMode(isThinking)
             }
             setOnAudioOutputModeChanged {
                 chatPresenter.setEnableAudioOutput(it)
@@ -967,6 +1015,12 @@ class ChatActivity : AppCompatActivity() {
         useDiffusionWaitHint = DiffusionWaitHintPolicy.shouldShowWaitHint(modelName)
         hasMeaningfulDiffusionProgress = false
         showDiffusionPercentWhenZero = ModelTypeUtils.isSanaModel(modelName)
+        // 深度思考：先立刻显示思考块，避免首字前一片空白
+        if (!useDiffusionWaitHint && thinkingEnabled && recentItem != null) {
+            recentItem.thinkingText = THINK_PLACEHOLDER
+            recentItem.thinkingFinishedTime = -1
+            chatListComponent.updateAssistantResponse(recentItem)
+        }
         if (useDiffusionWaitHint && recentItem != null) {
             recentItem.text = getString(R.string.diffusion_wait_hint_no_progress)
             recentItem.displayText = recentItem.text
@@ -998,7 +1052,8 @@ class ChatActivity : AppCompatActivity() {
 
     fun onLlmGenerateProgress(progress: String?, generateResultProcessor:GenerateResultProcessor) {
         val chatDataItem = chatListComponent.recentItem!!
-        chatDataItem.thinkingText = generateResultProcessor.getThinkingContent()
+        val thinkingNow = generateResultProcessor.getThinkingContent()
+        chatDataItem.thinkingText = if (thinkingNow.isNullOrEmpty() && thinkingEnabled) THINK_PLACEHOLDER else thinkingNow
         chatDataItem.displayText = generateResultProcessor.getNormalOutput()
         chatDataItem.text = generateResultProcessor.getRawResult()
         chatDataItem.thinkingFinishedTime = if (generateResultProcessor.thinkTime > 0) generateResultProcessor.thinkTime else -1
@@ -1084,6 +1139,7 @@ class ChatActivity : AppCompatActivity() {
             recentItem.displayText = recentItem.text
         }
         
+        if (recentItem.thinkingText == THINK_PLACEHOLDER) recentItem.thinkingText = null
         recentItem.benchmarkInfo = ModelUtils.generateBenchMarkString(benchMarkResult)
         chatListComponent.updateAssistantResponse(recentItem)
 
